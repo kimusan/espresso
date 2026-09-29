@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Union
+from typing import Sequence, Union
 
-from espresso.crema.color import TrueColor, is_no_color
+from espresso.crema.color import Color, TrueColor, is_no_color, parse_color
 from espresso.crema.width import strip_ansi
 
 
@@ -18,7 +18,7 @@ def hex_to_rgb(hex_code: str) -> tuple[int, int, int]:
     return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
 
 
-def _to_rgb(c: Union[str, tuple[int, int, int], TrueColor]) -> tuple[int, int, int]:
+def _to_rgb(c: Union[str, tuple[int, int, int], TrueColor, Color]) -> tuple[int, int, int]:
     if isinstance(c, TrueColor):
         return c.r, c.g, c.b
     if isinstance(c, (tuple, list)) and len(c) == 3:
@@ -55,9 +55,89 @@ def gradient(
     return colors
 
 
-def linear_gradient(text: str, start_hex: str, end_hex: str) -> str:
-    """Smoothly interpolate 24-bit TrueColor foreground RGB across the characters of a string.
+def multi_gradient_colors(
+    colors: Sequence[Union[str, tuple[int, int, int], TrueColor]],
+    steps: int,
+) -> list[TrueColor]:
+    """Generate a list of TrueColor steps smoothly interpolating across multiple color stops."""
+    if steps <= 0 or not colors:
+        return []
 
+    rgb_list = [_to_rgb(c) for c in colors]
+    k = len(rgb_list)
+    if k == 1 or steps == 1:
+        r, g, b = rgb_list[0]
+        return [TrueColor(r, g, b) for _ in range(steps)]
+
+    result: list[TrueColor] = []
+    denom = steps - 1
+    for i in range(steps):
+        t = i / denom
+        seg_pos = t * (k - 1)
+        seg_idx = min(int(seg_pos), k - 2)
+        sub_t = seg_pos - seg_idx
+        r1, g1, b1 = rgb_list[seg_idx]
+        r2, g2, b2 = rgb_list[seg_idx + 1]
+        r = max(0, min(255, round(r1 + sub_t * (r2 - r1))))
+        g = max(0, min(255, round(g1 + sub_t * (g2 - g1))))
+        b = max(0, min(255, round(b1 + sub_t * (b2 - b1))))
+        result.append(TrueColor(r, g, b))
+
+    return result
+
+
+def _render_gradient_chars(
+    text: str,
+    colors: list[TrueColor],
+    background: bool = False,
+    fg_color: Union[str, tuple[int, int, int], TrueColor, Color, None] = None,
+) -> str:
+    """Render characters with assigned gradient colors, preserving newlines."""
+    clean = strip_ansi(text)
+    if not clean or not colors:
+        return clean
+
+    fg_code = parse_color(fg_color).render_fg() if fg_color is not None and not is_no_color() else ""
+
+    out: list[str] = []
+    c_idx = 0
+    in_color = False
+
+    for ch in clean:
+        if ch == "\n":
+            if in_color:
+                out.append("\x1b[0m")
+                in_color = False
+            out.append("\n")
+        else:
+            col = colors[min(c_idx, len(colors) - 1)]
+            c_idx += 1
+            code = col.render_bg() if background else col.render_fg()
+            out.append(f"{code}{fg_code}{ch}")
+            in_color = True
+
+    if in_color:
+        out.append("\x1b[0m")
+
+    return "".join(out)
+
+
+def linear_gradient(
+    text: str,
+    start_color: Union[str, tuple[int, int, int], TrueColor] | None = None,
+    end_color: Union[str, tuple[int, int, int], TrueColor] | None = None,
+    background: bool = False,
+    fg_color: Union[str, tuple[int, int, int], TrueColor, Color, None] = None,
+    *,
+    start_hex: Union[str, tuple[int, int, int], TrueColor] | None = None,
+    end_hex: Union[str, tuple[int, int, int], TrueColor] | None = None,
+) -> str:
+    """Smoothly interpolate 24-bit TrueColor RGB across the characters of a string.
+
+    Supports:
+    - Foreground gradients (default, background=False)
+    - Background gradients (background=True)
+    - Optional foreground text color on background gradients (fg_color)
     - Preserves newlines and prevents terminal color bleeding.
     - Honors the NO_COLOR standard.
     """
@@ -71,31 +151,46 @@ def linear_gradient(text: str, start_hex: str, end_hex: str) -> str:
     if not clean:
         return ""
 
-    # Count non-newline printable characters across which to interpolate the gradient
+    start = start_color if start_color is not None else start_hex
+    end = end_color if end_color is not None else end_hex
+    if start is None or end is None:
+        raise ValueError("Both start and end colors must be specified for linear_gradient")
+
     printable_chars = [ch for ch in clean if ch != "\n"]
     n_chars = len(printable_chars)
     if n_chars == 0:
         return clean
 
-    colors = gradient(start_hex, end_hex, n_chars)
+    colors = gradient(start, end, n_chars)
+    return _render_gradient_chars(text, colors, background=background, fg_color=fg_color)
 
-    out: list[str] = []
-    c_idx = 0
-    in_color = False
 
-    for ch in clean:
-        if ch == "\n":
-            if in_color:
-                out.append("\x1b[0m")
-                in_color = False
-            out.append("\n")
-        else:
-            col = colors[c_idx]
-            c_idx += 1
-            out.append(f"{col.render_fg()}{ch}")
-            in_color = True
+def multi_gradient(
+    text: str,
+    colors: Sequence[Union[str, tuple[int, int, int], TrueColor]],
+    background: bool = False,
+    fg_color: Union[str, tuple[int, int, int], TrueColor, Color, None] = None,
+) -> str:
+    """Smoothly interpolate 24-bit TrueColor across multiple color stops for a string.
 
-    if in_color:
-        out.append("\x1b[0m")
+    Example:
+        multi_gradient("WELCOME", ["#FF5E3A", "#FF2A68", "#7D56F4", "#00E676"])
+    """
+    if not text:
+        return ""
 
-    return "".join(out)
+    if is_no_color():
+        return strip_ansi(text)
+
+    clean = strip_ansi(text)
+    if not clean:
+        return ""
+
+    printable_chars = [ch for ch in clean if ch != "\n"]
+    n_chars = len(printable_chars)
+    if n_chars == 0:
+        return clean
+
+    color_steps = multi_gradient_colors(colors, n_chars)
+    return _render_gradient_chars(text, color_steps, background=background, fg_color=fg_color)
+

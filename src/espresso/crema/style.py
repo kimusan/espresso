@@ -253,18 +253,26 @@ class Style:
         # 4. Apply box model padding (top, right, bottom, left)
         pad_top, pad_right, pad_bottom, pad_left = self._padding
         padded_lines: list[str] = []
-        blank_row = " " * (target_inner_w + pad_left + pad_right)
+        inner_box_w = target_inner_w + pad_left + pad_right
+
+        bg_open = ""
+        bg_close = ""
+        if self._bg is not None and not is_no_color():
+            bg_open = self._bg.render_bg()
+            bg_close = "\x1b[0m"
+
+        blank_row = f"{bg_open}{' ' * inner_box_w}{bg_close}" if bg_open else " " * inner_box_w
+        left_pad_str = f"{bg_open}{' ' * pad_left}{bg_close}" if (bg_open and pad_left > 0) else " " * pad_left
+        right_pad_str = f"{bg_open}{' ' * pad_right}{bg_close}" if (bg_open and pad_right > 0) else " " * pad_right
 
         for _ in range(pad_top):
             padded_lines.append(blank_row)
 
         for line in styled_lines:
-            padded_lines.append(f"{' ' * pad_left}{line}{' ' * pad_right}")
+            padded_lines.append(f"{left_pad_str}{line}{right_pad_str}")
 
         for _ in range(pad_bottom):
             padded_lines.append(blank_row)
-
-        inner_box_w = target_inner_w + pad_left + pad_right
 
         # 5. Apply borders
         bordered_lines: list[str] = []
@@ -328,7 +336,7 @@ class Style:
         if self._height is not None and len(bordered_lines) < self._height:
             box_w = string_width(bordered_lines[0]) if bordered_lines else inner_box_w
             v_diff = self._height - len(bordered_lines)
-            empty_row = " " * box_w
+            empty_row = f"{bg_open}{' ' * box_w}{bg_close}" if (bg_open and self._border is None) else " " * box_w
             if self._v_align == Align.BOTTOM:
                 bordered_lines = [empty_row] * v_diff + bordered_lines
             elif self._v_align == Align.CENTER:

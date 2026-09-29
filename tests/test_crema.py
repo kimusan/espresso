@@ -12,8 +12,12 @@ from espresso.crema import (
     Style,
     TrueColor,
     char_width,
+    gradient,
     join_horizontal,
     join_vertical,
+    linear_gradient,
+    multi_gradient,
+    multi_gradient_colors,
     parse_color,
     place,
     string_width,
@@ -117,6 +121,64 @@ class TestCremaStyleAndBox(unittest.TestCase):
         self.assertEqual(len(lines), 3)
         self.assertEqual(string_width(lines[1]), 10)
         self.assertIn("OK", lines[1])
+
+    def test_style_background_padding_fill(self) -> None:
+        s = Style().background("#333333").padding(1, 2)
+        res = s.render("Test")
+        lines = res.splitlines()
+        self.assertEqual(len(lines), 3)  # 1 top pad + 1 content + 1 bot pad
+        # Top pad and bot pad should contain the background ANSI code (\x1b[48;2;51;51;51m)
+        self.assertIn("\x1b[48;2;51;51;51m", lines[0])
+        self.assertIn("\x1b[48;2;51;51;51m", lines[1])
+        self.assertIn("\x1b[48;2;51;51;51m", lines[2])
+        # Visual width must be consistent
+        self.assertEqual(string_width(lines[0]), string_width(lines[1]))
+        self.assertEqual(string_width(lines[1]), string_width(lines[2]))
+
+
+class TestCremaGradients(unittest.TestCase):
+    def test_linear_gradient_foreground(self) -> None:
+        res = linear_gradient("ABC", "#FF0000", "#0000FF")
+        self.assertIn("\x1b[38;2;255;0;0m", res)  # Start red
+        self.assertIn("\x1b[38;2;0;0;255m", res)  # End blue
+        self.assertEqual(strip_ansi(res), "ABC")
+
+    def test_linear_gradient_background(self) -> None:
+        res = linear_gradient("ABC", "#FF0000", "#0000FF", background=True, fg_color="#FFFFFF")
+        self.assertIn("\x1b[48;2;255;0;0m", res)  # Start bg red
+        self.assertIn("\x1b[48;2;0;0;255m", res)  # End bg blue
+        self.assertIn("\x1b[38;2;255;255;255m", res)  # Fg white
+        self.assertEqual(strip_ansi(res), "ABC")
+
+    def test_multi_gradient_colors_and_rendering(self) -> None:
+        stops = ["#FF0000", "#00FF00", "#0000FF"]
+        steps = multi_gradient_colors(stops, 5)
+        self.assertEqual(len(steps), 5)
+        self.assertEqual((steps[0].r, steps[0].g, steps[0].b), (255, 0, 0))
+        self.assertEqual((steps[2].r, steps[2].g, steps[2].b), (0, 255, 0))
+        self.assertEqual((steps[4].r, steps[4].g, steps[4].b), (0, 0, 255))
+
+        res = multi_gradient("HELLO", stops)
+        self.assertEqual(strip_ansi(res), "HELLO")
+        self.assertIn("\x1b[38;2;255;0;0m", res)
+        self.assertIn("\x1b[38;2;0;0;255m", res)
+
+    def test_gradient_no_color(self) -> None:
+        old_val = os.environ.get("NO_COLOR")
+        try:
+            os.environ["NO_COLOR"] = "1"
+            res = linear_gradient("Testing", "#FF0000", "#00FF00")
+            self.assertEqual(res, "Testing")
+            self.assertNotIn("\x1b[", res)
+
+            res_m = multi_gradient("Testing", ["#FF0000", "#00FF00", "#0000FF"])
+            self.assertEqual(res_m, "Testing")
+            self.assertNotIn("\x1b[", res_m)
+        finally:
+            if old_val is None:
+                os.environ.pop("NO_COLOR", None)
+            else:
+                os.environ["NO_COLOR"] = old_val
 
 
 if __name__ == "__main__":

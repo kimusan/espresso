@@ -20,7 +20,7 @@ from espresso.crema.color import (
     is_no_color,
     parse_color,
 )
-from espresso.crema.gradient import gradient, hex_to_rgb, linear_gradient
+from espresso.crema.gradient import gradient, hex_to_rgb, linear_gradient, multi_gradient, multi_gradient_colors
 from espresso.crema.layout import join_horizontal, join_vertical, place
 from espresso.crema.style import Align, Style
 from espresso.crema.width import char_width, string_width, strip_ansi, truncate_ansi
@@ -47,6 +47,8 @@ __all__ = [
     "is_no_color",
     "gradient",
     "linear_gradient",
+    "multi_gradient",
+    "multi_gradient_colors",
     "hex_to_rgb",
     # Layout
     "join_horizontal",
