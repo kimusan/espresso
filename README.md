@@ -158,6 +158,7 @@ Explore the interactive demos in `examples/`:
 | **05 Beans Wizard** | `python3 examples/05_beans_showcase.py` | Multi-component wizard (TextInput, Table, Spinner, Progress, Viewport) |
 | **06 Commit Helper** | `python3 examples/06_git_commit_helper.py` | Practical developer tool for Conventional Commits |
 | **07 Editor** | `python3 examples/07_editor.py` | Multi-line text editor with TextArea, status bar, and Help |
+| **08 RSS Reader** | `python3 examples/08_rss_reader.py` | Fullscreen 3-panel RSS reader with live feed fetching from schulz.dk |
 
 ---
 
