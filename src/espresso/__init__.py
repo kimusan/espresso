@@ -8,6 +8,7 @@ Inspired by Bubble Tea, Lip Gloss, and Bubbles.
 """
 
 from espresso.core.keys import Key, KeyMsg
+from espresso.core.mouse import MouseAction, MouseButton, MouseMsg
 from espresso.core.program import Program
 from espresso.core.tea import (
     BatchMsg,
@@ -33,6 +34,9 @@ __all__ = [
     "Program",
     "Key",
     "KeyMsg",
+    "MouseMsg",
+    "MouseButton",
+    "MouseAction",
     "QuitMsg",
     "WindowSizeMsg",
     "BatchMsg",
@@ -43,4 +47,5 @@ __all__ = [
     "quit_app",
     "crema",
 ]
+
 

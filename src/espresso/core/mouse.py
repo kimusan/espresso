@@ -1,0 +1,114 @@
+"""Mouse event definitions and XTerm SGR 1006 decoding."""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+from enum import Enum
+from typing import Union
+
+from espresso.core.tea import Msg
+
+
+class MouseButton(Enum):
+    """Mouse buttons."""
+
+    NONE = "none"
+    LEFT = "left"
+    MIDDLE = "middle"
+    RIGHT = "right"
+    WHEEL_UP = "wheel_up"
+    WHEEL_DOWN = "wheel_down"
+    WHEEL_LEFT = "wheel_left"
+    WHEEL_RIGHT = "wheel_right"
+
+
+class MouseAction(Enum):
+    """Mouse actions."""
+
+    PRESS = "press"
+    RELEASE = "release"
+    MOTION = "motion"
+
+
+@dataclass(frozen=True)
+class MouseMsg(Msg):
+    """Message emitted on mouse interaction (click, scroll, drag, release)."""
+
+    x: int  # 0-indexed column
+    y: int  # 0-indexed row
+    button: MouseButton
+    action: MouseAction
+    ctrl: bool = False
+    alt: bool = False
+    shift: bool = False
+
+    def __str__(self) -> str:
+        return f"MouseMsg({self.button.value}, {self.action.value}, x={self.x}, y={self.y})"
+
+
+# SGR 1006 pattern: \x1b[<b;x;y(M|m)
+SGR_MOUSE_REGEX = re.compile(r"^\x1b\[<(\d+);(\d+);(\d+)([Mm])")
+
+
+def parse_sgr_mouse(seq: str) -> tuple[MouseMsg | None, int]:
+    """Parse an SGR 1006 mouse escape sequence.
+
+    Returns (MouseMsg or None, number of characters consumed).
+    """
+    match = SGR_MOUSE_REGEX.match(seq)
+    if not match:
+        return None, 0
+
+    btn_code = int(match.group(1))
+    col = int(match.group(2)) - 1  # Convert to 0-indexed
+    row = int(match.group(3)) - 1
+    type_char = match.group(4)
+    consumed = match.end()
+
+    # Modifiers
+    shift = bool(btn_code & 4)
+    alt = bool(btn_code & 8)
+    ctrl = bool(btn_code & 16)
+    is_motion = bool(btn_code & 32)
+    is_wheel = bool(btn_code & 64)
+
+    # Action
+    if type_char == "m":
+        action = MouseAction.RELEASE
+    elif is_motion:
+        action = MouseAction.MOTION
+    else:
+        action = MouseAction.PRESS
+
+    # Button
+    if is_wheel:
+        wheel_dir = btn_code & 3
+        if wheel_dir == 0:
+            button = MouseButton.WHEEL_UP
+        elif wheel_dir == 1:
+            button = MouseButton.WHEEL_DOWN
+        elif wheel_dir == 2:
+            button = MouseButton.WHEEL_LEFT
+        else:
+            button = MouseButton.WHEEL_RIGHT
+    else:
+        base_btn = btn_code & 3
+        if base_btn == 0:
+            button = MouseButton.LEFT
+        elif base_btn == 1:
+            button = MouseButton.MIDDLE
+        elif base_btn == 2:
+            button = MouseButton.RIGHT
+        else:
+            button = MouseButton.NONE
+
+    return MouseMsg(
+        x=col,
+        y=row,
+        button=button,
+        action=action,
+        ctrl=ctrl,
+        alt=alt,
+        shift=shift,
+    ), consumed

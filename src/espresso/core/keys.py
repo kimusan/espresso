@@ -164,6 +164,16 @@ def parse_keys(raw: str) -> Iterator[KeyMsg]:
                 i += 2
                 continue
 
+            # Check for SGR 1006 mouse event: \x1b[<...
+            if raw[i : i + 3] == "\x1b[<":
+                from espresso.core.mouse import parse_sgr_mouse
+
+                mouse_msg, consumed = parse_sgr_mouse(raw[i:])
+                if mouse_msg is not None:
+                    yield mouse_msg
+                    i += consumed
+                    continue
+
             # Try longest matching ANSI sequence
             matched = False
             # Check substrings from longest possible (up to 8 chars) down to 2 chars
@@ -175,6 +185,7 @@ def parse_keys(raw: str) -> Iterator[KeyMsg]:
                     i += length
                     matched = True
                     break
+
 
             if matched:
                 continue

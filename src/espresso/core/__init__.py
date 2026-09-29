@@ -1,7 +1,9 @@
 """Core Elm Architecture (TEA) framework primitives."""
 
 from espresso.core.keys import Key, KeyMsg, parse_keys
+from espresso.core.mouse import MouseAction, MouseButton, MouseMsg, parse_sgr_mouse
 from espresso.core.program import Program
+
 from espresso.core.tea import (
     BatchMsg,
     Cmd,
@@ -21,6 +23,10 @@ __all__ = [
     "Key",
     "KeyMsg",
     "parse_keys",
+    "MouseMsg",
+    "MouseButton",
+    "MouseAction",
+    "parse_sgr_mouse",
     "Program",
     "Model",
     "Msg",
@@ -35,3 +41,4 @@ __all__ = [
     "quit_app",
     "TerminalDriver",
 ]
+
