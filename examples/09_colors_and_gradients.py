@@ -113,46 +113,71 @@ class ColorsAndGradientsDemo(Model):
             fg_color="#000000",
         )
 
-        # 3. Solid Background Cards with Padding
+        # 3. Boxes Filled with Solid & Gradient Backgrounds
         card_w = (content_w - 4) // 2
 
+        # Card 1: Solid Background Fill
         card1_body = (
-            f"Background: {card_bg}\n"
-            f"Padding: top=1, sides=2, bot=1\n"
-            f"Solid card background fill seamlessly\n"
-            f"colors all interior padding cells!"
+            f"● Solid Background Box\n\n"
+            f"• Style: .background('{card_bg}')\n"
+            f"• Padding cells fully filled\n"
+            f"• High contrast text on top\n"
+            f"• Borders & title frame the box"
         )
         card1 = (
             Style()
             .background(card_bg)
-            .foreground("#E0E0E0")
+            .foreground("#FAFAFA")
             .border(ROUNDED_BORDER)
             .border_foreground(accent)
-            .border_title(f" {palette['name']} Card ", Align.LEFT)
+            .border_title(" Solid Box Fill ", Align.LEFT)
             .padding(1, 2)
             .width(card_w)
             .render(card1_body)
         )
 
+        # Card 2: Vertical Gradient Background Fill
         card2_body = (
-            f"Accent: {accent}\n"
-            f"Stops: {' → '.join(stops[:3])}\n"
-            f"Supports 24-bit TrueColor, 256-ANSI,\n"
-            f"hex strings, and RGB tuples."
+            f"● Vertical Gradient Box\n\n"
+            f"• Direction: Top-to-Bottom\n"
+            f"• Start: {stops[0]}\n"
+            f"• End:   {stops[-1]}\n"
+            f"• Text rendered cleanly on top"
         )
         card2 = (
             Style()
-            .background(card_bg)
-            .foreground("#E0E0E0")
+            .background_gradient(stops[0], stops[-1], direction="vertical")
+            .foreground("#FFFFFF")
+            .bold(True)
             .border(ROUNDED_BORDER)
-            .border_foreground(stops[1])
-            .border_title(" TrueColor Engine ", Align.LEFT)
+            .border_foreground(accent)
+            .border_title(" Vertical Gradient Box ", Align.LEFT)
             .padding(1, 2)
             .width(card_w)
             .render(card2_body)
         )
 
         cards_row = join_horizontal(Align.TOP, card1, "  ", card2)
+
+        # Card 3: Full Width Horizontal Gradient Box
+        card3_body = (
+            f"✦ Horizontal Gradient Background Box with Text on Top ✦\n"
+            f"Every single cell from column 0 to {content_w - 2} transitions across palette stops:\n"
+            f"{' → '.join(stops[:4])}\n"
+            f"Text attributes, bold tags, and symbols sit seamlessly on top of the gradient background!"
+        )
+        card3 = (
+            Style()
+            .background_gradient_multi(stops, direction="horizontal")
+            .foreground("#000000")
+            .bold(True)
+            .border(ROUNDED_BORDER)
+            .border_foreground(accent)
+            .border_title(" Horizontal Gradient Box Fill ", Align.CENTER)
+            .padding(1, 2)
+            .width(content_w - 2)
+            .render(card3_body)
+        )
 
         # 4. Linear & Multi-Stop Gradient Progress Bars / Dividers
         bar_len = content_w - 20
@@ -197,6 +222,8 @@ class ColorsAndGradientsDemo(Model):
             bg_banner,
             "",
             cards_row,
+            "",
+            card3,
             "",
             bars_rendered,
             badges_line,

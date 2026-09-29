@@ -135,6 +135,57 @@ class TestCremaStyleAndBox(unittest.TestCase):
         self.assertEqual(string_width(lines[0]), string_width(lines[1]))
         self.assertEqual(string_width(lines[1]), string_width(lines[2]))
 
+    def test_style_background_with_internal_ansi_resets(self) -> None:
+        """Ensure internal \033[0m does not create uncolored gaps before alignment spaces."""
+        s = Style().background("#1E1E2E").width(30)
+        res = s.render("\033[1;32mGreen Text\033[0m")
+        # Line must be width 30
+        self.assertEqual(string_width(res), 30)
+        # Background ANSI code \x1b[48;2;30;30;46m must appear both before and after Green Text
+        bg_code = "\x1b[48;2;30;30;46m"
+        self.assertIn(bg_code, res)
+        # The trailing alignment spaces must also be styled with bg_code
+        self.assertTrue(res.endswith(f"{bg_code}                    \x1b[0m"))
+
+    def test_style_box_vertical_gradient(self) -> None:
+        """Test vertical gradient background on a bordered card with text on top."""
+        s = (
+            Style()
+            .border(ROUNDED_BORDER)
+            .background_gradient("#FF0000", "#0000FF", direction="vertical")
+            .padding(1, 1)
+            .width(20)
+        )
+        res = s.render("Line 1\nLine 2")
+        lines = res.splitlines()
+        # Border top + pad top (1) + 2 content + pad bot (1) + border bot = 6 rows
+        self.assertEqual(len(lines), 6)
+        # Verify visual width of each row is identical
+        widths = [string_width(l) for l in lines]
+        self.assertEqual(len(set(widths)), 1)
+        # Top padding row has red bg
+        self.assertIn("\x1b[48;2;255;0;0m", lines[1])
+        # Bottom padding row has blue bg
+        self.assertIn("\x1b[48;2;0;0;255m", lines[4])
+
+    def test_style_box_horizontal_gradient(self) -> None:
+        """Test horizontal gradient background across card columns with text on top."""
+        s = (
+            Style()
+            .border(ROUNDED_BORDER)
+            .background_gradient("#FF0000", "#0000FF", direction="horizontal")
+            .padding(0, 1)
+            .width(20)
+        )
+        res = s.render("Gradient Card")
+        lines = res.splitlines()
+        self.assertEqual(len(lines), 3)  # Top border, content, bot border
+        content_row = lines[1]
+        self.assertEqual(string_width(content_row), string_width(lines[0]))
+        # Starts with red bg and ends before border with blue bg
+        self.assertIn("\x1b[48;2;255;0;0m", content_row)
+        self.assertIn("\x1b[48;2;0;0;255m", content_row)
+
 
 class TestCremaGradients(unittest.TestCase):
     def test_linear_gradient_foreground(self) -> None:
