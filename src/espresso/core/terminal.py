@@ -65,16 +65,44 @@ class TerminalDriver:
         # Unix termios raw mode
         try:
             import termios
-            import tty
 
             fd = sys.stdin.fileno()
             self._orig_termios = termios.tcgetattr(fd)
-            tty.setraw(fd)
+
+            # Ensure stdin and stdout are in standard blocking mode
+            try:
+                os.set_blocking(fd, True)
+                os.set_blocking(sys.stdout.fileno(), True)
+            except Exception:
+                pass
+
+            # Make a copy of attributes for raw mode
+            mode = list(self._orig_termios)
+
+            # iflag: Disable flow control (XON/XOFF) and CR-to-NL translation
+            mode[0] = mode[0] & ~(termios.IXON | termios.ICRNL | termios.BRKINT | termios.INPCK | termios.ISTRIP)
+
+            # oflag: CRITICAL: Keep OPOST and ONLCR enabled so \n translates to \r\n
+            # This completely prevents terminal staircase/skewing
+            mode[1] = mode[1] | (termios.OPOST | termios.ONLCR)
+
+            # cflag: 8-bit characters
+            mode[2] = (mode[2] & ~(termios.CSIZE | termios.PARENB)) | termios.CS8
+
+            # lflag: Disable canonical mode, local echo, signals (Ctrl+C as key), and extended input
+            mode[3] = mode[3] & ~(termios.ICANON | termios.ECHO | termios.ISIG | termios.IEXTEN)
+
+            # vmin = 1, vtime = 0: read blocks until at least 1 byte is available
+            mode[6][termios.VMIN] = 1
+            mode[6][termios.VTIME] = 0
+
+            termios.tcsetattr(fd, termios.TCSADRAIN, mode)
             self._is_raw = True
             atexit.register(self.exit)
         except Exception:
             # Fallback if termios isn't available or fails
             self._is_raw = False
+
 
         # Output escape sequences
         out = [HIDE_CURSOR]
@@ -111,6 +139,14 @@ class TerminalDriver:
                 self._is_raw = False
             except Exception:
                 pass
+
+        # Ensure standard blocking mode is restored
+        try:
+            os.set_blocking(sys.stdin.fileno(), True)
+            os.set_blocking(sys.stdout.fileno(), True)
+        except Exception:
+            pass
+
 
         # Restore signal handler
         if hasattr(signal, "SIGWINCH") and self._orig_sigwinch_handler is not None:
