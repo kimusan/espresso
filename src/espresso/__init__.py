@@ -22,6 +22,7 @@ from espresso.core.tea import (
     sequence,
     tick,
 )
+from espresso import crema
 
 __version__ = "0.1.0"
 
@@ -40,4 +41,6 @@ __all__ = [
     "sequence",
     "tick",
     "quit_app",
+    "crema",
 ]
+
