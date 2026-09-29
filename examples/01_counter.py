@@ -33,7 +33,7 @@ class Counter(Model):
             case KeyMsg(key="-" | "down" | "j"):
                 self.count -= 1
                 return self, None
-            case KeyMsg(key="q" | "ctrl+c" | "esc"):
+            case KeyMsg(key="q" | "Q" | "ctrl+c" | "esc"):
                 return self, quit_app
         return self, None
 

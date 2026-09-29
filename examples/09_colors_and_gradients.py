@@ -79,8 +79,8 @@ class ColorsAndGradientsDemo(Model):
             return self, None
 
         if isinstance(msg, KeyMsg):
-            if msg.key in ("q", "ctrl+c", "esc"):
-                return self, quit_app()
+            if msg.key in ("q", "Q", "ctrl+c", "ctrl+z", "esc"):
+                return self, quit_app
             if msg.key in (" ", "tab", "right", "down"):
                 self.palette_idx = (self.palette_idx + 1) % len(PALETTES)
                 return self, None

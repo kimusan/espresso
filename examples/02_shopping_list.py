@@ -50,7 +50,7 @@ class ShoppingList(Model):
                 else:
                     self.selected.add(self.cursor)
                 return self, None
-            case KeyMsg(key="q" | "ctrl+c" | "esc"):
+            case KeyMsg(key="q" | "Q" | "ctrl+c" | "esc"):
                 return self, quit_app
         return self, None
 

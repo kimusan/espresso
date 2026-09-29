@@ -420,7 +420,7 @@ class RSSReaderApp(Model):
                 self.spinner, cmd = self.spinner.update(msg)
                 return self, cmd
 
-            case KeyMsg(key="q" | "ctrl+c"):
+            case KeyMsg(key="q" | "Q" | "ctrl+c"):
                 return self, quit_app
 
             case KeyMsg(key="tab" | "shift+tab"):

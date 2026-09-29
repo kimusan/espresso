@@ -96,7 +96,7 @@ class FullscreenMouseApp(Model):
 
                 return self, None
 
-            case KeyMsg(key="q" | "ctrl+c" | "esc"):
+            case KeyMsg(key="q" | "Q" | "ctrl+c" | "esc"):
                 return self, quit_app
 
             case KeyMsg(key="+" | "up"):

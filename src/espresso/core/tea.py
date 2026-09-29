@@ -32,6 +32,9 @@ class Msg:
 class QuitMsg(Msg):
     """Message instructing the Program event loop to cleanly terminate."""
 
+    def __call__(self) -> QuitMsg:
+        return self
+
 
 @dataclass(frozen=True)
 class WindowSizeMsg(Msg):

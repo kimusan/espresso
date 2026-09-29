@@ -5,13 +5,14 @@ from __future__ import annotations
 import asyncio
 import inspect
 import os
+import signal
 import sys
 import threading
 from typing import TextIO
 
 
-from espresso.core.keys import parse_keys
-from espresso.core.tea import BatchMsg, Cmd, Model, Msg, QuitMsg, WindowSizeMsg
+from espresso.core.keys import KeyMsg, parse_keys
+from espresso.core.tea import BatchMsg, Cmd, Model, Msg, QuitMsg, WindowSizeMsg, quit_app
 from espresso.core.terminal import (
     CLEAR_LINE,
     CURSOR_TO_COL,
@@ -132,6 +133,19 @@ class Program:
 
         self.model = updated_model
 
+        # Immediate quit check: if the model returned QuitMsg or quit_app
+        if isinstance(cmd, QuitMsg) or cmd is quit_app:
+            return True
+
+        # Unhandled emergency abort check: Ctrl+C quits if model did not consume it
+        if isinstance(msg, KeyMsg) and msg.key == "ctrl+c" and cmd is None:
+            return True
+
+        # Job control: Ctrl+Z suspends if model did not consume it
+        if isinstance(msg, KeyMsg) and msg.key == "ctrl+z" and cmd is None:
+            self._suspend()
+            return False
+
         if cmd is not None:
             self._dispatch_cmd(cmd)
 
@@ -148,6 +162,25 @@ class Program:
         self._render(self.model.view())
         return False
 
+    def _suspend(self) -> None:
+        """Temporarily restore terminal and suspend process on Ctrl+Z (Unix job control)."""
+        if not hasattr(signal, "SIGTSTP") or not self._terminal.is_tty:
+            return
+        try:
+            # 1. Restore canonical terminal mode and exit alt-screen
+            self._terminal.exit()
+            # 2. Trigger SIGTSTP to background the process
+            os.kill(os.getpid(), signal.SIGTSTP)
+            # 3. Process resumed by shell (e.g. `fg`): re-enter raw mode and alt screen
+            self._terminal.enter()
+            self._last_rendered_lines = []
+            if self.alt_screen:
+                self.output_stream.write("\x1b[2J\x1b[H")
+                self.output_stream.flush()
+            self._render(self.model.view())
+        except Exception:
+            pass
+
     def _dispatch_cmd(self, cmd: Cmd) -> None:
         """Execute a Cmd in the background and route its resulting Msg into the queue."""
         if cmd is None:
@@ -155,7 +188,9 @@ class Program:
 
         async def _cmd_wrapper() -> None:
             try:
-                if inspect.iscoroutinefunction(cmd) or inspect.isawaitable(cmd):
+                if isinstance(cmd, Msg):
+                    res = cmd
+                elif inspect.iscoroutinefunction(cmd) or inspect.isawaitable(cmd):
                     res = await (cmd() if callable(cmd) else cmd)
                 elif callable(cmd):
                     loop = asyncio.get_running_loop()
@@ -165,7 +200,7 @@ class Program:
 
                 if isinstance(res, Msg) and self._queue is not None and self._running:
                     await self._queue.put(res)
-            except Exception as e:
+            except Exception:
                 # Silently catch or handle command errors
                 pass
 
