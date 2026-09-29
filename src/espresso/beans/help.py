@@ -87,9 +87,11 @@ class Help(Model):
         self.sep_style = sep_style or Style().foreground("#444444")
 
     def init(self) -> Cmd | None:
+        """Initialize component lifecycle (no-op for Help)."""
         return None
 
     def update(self, msg: Msg) -> tuple[Help, Cmd | None]:
+        """Update help state on incoming messages (no-op for Help)."""
         return self, None
 
     def toggle(self) -> None:
@@ -100,6 +102,7 @@ class Help(Model):
         self,
         target: KeyMap | Sequence[KeyBinding] | Sequence[Sequence[KeyBinding]] | None,
     ) -> tuple[list[KeyBinding], list[list[KeyBinding]]]:
+        """Resolve various key_map inputs (protocol, flat list, nested list, object) into (short, full) lists."""
         km = target if target is not None else self.key_map
         if km is None:
             return [], []
@@ -131,6 +134,9 @@ class Help(Model):
 
     def short_help_view(self, bindings: Sequence[KeyBinding]) -> str:
         """Render single-line compact keybinding help."""
+        if self.width is not None and self.width <= 0:
+            return ""
+
         enabled = [b for b in bindings if b.enabled]
         if not enabled:
             return ""
@@ -142,7 +148,7 @@ class Help(Model):
         for b in enabled:
             item_w = string_width(b.help_key) + 1 + string_width(b.help_desc)
             needed = item_w if not rendered_items else item_w + sep_w
-            if self.width is not None and cur_w + needed > self.width and rendered_items:
+            if self.width is not None and cur_w + needed > self.width:
                 break
 
             k_rendered = self.key_style.render(b.help_key)
@@ -186,6 +192,8 @@ class Help(Model):
         key_map: KeyMap | Sequence[KeyBinding] | Sequence[Sequence[KeyBinding]] | None = None,
     ) -> str:
         """Render the keybindings based on compact or full mode."""
+        if self.width is not None and self.width <= 0:
+            return ""
         short_bindings, full_groups = self._resolve(key_map)
         if self.show_all:
             return self.full_help_view(full_groups)

@@ -21,7 +21,10 @@ def char_width(char: str) -> int:
     - Zero-width joiners and non-spacing combining marks occupy 0 cells.
     - Standard characters occupy 1 cell.
     """
-    code = ord(char)
+    if not char:
+        return 0
+
+    code = ord(char[0])
 
     # Control characters / null
     if code < 32 or (127 <= code < 160):

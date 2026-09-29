@@ -42,15 +42,18 @@ class Table(Model):
         self.header_style = header_style or Style().bold(True).foreground("#E056FD")
 
     def init(self) -> Cmd | None:
+        """Initialize component lifecycle (no-op for Table)."""
         return None
 
     @property
     def selected_row(self) -> Sequence[str] | None:
+        """Return the currently selected row data, or None if empty."""
         if 0 <= self.cursor < len(self.rows):
             return self.rows[self.cursor]
         return None
 
     def update(self, msg: Msg) -> tuple[Table, Cmd | None]:
+        """Navigate table rows using arrow keys (up/down) or vim bindings (k/j/g/G)."""
         match msg:
             case KeyMsg(key="up" | "k"):
                 if self.cursor > 0:
@@ -80,6 +83,7 @@ class Table(Model):
         return self, None
 
     def view(self) -> str:
+        """Render the styled table headers, separator, and visible body rows."""
         lines: list[str] = []
 
         # 1. Header row

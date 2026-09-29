@@ -68,91 +68,108 @@ class Style:
 
     # Text attributes
     def bold(self, val: bool = True) -> Style:
+        """Set or unset the bold text attribute."""
         s = self.copy()
         s._bold = val
         return s
 
     def faint(self, val: bool = True) -> Style:
+        """Set or unset the faint/dim text attribute."""
         s = self.copy()
         s._faint = val
         return s
 
     def italic(self, val: bool = True) -> Style:
+        """Set or unset the italic text attribute."""
         s = self.copy()
         s._italic = val
         return s
 
     def underline(self, val: bool = True) -> Style:
+        """Set or unset the underline text attribute."""
         s = self.copy()
         s._underline = val
         return s
 
     def strikethrough(self, val: bool = True) -> Style:
+        """Set or unset the strikethrough text attribute."""
         s = self.copy()
         s._strikethrough = val
         return s
 
     def reverse(self, val: bool = True) -> Style:
+        """Set or unset the reverse video text attribute."""
         s = self.copy()
         s._reverse = val
         return s
 
     # Colors
     def foreground(self, color: Union[str, int, Color, tuple[int, int, int]]) -> Style:
+        """Set the foreground text color (hex, ANSI int, RGB tuple, or Color)."""
         s = self.copy()
         s._fg = parse_color(color)
         return s
 
     def background(self, color: Union[str, int, Color, tuple[int, int, int]]) -> Style:
+        """Set the background color (hex, ANSI int, RGB tuple, or Color)."""
         s = self.copy()
         s._bg = parse_color(color)
         return s
 
     # Sizing & Alignment
     def width(self, w: int | None) -> Style:
+        """Set target inner content width in visual cells."""
         s = self.copy()
         s._width = w
         return s
 
     def height(self, h: int | None) -> Style:
+        """Set target minimum box height in rows."""
         s = self.copy()
         s._height = h
         return s
 
     def align(self, h_align: Align) -> Style:
+        """Set horizontal text alignment (LEFT, CENTER, RIGHT)."""
         s = self.copy()
         s._h_align = h_align
         return s
 
     def align_vertical(self, v_align: Align) -> Style:
+        """Set vertical text alignment (TOP, CENTER, BOTTOM) when height is set."""
         s = self.copy()
         s._v_align = v_align
         return s
 
     # Spacing
     def padding(self, top: int, right: int | None = None, bottom: int | None = None, left: int | None = None) -> Style:
+        """Set inner padding using CSS shorthand: (all) or (top/bottom, left/right) or (top, right, bottom, left)."""
         s = self.copy()
         s._padding = _parse_box_sides(top, right, bottom, left)
         return s
 
     def margin(self, top: int, right: int | None = None, bottom: int | None = None, left: int | None = None) -> Style:
+        """Set outer margin using CSS shorthand: (all) or (top/bottom, left/right) or (top, right, bottom, left)."""
         s = self.copy()
         s._margin = _parse_box_sides(top, right, bottom, left)
         return s
 
     # Borders
     def border(self, b: Border | None, top: bool = True, right: bool = True, bottom: bool = True, left: bool = True) -> Style:
+        """Set the border characters and selectively enable/disable specific sides."""
         s = self.copy()
         s._border = b
         s._border_sides = (top, right, bottom, left)
         return s
 
     def border_foreground(self, color: Union[str, int, Color, tuple[int, int, int]]) -> Style:
+        """Set the border foreground color."""
         s = self.copy()
         s._border_fg = parse_color(color)
         return s
 
     def border_background(self, color: Union[str, int, Color, tuple[int, int, int]]) -> Style:
+        """Set the border background color."""
         s = self.copy()
         s._border_bg = parse_color(color)
         return s

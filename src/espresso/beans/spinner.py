@@ -36,25 +36,34 @@ class Spinner(Model):
         style: Style | None = None,
         tag: str = "spinner",
     ) -> None:
-        self.frames = tuple(frames)
+        self.frames = tuple(frames) if frames else DOTS
         self.interval = 1.0 / max(1.0, fps)
         self.style = style or Style().foreground("#7D56F4")
         self.tag = tag
         self.frame_idx = 0
 
     def init(self) -> Cmd | None:
+        """Initialize the spinner by dispatching the first tick command."""
         return self._next_tick()
 
     def _next_tick(self) -> Cmd:
+        if not self.frames:
+            self.frames = DOTS
         next_idx = (self.frame_idx + 1) % len(self.frames)
         return tick(self.interval, SpinnerTickMsg(tag=self.tag, frame=next_idx))
 
     def update(self, msg: Msg) -> tuple[Spinner, Cmd | None]:
+        """Advance spinner animation frame upon receiving a matching tick message."""
         if isinstance(msg, SpinnerTickMsg) and msg.tag == self.tag:
+            if not self.frames:
+                self.frames = DOTS
             self.frame_idx = msg.frame % len(self.frames)
             return self, self._next_tick()
         return self, None
 
     def view(self) -> str:
-        current_frame = self.frames[self.frame_idx]
+        """Render the current animated frame formatted with the configured style."""
+        if not self.frames:
+            self.frames = DOTS
+        current_frame = self.frames[self.frame_idx % len(self.frames)]
         return self.style.render(current_frame)

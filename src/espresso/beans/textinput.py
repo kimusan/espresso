@@ -44,19 +44,24 @@ class TextInput(Model):
         self.prompt_style = prompt_style or Style().bold(True).foreground("#7D56F4")
 
     def init(self) -> Cmd | None:
+        """Initialize component lifecycle (no-op for TextInput)."""
         return None
 
     def focus(self) -> None:
+        """Enable keyboard focus and show the cursor."""
         self.focused = True
 
     def blur(self) -> None:
+        """Remove focus and hide the cursor."""
         self.focused = False
 
     def set_value(self, val: str) -> None:
+        """Set the text content clamped to char_limit and move cursor to end."""
         self.value = val[: self.char_limit]
         self.cursor_pos = len(self.value)
 
     def update(self, msg: Msg) -> tuple[TextInput, Cmd | None]:
+        """Process keyboard navigation and character insertion messages."""
         if not self.focused:
             return self, None
 
@@ -99,6 +104,7 @@ class TextInput(Model):
         return self, None
 
     def view(self) -> str:
+        """Render the styled text input with prompt, text/mask, and cursor."""
         prompt_rendered = self.prompt_style.render(self.prompt)
 
         # Placeholder display when empty and not focused or focused with no text

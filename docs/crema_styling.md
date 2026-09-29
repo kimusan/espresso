@@ -88,6 +88,87 @@ style = (
 )
 ```
 
+### Border Titles
+Embed styled titles directly into the top border bar with custom alignment:
+
+```python
+from espresso.crema import Style, ROUNDED_BORDER, Align
+
+panel = (
+    Style()
+    .border(ROUNDED_BORDER)
+    .border_foreground("#7D56F4")
+    .border_title(" [ System Status ] ", align=Align.LEFT)
+    .width(40)
+    .render("All systems operational.")
+)
+print(panel)
+```
+
+Available title alignments:
+- `Align.LEFT`: `╭─ [ Title ] ──────────╮`
+- `Align.CENTER`: `╭─────── [ Title ] ───────╮`
+- `Align.RIGHT`: `╭────────── [ Title ] ─╮`
+
+If explicit box width is smaller than the title, Crema safely truncates the title with an ellipsis (`…`) while preserving box geometry and corner connections.
+
+---
+
+## Word Wrapping (`wrap_ansi`)
+
+Standard `textwrap` corrupts terminal strings containing ANSI escape codes, miscalculating visual character widths and causing color bleeding across wrapped lines.
+
+Crema provides `wrap_ansi(text, width)`:
+* **Preserves ANSI Sequences**: Active styles (colors, bold, underline) are carried over cleanly into wrapped lines.
+* **Prevents Color Bleeding**: Lines automatically terminate with reset codes (`\x1b[0m`) and reopen styles on the next line.
+* **Accurate Unicode Widths**: Evaluates CJK fullwidth characters and multi-byte emojis as 2 visual cells.
+* **Preserves Hard Breaks**: Existing newlines and paragraph breaks are respected.
+
+```python
+from espresso.crema import wrap_ansi, Style
+
+styled_text = Style().bold(True).foreground("#FF5252").render(
+    "Warning: The database connection timed out after multiple retry attempts across availability zones."
+)
+
+wrapped = wrap_ansi(styled_text, width=35)
+print(wrapped)
+```
+
+---
+
+## TrueColor Linear Gradients
+
+Crema provides TrueColor (24-bit RGB) linear interpolation across text strings and palette generation.
+
+### `linear_gradient(text, start_hex, end_hex)`
+Smoothly interpolates foreground RGB values across the printable characters of a string:
+
+```python
+from espresso.crema import linear_gradient
+
+# Horizontal TrueColor gradient from coral to neon pink
+banner = linear_gradient("ESPRESSO TERMINAL UI", "#FF5E3A", "#FF2A68")
+print(banner)
+
+# Multi-line gradient preserving newlines and preventing background bleed
+multiline_banner = linear_gradient("WELCOME\nTO\nESPRESSO", "#00E676", "#7D56F4")
+print(multiline_banner)
+```
+
+### `gradient(start_color, end_color, steps)`
+Generate a sequence of `TrueColor` steps for styling tables, progress bars, or charts:
+
+```python
+from espresso.crema import gradient, Style
+
+colors = gradient("#00E676", "#FF5252", steps=10)
+for idx, col in enumerate(colors):
+    print(Style().foreground(col).render(f"Step {idx + 1:2d}"))
+```
+
+All gradient functions automatically respect the `NO_COLOR` environment standard, rendering clean unstyled text when requested.
+
 ---
 
 ## 2D Layout Primitives

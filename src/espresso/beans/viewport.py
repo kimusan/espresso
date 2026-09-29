@@ -20,6 +20,7 @@ class Viewport(Model):
         self.y_offset = 0
 
     def init(self) -> Cmd | None:
+        """Initialize component lifecycle (no-op for Viewport)."""
         return None
 
     def set_content(self, text: str) -> None:
@@ -29,15 +30,18 @@ class Viewport(Model):
 
     @property
     def max_offset(self) -> int:
+        """Maximum allowable vertical scroll offset."""
         return max(0, len(self.lines) - self.height)
 
     @property
     def scroll_percent(self) -> float:
+        """Current scroll position ratio from 0.0 (top) to 1.0 (bottom)."""
         if self.max_offset == 0:
             return 1.0
         return self.y_offset / self.max_offset
 
     def update(self, msg: Msg) -> tuple[Viewport, Cmd | None]:
+        """Handle navigation keys and mouse wheel events to scroll content."""
         match msg:
             case KeyMsg(key="up" | "k"):
                 if self.y_offset > 0:
@@ -78,6 +82,10 @@ class Viewport(Model):
         return self, None
 
     def view(self) -> str:
+        """Render the visible window of lines truncated to width and padded to height."""
+        if self.width <= 0 or self.height <= 0:
+            return ""
+
         visible = self.lines[self.y_offset : self.y_offset + self.height]
         # Truncate lines to viewport width
         truncated = [truncate_ansi(l, self.width, tail="") for l in visible]

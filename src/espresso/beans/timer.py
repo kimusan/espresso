@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import time
 from dataclasses import dataclass
 from typing import Callable
@@ -45,10 +46,12 @@ class Timer(Model):
         style: Style | None = None,
         format_fn: Callable[[float], str] | None = None,
     ) -> None:
-        self.initial_timeout = max(0.0, float(timeout))
+        t = 0.0 if math.isnan(timeout) else timeout
+        self.initial_timeout = max(0.0, float(t))
         self.timeout = self.initial_timeout
         self.remaining = self.initial_timeout
-        self.interval = max(0.001, float(interval))
+        inv = 1.0 if math.isnan(interval) else interval
+        self.interval = max(0.001, float(inv))
         self.tag = tag
         self.auto_start = auto_start
         self.style = style
@@ -61,6 +64,7 @@ class Timer(Model):
         self._target_time: float = 0.0
 
     def init(self) -> Cmd | None:
+        """Initialize timer lifecycle, automatically starting countdown if configured."""
         if self.auto_start:
             return self.start()
         return None
@@ -125,6 +129,7 @@ class Timer(Model):
             self.timedout = True
 
     def update(self, msg: Msg) -> tuple[Timer, Cmd | None]:
+        """Advance remaining time on timer tick, scheduling next tick or emitting timeout message."""
         if isinstance(msg, TimerTickMsg) and msg.tag == self.tag and msg.id == self._tick_id:
             if not self.running:
                 return self, None
@@ -143,6 +148,7 @@ class Timer(Model):
         return self, None
 
     def view(self) -> str:
+        """Render the countdown timer formatted as HH:MM:SS or MM:SS."""
         if self.format_fn is not None:
             formatted = self.format_fn(self.remaining)
         else:
@@ -175,7 +181,8 @@ class Stopwatch(Model):
         style: Style | None = None,
         format_fn: Callable[[float], str] | None = None,
     ) -> None:
-        self.interval = max(0.001, float(interval))
+        inv = 0.1 if math.isnan(interval) else interval
+        self.interval = max(0.001, float(inv))
         self.tag = tag
         self.auto_start = auto_start
         self.style = style
@@ -187,6 +194,7 @@ class Stopwatch(Model):
         self._tick_id: int = 0
 
     def init(self) -> Cmd | None:
+        """Initialize stopwatch lifecycle, starting elapsed time tracking if configured."""
         if self.auto_start:
             return self.start()
         return None
@@ -233,11 +241,13 @@ class Stopwatch(Model):
 
     def set_elapsed(self, val: float) -> None:
         """Directly set elapsed time, primarily for testing or sync."""
-        self._accumulated_time = max(0.0, float(val))
+        v = 0.0 if math.isnan(val) else val
+        self._accumulated_time = max(0.0, float(v))
         if self.running:
             self._start_time = time.monotonic() - self._accumulated_time
 
     def update(self, msg: Msg) -> tuple[Stopwatch, Cmd | None]:
+        """Update elapsed duration on matching tick message and schedule next tick."""
         if isinstance(msg, StopwatchTickMsg) and msg.tag == self.tag and msg.id == self._tick_id:
             if not self.running:
                 return self, None
@@ -247,6 +257,7 @@ class Stopwatch(Model):
         return self, None
 
     def view(self) -> str:
+        """Render elapsed time formatted as MM:SS.hh or HH:MM:SS.hh."""
         if self.format_fn is not None:
             formatted = self.format_fn(self.elapsed)
         else:

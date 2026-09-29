@@ -13,5 +13,5 @@
 ## Architecture at a Glance
 
 * **`espresso`**: The core runtime engine coordinating terminal raw mode, event loop, and TEA dispatch.
-* **`espresso.crema`**: The styling and layout engine with TrueColor, ANSI 256, box model, and 2D joins.
-* **`espresso.beans`**: The standard component library (Spinners, TextInputs, Tables, Viewports, Progress bars).
+* **`espresso.crema`**: The styling and layout engine with TrueColor, ANSI 256, box model, border titles, word wrapping, gradients, and 2D joins.
+* **`espresso.beans`**: The standard component library (TextArea, Help, Timer, Stopwatch, Spinners, TextInputs, Tables, Viewports, Progress bars).

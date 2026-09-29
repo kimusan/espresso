@@ -141,3 +141,138 @@ def update(self, msg):
     self.table, cmd = self.table.update(msg)
     return self, cmd
 ```
+
+---
+
+## 6. TextArea
+
+The `TextArea` component provides an interactive multi-line text editor with customizable line numbers, viewport scrolling, tab indentation, and cursor navigation.
+
+### Usage
+```python
+from espresso.beans import TextArea
+from espresso.crema import Style
+
+editor = TextArea(
+    placeholder="Write your notes here...",
+    width=60,
+    height=12,
+    show_line_numbers=True,
+    tab_size=4,
+    line_number_style=Style().foreground("#555555"),
+    cursor_line_number_style=Style().bold(True).foreground("#7D56F4")
+)
+
+def update(self, msg):
+    self.editor, cmd = self.editor.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.editor.view()
+```
+
+### Features
+- **Line Numbers**: Optional gutter column with active cursor line highlighting (`show_line_numbers=True`, `toggle_line_numbers()`).
+- **Cursor Navigation**: Arrow keys (`Up`, `Down`, `Left`, `Right`), `Home` / `End`, `PageUp` / `PageDown`.
+- **Text Editing**: Character insertion, `Backspace` (merging lines), `Delete`, and `Enter`.
+- **Indentation**: Configurable `tab_size` inserting soft spaces on `Tab`.
+- **Limits**: Optional `char_limit` and `max_lines` constraints.
+- **Scroll Synchronization**: Automatic vertical and horizontal viewport tracking.
+
+---
+
+## 7. Help
+
+The `Help` component displays keyboard shortcut documentation. It dynamically toggles between a compact single-line view and a multi-column full reference.
+
+### Usage
+```python
+from espresso.beans import Help, KeyBinding
+
+# Define key bindings
+bindings = [
+    KeyBinding("enter", "submit order"),
+    KeyBinding("tab", "next field"),
+    KeyBinding("ctrl+c", "quit app"),
+    KeyBinding("?", "toggle full help", help_key="?")
+]
+
+help_view = Help(bindings, width=60, show_all=False)
+
+def update(self, msg):
+    match msg:
+        case KeyMsg(key="?"):
+            self.help_view.toggle()
+    return self, None
+
+def view(self):
+    return self.help_view.view()
+```
+
+### Modes
+- **Compact View (`show_all=False`)**: Displays a single horizontal line of hotkeys separated by `short_separator` (` • `), automatically truncating items that exceed `width`.
+- **Full View (`show_all=True`)**: Displays multi-column side-by-side grouped keybindings with aligned descriptions.
+- **`KeyMap` Protocol Support**: Pass custom container objects implementing `short_help()` and `full_help()`.
+
+---
+
+## 8. Timer
+
+The `Timer` component provides a high-precision countdown timer driven by Tea `tick` commands.
+
+### Usage
+```python
+from espresso.beans import Timer, TimerTimeoutMsg
+
+timer = Timer(timeout=60.0, interval=1.0, auto_start=True, tag="session_timer")
+
+def init(self):
+    return self.timer.init()
+
+def update(self, msg):
+    match msg:
+        case TimerTimeoutMsg(tag="session_timer"):
+            print("Session expired!")
+            return self, None
+    self.timer, cmd = self.timer.update(msg)
+    return self, cmd
+
+def view(self):
+    return f"Time Remaining: {self.timer.view()} ({int(self.timer.percent * 100)}%)"
+```
+
+### Methods & Properties
+- `start()` / `stop()` / `toggle()`: Controls countdown state.
+- `reset(timeout=None, start=False)`: Restores original or specifies a new duration.
+- `remaining` / `elapsed`: Current time remaining and elapsed in seconds.
+- `percent`: Completion progress from `0.0` (just started) to `1.0` (timed out).
+- `format_fn`: Optional custom formatter callback `(float) -> str`.
+
+---
+
+## 9. Stopwatch
+
+The `Stopwatch` component measures elapsed time with sub-second accuracy.
+
+### Usage
+```python
+from espresso.beans import Stopwatch
+
+sw = Stopwatch(interval=0.1, auto_start=True)
+
+def init(self):
+    return self.sw.init()
+
+def update(self, msg):
+    self.sw, cmd = self.sw.update(msg)
+    return self, cmd
+
+def view(self):
+    return f"Elapsed: {self.sw.view()}"  # e.g., "01:23.45"
+```
+
+### Controls
+- `start()`: Resumes tracking elapsed time.
+- `stop()`: Freezes the stopwatch.
+- `toggle()`: Flips between running and stopped states.
+- `reset(start=False)`: Clears elapsed time back to `0.0`.

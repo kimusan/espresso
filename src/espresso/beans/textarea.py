@@ -49,12 +49,15 @@ class TextArea(Model):
         self.placeholder_style = placeholder_style or Style().foreground("#666666")
 
     def init(self) -> Cmd | None:
+        """Initialize component lifecycle (no-op for TextArea)."""
         return None
 
     def focus(self) -> None:
+        """Enable keyboard focus and show the cursor."""
         self.focused = True
 
     def blur(self) -> None:
+        """Remove keyboard focus and hide the cursor."""
         self.focused = False
 
     @property
@@ -182,6 +185,7 @@ class TextArea(Model):
             self.col_offset = 0
 
     def update(self, msg: Msg) -> tuple[TextArea, Cmd | None]:
+        """Process keyboard navigation, character edits, tab indentation, and scroll wheel."""
         if not self.focused:
             return self, None
 
@@ -309,6 +313,12 @@ class TextArea(Model):
         return self, None
 
     def view(self) -> str:
+        """Render visible text lines, line number gutter, and cursor within the viewport."""
+        if self.width is not None and self.width <= 0:
+            return ""
+        if self.height is not None and self.height <= 0:
+            return ""
+
         total_lines = len(self.lines)
         gutter_w = max(2, len(str(total_lines)))
         sep = " │ "
