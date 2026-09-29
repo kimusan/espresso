@@ -49,8 +49,12 @@ class TestTerminalRenderFormatting(unittest.TestCase):
         p._render(p.model.view())
         output = out.getvalue()
 
-        self.assertIn("\r", output)
-        self.assertIn("\r\n", output)
+        # In alt screen, lines are placed with row;col coordinate jump and cleared before line text
+        self.assertIn("\x1b[1;1H", output)
+        self.assertIn("\x1b[2KLine 1", output)
+        self.assertIn("\x1b[2;1H", output)
+        self.assertIn("\x1b[2KLine 2", output)
+
 
     def test_blocking_io_recovery(self) -> None:
         out = MockBlockingStream()

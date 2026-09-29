@@ -18,11 +18,13 @@ ENTER_ALT_SCREEN = f"{CSI}?1049h"
 EXIT_ALT_SCREEN = f"{CSI}?1049l"
 CLEAR_SCREEN = f"{CSI}2J{CSI}H"
 CLEAR_LINE = f"{CSI}2K"
+CLEAR_TO_EOL = f"{CSI}K"
 CURSOR_UP = lambda n=1: f"{CSI}{n}A"
 CURSOR_DOWN = lambda n=1: f"{CSI}{n}B"
 CURSOR_TO_COL = lambda col=1: f"{CSI}{col}G"
 ENABLE_MOUSE_SGR = f"{CSI}?1000h{CSI}?1002h{CSI}?1006h"
 DISABLE_MOUSE_SGR = f"{CSI}?1000l{CSI}?1002l{CSI}?1006l"
+
 
 
 class TerminalDriver:

@@ -204,8 +204,8 @@ class Program:
             if not self._last_rendered_lines:
                 # Initial frame render
                 buf.append("\x1b[H")
-                for line in new_lines:
-                    buf.append(f"\r{line}{CLEAR_LINE}\r\n")
+                for i, line in enumerate(new_lines):
+                    buf.append(f"\x1b[{i + 1};1H\x1b[2K{line}")
             else:
                 max_lines = max(len(new_lines), len(self._last_rendered_lines))
                 for row_idx in range(max_lines):
@@ -215,21 +215,19 @@ class Program:
                     if old_line == new_line:
                         continue
 
-                    # Direct cursor jump to row (1-indexed) and col 1
-                    buf.append(f"\x1b[{row_idx + 1};1H\r")
+                    # Direct cursor jump to row (1-indexed), clear line, and write new_line
+                    buf.append(f"\x1b[{row_idx + 1};1H\x1b[2K")
                     if new_line is not None:
-                        buf.append(f"{new_line}{CLEAR_LINE}")
-                    else:
-                        buf.append(CLEAR_LINE)
+                        buf.append(new_line)
         else:
             # Inline mode: rewrite lines over the previously rendered block
             num_prev_lines = len(self._last_rendered_lines)
             if num_prev_lines > 1:
                 buf.append(CURSOR_UP(num_prev_lines - 1))
-            buf.append("\r" + CURSOR_TO_COL(1))
+            buf.append("\r")
 
             for i, line in enumerate(new_lines):
-                buf.append(f"\r{CURSOR_TO_COL(1)}{line}{CLEAR_LINE}")
+                buf.append(f"\r\x1b[2K{line}")
                 if i < len(new_lines) - 1:
                     buf.append("\r\n")
 
@@ -237,9 +235,10 @@ class Program:
             if len(new_lines) < num_prev_lines:
                 extra = num_prev_lines - len(new_lines)
                 for _ in range(extra):
-                    buf.append("\r\n" + CLEAR_LINE)
+                    buf.append("\r\n\x1b[2K")
                 buf.append(CURSOR_UP(extra))
                 buf.append("\r")
+
 
         self._last_rendered_lines = new_lines
         payload = "".join(buf)
