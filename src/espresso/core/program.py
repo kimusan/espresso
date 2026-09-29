@@ -192,17 +192,30 @@ class Program:
         buf = []
 
         if self.alt_screen:
-            # Move cursor to home position
-            buf.append("\x1b[H")
-            for i, line in enumerate(new_lines):
-                buf.append(f"{line}{CLEAR_LINE}\n")
-            # Clear remaining lines below if old view was taller
-            if len(new_lines) < len(self._last_rendered_lines):
-                remaining = len(self._last_rendered_lines) - len(new_lines)
-                for _ in range(remaining):
-                    buf.append(f"{CLEAR_LINE}\n")
+            # Line-diffing alt-screen renderer
+            if not self._last_rendered_lines:
+                # Initial frame render
+                buf.append("\x1b[H")
+                for line in new_lines:
+                    buf.append(f"{line}{CLEAR_LINE}\n")
+            else:
+                max_lines = max(len(new_lines), len(self._last_rendered_lines))
+                for row_idx in range(max_lines):
+                    old_line = self._last_rendered_lines[row_idx] if row_idx < len(self._last_rendered_lines) else None
+                    new_line = new_lines[row_idx] if row_idx < len(new_lines) else None
+
+                    if old_line == new_line:
+                        continue
+
+                    # Direct cursor jump to row (1-indexed)
+                    buf.append(f"\x1b[{row_idx + 1};1H")
+                    if new_line is not None:
+                        buf.append(f"{new_line}{CLEAR_LINE}")
+                    else:
+                        buf.append(CLEAR_LINE)
         else:
             # Inline mode: rewrite lines over the previously rendered block
+
             num_prev_lines = len(self._last_rendered_lines)
             if num_prev_lines > 1:
                 buf.append(CURSOR_UP(num_prev_lines - 1))
