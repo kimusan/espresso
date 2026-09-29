@@ -8,7 +8,7 @@ from typing import Any, Union
 
 from espresso.crema.border import Border
 from espresso.crema.color import Color, is_no_color, parse_color
-from espresso.crema.width import char_width, string_width, strip_ansi
+from espresso.crema.width import char_width, string_width, strip_ansi, truncate_ansi
 
 
 class Align(Enum):
@@ -59,6 +59,8 @@ class Style:
         self._border_sides: tuple[bool, bool, bool, bool] = (True, True, True, True)  # top, right, bottom, left
         self._border_fg: Color | None = None
         self._border_bg: Color | None = None
+        self._border_title: str | None = None
+        self._border_title_align: Align = Align.LEFT
 
     def copy(self) -> Style:
         """Create a deep copy of this Style for modification."""
@@ -155,6 +157,13 @@ class Style:
         s._border_bg = parse_color(color)
         return s
 
+    def border_title(self, title: str | None, align: Align = Align.LEFT) -> Style:
+        """Embed an optional styled title into the top border line."""
+        s = self.copy()
+        s._border_title = title
+        s._border_title_align = align
+        return s
+
     # Rendering
     def _text_prefix(self) -> str:
         """Generate open ANSI escape sequences for text attributes and colors."""
@@ -199,6 +208,11 @@ class Style:
         target_inner_w = max_line_w
         if self._width is not None:
             target_inner_w = max(self._width, max_line_w)
+        elif self._border_title is not None and self._border is not None:
+            pad_top, pad_right, pad_bottom, pad_left = self._padding
+            title_w = string_width(self._border_title)
+            needed_w = max(0, title_w + 2 - (pad_left + pad_right))
+            target_inner_w = max(target_inner_w, needed_w)
 
         # 2. Horizontal alignment & line padding
         aligned_lines: list[str] = []
@@ -248,8 +262,35 @@ class Style:
             if b_top:
                 tl = b.top_left if b_left else ""
                 tr = b.top_right if b_right else ""
-                border_bar = b.top * inner_box_w
-                bordered_lines.append(f"{b_prefix}{tl}{border_bar}{tr}{b_suffix}")
+                if self._border_title and inner_box_w > 0:
+                    title = self._border_title
+                    avail_w = max(0, inner_box_w - 2) if inner_box_w >= 4 else inner_box_w
+                    if string_width(title) > avail_w:
+                        title = truncate_ansi(title, avail_w)
+                    t_width = string_width(title)
+                    remaining = max(0, inner_box_w - t_width)
+
+                    if self._border_title_align == Align.CENTER:
+                        left_len = remaining // 2
+                        right_len = remaining - left_len
+                    elif self._border_title_align == Align.RIGHT:
+                        left_len = max(0, remaining - 1) if remaining >= 1 else 0
+                        right_len = remaining - left_len
+                    else:  # Align.LEFT
+                        left_len = 1 if remaining >= 1 else 0
+                        right_len = remaining - left_len
+
+                    left_bar = b.top * left_len
+                    right_bar = b.top * right_len
+
+                    left_part = f"{b_prefix}{tl}{left_bar}{b_suffix}" if (tl or left_bar) else ""
+                    right_part = f"{b_prefix}{right_bar}{tr}{b_suffix}" if (right_bar or tr) else ""
+                    title_part = title if (title.endswith("\x1b[0m") or "\x1b[" not in title) else f"{title}\x1b[0m"
+
+                    bordered_lines.append(f"{left_part}{title_part}{right_part}")
+                else:
+                    border_bar = b.top * inner_box_w
+                    bordered_lines.append(f"{b_prefix}{tl}{border_bar}{tr}{b_suffix}")
 
             # Content rows with side borders
             for row in padded_lines:

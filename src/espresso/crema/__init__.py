@@ -20,9 +20,11 @@ from espresso.crema.color import (
     is_no_color,
     parse_color,
 )
+from espresso.crema.gradient import gradient, hex_to_rgb, linear_gradient
 from espresso.crema.layout import join_horizontal, join_vertical, place
 from espresso.crema.style import Align, Style
 from espresso.crema.width import char_width, string_width, strip_ansi, truncate_ansi
+from espresso.crema.wrap import wrap_ansi
 
 __all__ = [
     # Style and Enums
@@ -36,20 +38,24 @@ __all__ = [
     "THICK_BORDER",
     "HIDDEN_BORDER",
     "BLOCK_BORDER",
-    # Colors
+    # Colors and Gradients
     "Color",
     "TrueColor",
     "ANSIColor",
     "AdaptiveColor",
     "parse_color",
     "is_no_color",
+    "gradient",
+    "linear_gradient",
+    "hex_to_rgb",
     # Layout
     "join_horizontal",
     "join_vertical",
     "place",
-    # Width and ANSI
+    # Width, Wrapping, and ANSI
     "char_width",
     "string_width",
     "strip_ansi",
     "truncate_ansi",
+    "wrap_ansi",
 ]
