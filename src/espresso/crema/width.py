@@ -41,8 +41,9 @@ def char_width(char: str) -> int:
     if eaw in ("W", "F"):
         return 2
 
-    # Common Emoji Ranges (pictographs, emoticons, transport, symbols)
-    if 0x1F300 <= code <= 0x1FAFF or 0x2600 <= code <= 0x27BF:
+    # Common Emoji Ranges (pictographs, emoticons, transport, supplemental symbols)
+    # Emojis in the Supplementary Multilingual Plane (SMP) that may have EAW='N'
+    if 0x1F300 <= code <= 0x1FAFF:
         return 2
 
     return 1

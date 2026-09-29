@@ -42,6 +42,10 @@ class TestCremaColorsAndWidth(unittest.TestCase):
         self.assertEqual(char_width("中"), 2)  # Chinese
         self.assertEqual(char_width("☕"), 2)  # Coffee emoji
         self.assertEqual(char_width("🚀"), 2)  # Rocket emoji
+        self.assertEqual(char_width("✕"), 1)  # Multiplication X symbol
+        self.assertEqual(char_width("✓"), 1)  # Check mark
+        self.assertEqual(char_width("✗"), 1)  # Ballot X
+        self.assertEqual(char_width("★"), 1)  # Star symbol
 
     def test_string_width_and_ansi_stripping(self) -> None:
         styled = "\x1b[1;31mHello\x1b[0m World"

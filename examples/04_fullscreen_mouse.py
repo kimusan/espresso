@@ -21,6 +21,7 @@ from espresso import (
     Cmd,
     KeyMsg,
     Model,
+    MouseAction,
     MouseButton,
     MouseMsg,
     Msg,
@@ -48,6 +49,7 @@ class FullscreenMouseApp(Model):
         self.clicks: list[str] = []
         self.color_idx = 0
         self.colors = ["#7D56F4", "#00E676", "#FF9100", "#E056FD", "#00B0FF"]
+        self.pressed_btn: str | None = None
 
     def init(self) -> Cmd | None:
         return None
@@ -69,18 +71,25 @@ class FullscreenMouseApp(Model):
                     self.counter -= 1
 
                 # Left click interaction
-                if btn == MouseButton.LEFT and act.value == "press":
-                    # Check button hit regions (approximate row positions)
-                    if 4 <= y <= 6 and 4 <= x <= 22:
-                        self.counter += 1
-                        self.clicks.append(f"Clicked [+1 Button] at ({x},{y})")
-                    elif 4 <= y <= 6 and 24 <= x <= 44:
-                        self.color_idx = (self.color_idx + 1) % len(self.colors)
-                        self.clicks.append(f"Clicked [Color Toggle] at ({x},{y})")
-                    elif 4 <= y <= 6 and 46 <= x <= 60:
-                        return self, quit_app
-                    else:
-                        self.clicks.append(f"Clicked canvas at ({x},{y})")
+                if btn == MouseButton.LEFT:
+                    if act == MouseAction.PRESS:
+                        # Buttons are at rows 2..4:
+                        # btn1: cols 0..21, btn2: cols 23..44, btn3: cols 46..63
+                        if 2 <= y <= 4 and 0 <= x <= 21:
+                            self.counter += 1
+                            self.pressed_btn = "count"
+                            self.clicks.append(f"Clicked [+ Count Button] at ({x}, {y})")
+                        elif 2 <= y <= 4 and 23 <= x <= 44:
+                            self.color_idx = (self.color_idx + 1) % len(self.colors)
+                            self.pressed_btn = "theme"
+                            self.clicks.append(f"Clicked [Switch Theme Button] at ({x}, {y})")
+                        elif 2 <= y <= 4 and 46 <= x <= 63:
+                            self.pressed_btn = "exit"
+                            return self, quit_app
+                        else:
+                            self.clicks.append(f"Clicked canvas at ({x}, {y})")
+                    elif act == MouseAction.RELEASE:
+                        self.pressed_btn = None
 
                     if len(self.clicks) > 8:
                         self.clicks.pop(0)
@@ -118,13 +127,16 @@ class FullscreenMouseApp(Model):
             .render("☕ ESPRESSO FULLSCREEN & MOUSE LAB")
         )
 
-        # Interactive Buttons
+        # Interactive Buttons (Rows 2..4)
         btn1 = (
             Style()
             .border(ROUNDED_BORDER)
             .border_foreground(active_color)
             .padding(0, 1)
-            .render(f"\033[1m[+] Click Count: {self.counter}\033[0m")
+            .width(18)
+            .align(Align.CENTER)
+            .reverse(self.pressed_btn == "count")
+            .render(f"+ Count: {self.counter}")
         )
 
         btn2 = (
@@ -132,7 +144,10 @@ class FullscreenMouseApp(Model):
             .border(ROUNDED_BORDER)
             .border_foreground(active_color)
             .padding(0, 1)
-            .render("\033[1m[🎨 Switch Theme]\033[0m")
+            .width(18)
+            .align(Align.CENTER)
+            .reverse(self.pressed_btn == "theme")
+            .render("🎨 Switch Theme")
         )
 
         btn3 = (
@@ -140,7 +155,10 @@ class FullscreenMouseApp(Model):
             .border(ROUNDED_BORDER)
             .border_foreground("#FF5252")
             .padding(0, 1)
-            .render("\033[1;31m[✕ Exit App]\033[0m")
+            .width(14)
+            .align(Align.CENTER)
+            .reverse(self.pressed_btn == "exit")
+            .render("\033[31m✕ Exit App\033[0m")
         )
 
         button_row = join_horizontal(Align.TOP, btn1, " ", btn2, " ", btn3)
@@ -150,7 +168,8 @@ class FullscreenMouseApp(Model):
             f"• Terminal Size:    {self.width} cols × {self.height} rows\n"
             f"• Last Mouse Event: \033[1;36m{self.last_mouse_event}\033[0m\n"
             f"• Active Theme:     {active_color}\n"
-            f"• Wheel Scroll:     Up/Down increments & decrements count"
+            f"• Wheel Scroll:     Up/Down increments & decrements count\n"
+            f"• Mouse Buttons:    Click buttons above or scroll anywhere"
         )
         info_box = (
             Style()
@@ -163,7 +182,7 @@ class FullscreenMouseApp(Model):
         # Event History Log
         log_lines = ["\033[1;33mRecent Mouse Clicks:\033[0m"]
         if not self.clicks:
-            log_lines.append("  (no clicks recorded yet)")
+            log_lines.append("  (no clicks recorded yet - click buttons above!)")
         else:
             for click_entry in self.clicks:
                 log_lines.append(f"  • {click_entry}")
@@ -183,7 +202,7 @@ class FullscreenMouseApp(Model):
             .render("Keys: [+] Increment  [-] Decrement  [c] Cycle Color  [q] Quit  |  Mouse: Left Click & Scroll")
         )
 
-        content = join_vertical(Align.LEFT, header, "", button_row, "", info_box, "", log_box, "", footer)
+        content = join_vertical(Align.LEFT, header, " ", button_row, " ", info_box, " ", log_box, " ", footer)
         return content
 
 
