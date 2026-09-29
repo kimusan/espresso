@@ -26,10 +26,11 @@ class TestKeys(unittest.TestCase):
         self.assertEqual(chars, ["h", "e", "l", "l", "o"])
 
     def test_parse_control_characters(self) -> None:
-        # Ctrl+C is ASCII 3, Enter is \r (13) or \n (10), Tab is \t (9)
-        keys = list(parse_keys("\x03\r\t"))
-        self.assertEqual([k.key.name for k in keys], ["ctrl+c", "enter", "tab"])
+        # Ctrl+C is ASCII 3, Ctrl+H is ASCII 8, Enter is \r (13) or \n (10), Tab is \t (9), Backspace is \x7f (127)
+        keys = list(parse_keys("\x03\x08\r\t\x7f"))
+        self.assertEqual([k.key.name for k in keys], ["ctrl+c", "ctrl+h", "enter", "tab", "backspace"])
         self.assertTrue(keys[0].key.ctrl)
+        self.assertTrue(keys[1].key.ctrl)
 
     def test_parse_arrows(self) -> None:
         # ANSI CSI arrow sequences: \x1b[A, \x1b[B, \x1b[C, \x1b[D

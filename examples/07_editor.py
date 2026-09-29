@@ -110,11 +110,11 @@ class EditorApp(Model):
         match msg:
             case WindowSizeMsg(width=w, height=h):
                 editor_w = max(40, w - 4)
-                # Subtract header (3 lines) and footer/help (4-6 lines)
-                editor_h = max(6, h - 9)
+                # Subtract header (1 line), status bar (1 line), help (1-4 lines), borders (2 lines)
+                editor_h = max(6, h - 8)
                 self.textarea.width = editor_w
                 self.textarea.height = editor_h
-                self.help.width = editor_w
+                self.help.width = editor_w + 2
                 return self, None
 
             case KeyMsg(key="ctrl+q" | "esc"):
@@ -132,7 +132,7 @@ class EditorApp(Model):
                 self.status_message = f"Line numbers {state}"
                 return self, None
 
-            case KeyMsg(key="ctrl+h"):
+            case KeyMsg(key="ctrl+h" | "f1"):
                 self.help.toggle()
                 return self, None
 
@@ -157,7 +157,8 @@ class EditorApp(Model):
         header = f"{badge}{file_info}"
 
         # Editor Box
-        editor_view = self.box_style.render(self.textarea.view())
+        box = self.box_style.width(self.textarea.width) if self.textarea.width else self.box_style
+        editor_view = box.render(self.textarea.view())
 
         # Status Bar
         row, col = self.textarea.cursor
@@ -180,12 +181,13 @@ class EditorApp(Model):
         status_line = self.status_bar_style.render(left_status + (" " * spacing) + right_status)
 
         # Help bar
+        self.help.width = bar_w
         help_rendered = self.help.view()
 
-        return join_vertical(Align.LEFT, header, editor_view, status_line, "", help_rendered)
+        return join_vertical(Align.LEFT, header, editor_view, status_line, help_rendered)
 
 
 if __name__ == "__main__":
     app = EditorApp()
-    p = Program(app)
+    p = Program(app, alt_screen=True)
     p.run()

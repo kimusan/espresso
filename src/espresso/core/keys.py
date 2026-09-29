@@ -66,7 +66,7 @@ CTRL_KEY_MAP: dict[int, str] = {
     5: "ctrl+e",
     6: "ctrl+f",
     7: "ctrl+g",
-    8: "backspace",  # Often ASCII BS (\x08)
+    8: "ctrl+h",
     9: "tab",
     10: "enter",  # Line Feed \n
     11: "ctrl+k",

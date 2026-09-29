@@ -67,9 +67,14 @@ class Program:
 
         reader_task: asyncio.Task[None] | None = None
         try:
-            # Emit initial window size
+            # Determine initial window size and notify model so initial view has correct dimensions
             w, h = self._terminal.get_size()
-            await self._queue.put(WindowSizeMsg(w, h))
+            if inspect.iscoroutinefunction(self.model.update):
+                self.model, size_cmd = await self.model.update(WindowSizeMsg(w, h))
+            else:
+                self.model, size_cmd = self.model.update(WindowSizeMsg(w, h))
+            if size_cmd is not None:
+                self._dispatch_cmd(size_cmd)
 
             # Trigger initial model command
             init_cmd = self.model.init()
@@ -129,6 +134,15 @@ class Program:
 
         if cmd is not None:
             self._dispatch_cmd(cmd)
+
+        if isinstance(msg, WindowSizeMsg) and self.alt_screen:
+            # On window resize in alt_screen, clear screen and reset diff buffer for a clean reflow
+            self._last_rendered_lines = []
+            try:
+                self.output_stream.write("\x1b[2J\x1b[H")
+                self.output_stream.flush()
+            except Exception:
+                pass
 
         # Re-render view
         self._render(self.model.view())
@@ -200,6 +214,11 @@ class Program:
         buf = []
 
         if self.alt_screen:
+            # Clamp rendered lines to terminal height to prevent terminal scrolling
+            term_w, term_h = self._terminal.get_size()
+            if term_h > 0 and len(new_lines) > term_h:
+                new_lines = new_lines[:term_h]
+
             # Line-diffing alt-screen renderer
             if not self._last_rendered_lines:
                 # Initial frame render
