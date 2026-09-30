@@ -22,7 +22,21 @@ from pathlib import Path
 # Add src/ to sys.path so example runs directly
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from espresso import Cmd, KeyMsg, Model, Msg, Program, WindowSizeMsg, quit_app
+from espresso import (
+    Cmd,
+    KeyMsg,
+    Model,
+    MouseAction,
+    MouseButton,
+    MouseMsg,
+    Msg,
+    Program,
+    WindowSizeMsg,
+    batch,
+    disable_mouse,
+    enable_mouse,
+    quit_app,
+)
 from espresso.beans import (
     ConfirmPrompt,
     ConfirmSubmitMsg,
@@ -101,7 +115,8 @@ class ComponentGallery(Model):
         self.width = max(80, ts.columns)
         self.height = max(24, ts.lines)
 
-        self.status_msg = "Use Tab / 1-4 to navigate tabs, 'd' for modal dialog, 't' for toast, 'q' to quit"
+        self.status_msg = "Use Tab / Click to navigate tabs, 'd' for modal dialog, 't' for toast, 'm' for mouse, 'q' to quit"
+        self.mouse_enabled = True
 
         # --- Component 1: Tabs ---
         self.tabs = Tabs(
@@ -277,6 +292,178 @@ class ComponentGallery(Model):
         )
         return toast_cmd
 
+    def _handle_mouse(self, msg: MouseMsg) -> tuple[ComponentGallery, Cmd | None]:
+        # Wheel scrolling behaves like Up/Down navigation keys
+        if msg.button == MouseButton.WHEEL_UP:
+            return self.update(KeyMsg("up"))
+        if msg.button == MouseButton.WHEEL_DOWN:
+            return self.update(KeyMsg("down"))
+
+        # Only process left-click press events
+        if msg.button != MouseButton.LEFT or msg.action != MouseAction.PRESS:
+            return self, None
+
+        # 1. Modal Dialog Click Handling
+        if self.show_dialog:
+            dialog_w = 50
+            dialog_lines = self.dialog.view().splitlines()
+            dialog_h = max(7, len(dialog_lines))
+            dx = (self.width - dialog_w) // 2
+            dy = (self.height - dialog_h) // 2
+
+            # Click outside dialog modal: dismiss
+            if msg.x < dx or msg.x >= dx + dialog_w or msg.y < dy or msg.y >= dy + dialog_h:
+                self.show_dialog = False
+                self.status_msg = "Dialog dismissed."
+                _, toast_cmd = self.toast_manager.add("Dialog dismissed", ToastLevel.INFO, duration=2.0)
+                return self, toast_cmd
+
+            # Click inside dialog: check buttons row
+            btn_row = dy + dialog_h - 2
+            if msg.y in (btn_row, btn_row - 1):
+                if msg.x < dx + (dialog_w // 2):
+                    self.show_dialog = False
+                    self.status_msg = "Deployment sequence initiated!"
+                    _, toast_cmd = self.toast_manager.add(
+                        "🚀 Deployment sequence initiated!",
+                        ToastLevel.SUCCESS,
+                        duration=4.0,
+                    )
+                    return self, toast_cmd
+                else:
+                    self.show_dialog = False
+                    self.status_msg = "Deployment cancelled."
+                    _, toast_cmd = self.toast_manager.add(
+                        "Action cancelled.",
+                        ToastLevel.WARNING,
+                        duration=2.5,
+                    )
+                    return self, toast_cmd
+            return self, None
+
+        # 2. Header Row Click (row 0): Tabs navigation
+        if msg.y == 0:
+            curr_x = 30  # Offset after title badge
+            for i, title in enumerate(self.tabs.titles):
+                label = f"{i + 1} {title}" if self.tabs.show_numbers else title
+                tab_w = string_width(label) + 2
+                if curr_x <= msg.x < curr_x + tab_w:
+                    self.tabs.set_active(i)
+                    self.status_msg = f"Switched to {title}"
+                    _, toast_cmd = self.toast_manager.add(
+                        f"Switched to Tab {i + 1}: {title}",
+                        ToastLevel.INFO,
+                        duration=2.0,
+                    )
+                    return self, toast_cmd
+                curr_x += tab_w + 2
+            return self, None
+
+        # 3. Footer Row Click (row self.height - 1): Action shortcuts
+        if msg.y >= self.height - 1:
+            if msg.x < 35:
+                next_tab = (self.tabs.active_tab + 1) % len(self.tabs.titles)
+                self.tabs.set_active(next_tab)
+                return self, None
+
+            if msg.x >= self.width - 10:
+                return self, quit_app
+            elif self.width - 28 <= msg.x < self.width - 10:
+                return self.update(KeyMsg("m"))
+            elif self.width - 40 <= msg.x < self.width - 28:
+                return self.update(KeyMsg("t"))
+            elif self.width - 55 <= msg.x < self.width - 40:
+                self.show_dialog = True
+                return self, None
+            return self, None
+
+        # 4. Content Panels Click
+        content_h, w_left, w_right = self._calc_layout()
+        curr_tab = self.tabs.active_tab
+
+        if msg.x < w_left:
+            # Left Panel Interaction
+            if curr_tab == 0:
+                # Tab 0: Filterable List
+                if msg.y == 2:
+                    return self.update(KeyMsg("/"))
+                elif msg.y >= 3:
+                    item_idx_on_page = (msg.y - 3) // 2
+                    start_idx = self.list.paginator.page * self.list.per_page
+                    target_idx = start_idx + item_idx_on_page
+                    if 0 <= target_idx < len(self.list.filtered_items):
+                        self.list.cursor = target_idx
+                        item = self.list.filtered_items[target_idx]
+                        self.selected_item = item
+                        self.status_msg = f"Inspecting: {item.title}"
+                        _, toast_cmd = self.toast_manager.add(
+                            f"Selected: {item.title}",
+                            ToastLevel.SUCCESS,
+                            duration=2.5,
+                        )
+                        return self, toast_cmd
+
+            elif curr_tab == 1:
+                # Tab 1: FilePicker
+                if msg.y >= 3:
+                    entry_idx_on_screen = msg.y - 3
+                    target_idx = self.file_picker.scroll_offset + entry_idx_on_screen
+                    entries = self.file_picker.entries
+                    if 0 <= target_idx < len(entries):
+                        if self.file_picker.cursor == target_idx:
+                            return self.update(KeyMsg("enter"))
+                        else:
+                            self.file_picker.cursor = target_idx
+                            entry = entries[target_idx]
+                            kind = "Directory" if entry.is_dir else "File"
+                            self.selected_file_str = f"{entry.name} ({kind})"
+                            self.status_msg = f"Browsing: {entry.name}"
+                            return self, None
+
+            elif curr_tab == 2:
+                # Tab 2: CLI Prompts
+                if msg.y <= 7:
+                    self.active_prompt_idx = 0
+                    opt_idx = msg.y - 3
+                    if 0 <= opt_idx < len(self.select_prompt.options):
+                        self.select_prompt.cursor = opt_idx
+                        return self.update(KeyMsg("enter"))
+                elif msg.y <= 15:
+                    self.active_prompt_idx = 1
+                    opt_idx = msg.y - 10
+                    if 0 <= opt_idx < len(self.multiselect_prompt.options):
+                        self.multiselect_prompt.cursor = opt_idx
+                        return self.update(KeyMsg(" "))
+                else:
+                    self.active_prompt_idx = 2
+                    if msg.x < w_left // 2:
+                        return self.update(KeyMsg("y"))
+                    else:
+                        return self.update(KeyMsg("n"))
+
+            elif curr_tab == 3:
+                # Tab 3: Tree View
+                if msg.y >= 3:
+                    node_idx = msg.y - 3
+                    visible_nodes = self.tree.visible_nodes
+                    if 0 <= node_idx < len(visible_nodes):
+                        if self.tree.cursor == node_idx:
+                            return self.update(KeyMsg(" "))
+                        else:
+                            self.tree.cursor = node_idx
+                            node = visible_nodes[node_idx]
+                            self.selected_node_label = node.label
+                            self.status_msg = f"Inspecting node: {node.label}"
+                            return self, None
+
+        else:
+            # Right Panel Interaction
+            if curr_tab == 2:
+                self.active_prompt_idx = (self.active_prompt_idx + 1) % 3
+                return self, None
+
+        return self, None
+
     def update(self, msg: Msg) -> tuple[ComponentGallery, Cmd | None]:
         cmds: list[Cmd] = []
 
@@ -286,6 +473,10 @@ class ComponentGallery(Model):
             self.height = max(20, msg.height)
             self._sync_child_dimensions()
             return self, None
+
+        # Mouse Events
+        if isinstance(msg, MouseMsg):
+            return self._handle_mouse(msg)
 
         # Toast Dismissal
         if isinstance(msg, ToastDismissMsg):
@@ -325,9 +516,27 @@ class ComponentGallery(Model):
             match msg.key:
                 case "q" | "ctrl+c":
                     return self, quit_app
-                case "d" | "m":
+                case "d":
                     self.show_dialog = True
                     return self, None
+                case "m":
+                    self.mouse_enabled = not self.mouse_enabled
+                    if self.mouse_enabled:
+                        self.status_msg = "Mouse tracking enabled (SGR 1006)"
+                        _, toast_cmd = self.toast_manager.add(
+                            "🖱 Mouse tracking enabled",
+                            ToastLevel.INFO,
+                            duration=2.5,
+                        )
+                        return self, batch(enable_mouse(), toast_cmd)
+                    else:
+                        self.status_msg = "Mouse tracking disabled"
+                        _, toast_cmd = self.toast_manager.add(
+                            "🚫 Mouse tracking disabled",
+                            ToastLevel.WARNING,
+                            duration=2.5,
+                        )
+                        return self, batch(disable_mouse(), toast_cmd)
                 case "t":
                     samples = [
                         ("Build completed successfully in 1.42s", ToastLevel.SUCCESS),
@@ -629,11 +838,17 @@ class ComponentGallery(Model):
         else:
             status_part = Style().foreground("#9999BB").render(f" {self.status_msg}")
 
+        mouse_badge = (
+            Style().bold(True).foreground("#00E676").render("[m] MOUSE: ON")
+            if self.mouse_enabled
+            else Style().foreground("#666688").render("[m] MOUSE: OFF")
+        )
+
         hints = (
             f"{Style().bold(True).foreground('#00E5FF').render('[Tab]')} Next  "
-            f"{Style().bold(True).foreground('#00E5FF').render('[1-4]')} Jump  "
             f"{Style().bold(True).foreground('#00E5FF').render('[d]')} Dialog  "
             f"{Style().bold(True).foreground('#00E5FF').render('[t]')} Toast  "
+            f"{mouse_badge}  "
             f"{Style().bold(True).foreground('#FF5252').render('[q]')} Quit "
         )
 
@@ -672,7 +887,7 @@ class ComponentGallery(Model):
 
 def main() -> None:
     app = ComponentGallery()
-    prog = Program(app, alt_screen=True)
+    prog = Program(app, alt_screen=True, mouse=True)
     prog.run()
 
 

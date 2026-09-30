@@ -48,5 +48,123 @@ class TestMouseParser(unittest.TestCase):
         self.assertEqual(events[2], "q")
 
 
+class TestMouseToggle(unittest.TestCase):
+    def test_program_fluent_and_direct_mouse_controls(self) -> None:
+        from espresso import Model, Program
+        from io import StringIO
+
+        class DummyModel(Model):
+            def init(self):
+                return None
+            def update(self, msg):
+                return self, None
+            def view(self):
+                return "hello"
+
+        prog = Program(DummyModel(), input_stream=StringIO(""), output_stream=StringIO())
+        self.assertFalse(prog.mouse)
+
+        prog.with_mouse(True)
+        self.assertTrue(prog.mouse)
+
+        prog.disable_mouse()
+        self.assertFalse(prog.mouse)
+
+        prog.enable_mouse()
+        self.assertTrue(prog.mouse)
+
+        res = prog.toggle_mouse()
+        self.assertFalse(res)
+        self.assertFalse(prog.mouse)
+
+        res2 = prog.toggle_mouse()
+        self.assertTrue(res2)
+        self.assertTrue(prog.mouse)
+
+    def test_terminal_driver_mouse_toggle(self) -> None:
+        from espresso.core.terminal import TerminalDriver
+
+        driver = TerminalDriver(mouse=False)
+        self.assertFalse(driver.mouse)
+
+        driver.enable_mouse()
+        self.assertTrue(driver.mouse)
+
+        driver.disable_mouse()
+        self.assertFalse(driver.mouse)
+
+    def test_tea_mouse_commands(self) -> None:
+        from espresso import DisableMouseMsg, EnableMouseMsg, disable_mouse, enable_mouse
+
+        cmd_enable = enable_mouse()
+        self.assertIsInstance(cmd_enable, EnableMouseMsg)
+        # Verify callable as Cmd
+        self.assertIs(cmd_enable(), cmd_enable)
+
+        cmd_disable = disable_mouse()
+        self.assertIsInstance(cmd_disable, DisableMouseMsg)
+        self.assertIs(cmd_disable(), cmd_disable)
+
+    def test_program_runtime_mouse_toggle(self) -> None:
+        import asyncio
+        from espresso import Cmd, DisableMouseMsg, EnableMouseMsg, KeyMsg, Model, Msg, Program, quit_app
+        from io import StringIO
+
+        class MouseTogglingModel(Model):
+            def __init__(self) -> None:
+                self.clicks = 0
+                self.mouse_on = False
+
+            def init(self) -> Cmd | None:
+                return None
+
+            def update(self, msg: Msg) -> tuple[Model, Cmd | None]:
+                if isinstance(msg, KeyMsg):
+                    if msg.key == "e":
+                        self.mouse_on = True
+                        from espresso import enable_mouse
+                        return self, enable_mouse()
+                    elif msg.key == "d":
+                        self.mouse_on = False
+                        from espresso import disable_mouse
+                        return self, disable_mouse()
+                    elif msg.key == "q":
+                        return self, quit_app
+                elif isinstance(msg, MouseMsg):
+                    self.clicks += 1
+                return self, None
+
+            def view(self) -> str:
+                return f"clicks: {self.clicks}, on: {self.mouse_on}"
+
+        model = MouseTogglingModel()
+        out = StringIO()
+        prog = Program(model, input_stream=StringIO(""), output_stream=out)
+
+        async def run_scenario():
+            # Initial state
+            self.assertFalse(prog.mouse)
+
+            # Send Key 'e' -> enables mouse via TEA command
+            await prog._handle_msg(KeyMsg("e"))
+            self.assertTrue(prog.mouse)
+
+            # Send Mouse click when mouse enabled -> should be processed
+            click_msg = MouseMsg(x=10, y=5, button=MouseButton.LEFT, action=MouseAction.PRESS)
+            await prog._handle_msg(click_msg)
+            self.assertEqual(prog.model.clicks, 1)
+
+            # Send Key 'd' -> disables mouse via TEA command
+            await prog._handle_msg(KeyMsg("d"))
+            self.assertFalse(prog.mouse)
+
+            # Send Mouse click when mouse disabled -> ignored by runtime
+            await prog._handle_msg(click_msg)
+            self.assertEqual(prog.model.clicks, 1)  # Unchanged!
+
+        asyncio.run(run_scenario())
+
+
 if __name__ == "__main__":
     unittest.main()
+

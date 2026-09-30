@@ -12,7 +12,20 @@ from typing import TextIO
 
 
 from espresso.core.keys import KeyMsg, parse_keys
-from espresso.core.tea import BatchMsg, Cmd, Model, Msg, QuitMsg, WindowSizeMsg, quit_app
+from espresso.core.mouse import MouseMsg
+from espresso.core.tea import (
+    BatchMsg,
+    Cmd,
+    DisableMouseMsg,
+    EnableMouseMsg,
+    Model,
+    Msg,
+    QuitMsg,
+    WindowSizeMsg,
+    disable_mouse,
+    enable_mouse,
+    quit_app,
+)
 from espresso.core.terminal import (
     CLEAR_LINE,
     CURSOR_TO_COL,
@@ -45,6 +58,36 @@ class Program:
         self._terminal = TerminalDriver(alt_screen=self.alt_screen, mouse=self.mouse)
         self._last_rendered_lines: list[str] = []
         self._bg_tasks: set[asyncio.Task[None]] = set()
+
+    def with_mouse(self, mouse: bool = True) -> Program:
+        """Set mouse tracking mode fluently on Program."""
+        self.mouse = mouse
+        self._terminal.mouse = mouse
+        return self
+
+    def with_alt_screen(self, alt_screen: bool = True) -> Program:
+        """Set alternate screen buffer mode fluently on Program."""
+        self.alt_screen = alt_screen
+        self._terminal.alt_screen = alt_screen
+        return self
+
+    def enable_mouse(self) -> None:
+        """Enable mouse tracking in the running or pending program."""
+        self.mouse = True
+        self._terminal.enable_mouse()
+
+    def disable_mouse(self) -> None:
+        """Disable mouse tracking in the running or pending program."""
+        self.mouse = False
+        self._terminal.disable_mouse()
+
+    def toggle_mouse(self) -> bool:
+        """Toggle mouse tracking on/off. Returns the new state."""
+        if self.mouse:
+            self.disable_mouse()
+        else:
+            self.enable_mouse()
+        return self.mouse
 
     def run(self) -> Model:
         """Run the program synchronously to completion."""
@@ -118,6 +161,15 @@ class Program:
         if isinstance(msg, QuitMsg):
             return True
 
+        if isinstance(msg, EnableMouseMsg):
+            self.enable_mouse()
+
+        if isinstance(msg, DisableMouseMsg):
+            self.disable_mouse()
+
+        if not self.mouse and isinstance(msg, MouseMsg):
+            return False
+
         if isinstance(msg, BatchMsg):
             for sub_msg in msg.messages:
                 quit_req = await self._handle_msg(sub_msg)
@@ -136,6 +188,14 @@ class Program:
         # Immediate quit check: if the model returned QuitMsg or quit_app
         if isinstance(cmd, QuitMsg) or cmd is quit_app:
             return True
+
+        # Dynamic mouse control commands from model
+        if cmd is enable_mouse or isinstance(cmd, EnableMouseMsg):
+            self.enable_mouse()
+            cmd = None
+        elif cmd is disable_mouse or isinstance(cmd, DisableMouseMsg):
+            self.disable_mouse()
+            cmd = None
 
         # Unhandled emergency abort check: Ctrl+C quits if model did not consume it
         if isinstance(msg, KeyMsg) and msg.key == "ctrl+c" and cmd is None:

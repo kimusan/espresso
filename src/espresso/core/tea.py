@@ -58,6 +58,22 @@ class TickMsg(Msg):
     tag: str = ""
 
 
+@dataclass(frozen=True)
+class EnableMouseMsg(Msg):
+    """Message instructing the Program runtime to enable mouse tracking."""
+
+    def __call__(self) -> EnableMouseMsg:
+        return self
+
+
+@dataclass(frozen=True)
+class DisableMouseMsg(Msg):
+    """Message instructing the Program runtime to disable mouse tracking."""
+
+    def __call__(self) -> DisableMouseMsg:
+        return self
+
+
 # A Cmd is either:
 # 1. A synchronous callable returning Msg or None: Callable[[], Msg | None]
 # 2. An asynchronous callable returning an awaitable of Msg or None: Callable[[], Awaitable[Msg | None]]
@@ -87,6 +103,16 @@ class Model(Protocol):
 def quit_app() -> QuitMsg:
     """Convenience command that returns a QuitMsg to shut down the application."""
     return QuitMsg()
+
+
+def enable_mouse() -> EnableMouseMsg:
+    """Convenience command to dynamically enable mouse tracking in the Program."""
+    return EnableMouseMsg()
+
+
+def disable_mouse() -> DisableMouseMsg:
+    """Convenience command to dynamically disable mouse tracking in the Program."""
+    return DisableMouseMsg()
 
 
 def batch(*cmds: Cmd | None) -> Cmd:

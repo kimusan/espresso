@@ -117,14 +117,26 @@ class TerminalDriver:
         sys.stdout.write("".join(out))
         sys.stdout.flush()
 
+    def enable_mouse(self) -> None:
+        """Enable SGR mouse tracking in the terminal."""
+        self.mouse = True
+        if self._is_tty:
+            sys.stdout.write(ENABLE_MOUSE_SGR)
+            sys.stdout.flush()
+
+    def disable_mouse(self) -> None:
+        """Disable SGR mouse tracking in the terminal."""
+        self.mouse = False
+        if self._is_tty:
+            sys.stdout.write(DISABLE_MOUSE_SGR)
+            sys.stdout.flush()
+
     def exit(self) -> None:
         """Restore canonical terminal mode and original screen buffer."""
         if not self._is_tty:
             return
 
-        out = [SHOW_CURSOR]
-        if self.mouse:
-            out.append(DISABLE_MOUSE_SGR)
+        out = [SHOW_CURSOR, DISABLE_MOUSE_SGR]
         if self.alt_screen:
             out.append(EXIT_ALT_SCREEN)
 
