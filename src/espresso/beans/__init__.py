@@ -7,6 +7,14 @@ from espresso.beans.dialog import Dialog, DialogResultMsg
 from espresso.beans.filepicker import FileEntry, FilePicker, FileSelectMsg, format_file_size
 from espresso.beans.help import Help, KeyBinding, KeyMap
 from espresso.beans.list import List, ListItem, ListSelectMsg
+from espresso.beans.metric import (
+    LayoutDirection,
+    Metric,
+    MetricGroup,
+    MetricLayout,
+    MetricTrend,
+)
+from espresso.beans.navstack import NavEntry, NavPopMsg, NavPushMsg, NavStack
 from espresso.beans.paginator import Paginator, PaginatorType
 from espresso.beans.progress import Progress
 from espresso.beans.prompt import (
@@ -28,6 +36,7 @@ from espresso.beans.spinner import (
     Spinner,
     SpinnerTickMsg,
 )
+from espresso.beans.statusbar import StatusBar, StatusSection
 from espresso.beans.table import Column, Table
 from espresso.beans.tabs import TabChangeMsg, TabStyle, Tabs
 from espresso.beans.textarea import TextArea
@@ -111,5 +120,19 @@ __all__ = [
     "Tree",
     "TreeNode",
     "TreeNodeSelectMsg",
+    # StatusBar
+    "StatusBar",
+    "StatusSection",
+    # Metric
+    "Metric",
+    "MetricGroup",
+    "MetricLayout",
+    "MetricTrend",
+    "LayoutDirection",
+    # NavStack
+    "NavStack",
+    "NavEntry",
+    "NavPushMsg",
+    "NavPopMsg",
 ]
 
