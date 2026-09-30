@@ -93,6 +93,10 @@ class TextArea(Model):
         """Return the cursor position as (row, col)."""
         return self.cursor_row, self.cursor_col
 
+    @cursor.setter
+    def cursor(self, pos: tuple[int, int]) -> None:
+        self.set_cursor(pos[0], pos[1])
+
     def set_cursor(self, row: int, col: int) -> None:
         """Set cursor position with clamping."""
         self.cursor_row = max(0, min(row, len(self.lines) - 1))
@@ -353,11 +357,17 @@ class TextArea(Model):
                 else:
                     line_rendered = f"{num_prefix}{self.placeholder_style.render(p_line)}"
 
-                output.append(line_rendered)
+                line_str = line_rendered
+                if self.width is not None:
+                    diff = self.width - string_width(line_str)
+                    if diff > 0:
+                        line_str = f"{line_str}{' ' * diff}"
+                output.append(line_str)
 
             if self.height is not None:
+                pad_w = self.width if self.width is not None else (gutter_total_w if self.show_line_numbers else 0)
                 while len(output) < self.height:
-                    output.append(" " * gutter_total_w if self.show_line_numbers else "")
+                    output.append(" " * pad_w)
 
             return "\n".join(output)
 
@@ -400,10 +410,16 @@ class TextArea(Model):
             else:
                 text_rendered = self.style.render(visible_text)
 
-            output_lines.append(f"{num_prefix}{text_rendered}")
+            line_str = f"{num_prefix}{text_rendered}"
+            if self.width is not None:
+                diff = self.width - string_width(line_str)
+                if diff > 0:
+                    line_str = f"{line_str}{' ' * diff}"
+            output_lines.append(line_str)
 
         if self.height is not None:
+            pad_w = self.width if self.width is not None else (gutter_total_w if self.show_line_numbers else 0)
             while len(output_lines) < self.height:
-                output_lines.append(" " * gutter_total_w if self.show_line_numbers else "")
+                output_lines.append(" " * pad_w)
 
         return "\n".join(output_lines)

@@ -14,7 +14,10 @@ def join_horizontal(align: Align, *blocks: str) -> str:
     if not non_empty:
         return ""
 
-    block_lines: list[list[str]] = [b.splitlines() for b in non_empty]
+    block_lines: list[list[str]] = [
+        b.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+        for b in non_empty
+    ]
     max_height = max(len(lines) for lines in block_lines)
 
     # Pad each block to max_height with blank lines according to alignment
@@ -56,7 +59,7 @@ def join_vertical(align: Align, *blocks: str) -> str:
 
     all_lines: list[str] = []
     for b in non_empty:
-        all_lines.extend(b.splitlines())
+        all_lines.extend(b.replace("\r\n", "\n").replace("\r", "\n").split("\n"))
 
     max_width = max((string_width(l) for l in all_lines), default=0)
 
@@ -80,7 +83,10 @@ def join_vertical(align: Align, *blocks: str) -> str:
 
 def place(width: int, height: int, h_align: Align, v_align: Align, content: str) -> str:
     """Place content inside a box of (width, height) cells with given alignments."""
-    lines = content.splitlines() if content else [""]
+    if not content:
+        lines = [""]
+    else:
+        lines = content.replace("\r\n", "\n").replace("\r", "\n").split("\n")
     # 1. Horizontal placement
     h_aligned: list[str] = []
     for line in lines:

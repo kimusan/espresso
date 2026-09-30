@@ -140,7 +140,7 @@ class Cell:
             raw = self.style.render(raw)
 
         # Pad and clamp each line to w, and pad line count to h
-        raw_lines = raw.splitlines() if raw else []
+        raw_lines = raw.replace("\r\n", "\n").replace("\r", "\n").split("\n") if raw else []
         lines: list[str] = []
         for line in raw_lines[:h]:
             line_w = string_width(line)

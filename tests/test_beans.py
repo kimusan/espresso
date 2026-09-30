@@ -15,6 +15,7 @@ from espresso.beans import (
     TextInput,
     Viewport,
 )
+from espresso.crema import ROUNDED_BORDER, Style
 
 
 class TestBeansComponents(unittest.TestCase):
@@ -65,6 +66,24 @@ class TestBeansComponents(unittest.TestCase):
         self.assertEqual(vp.y_offset, 1)
         self.assertIn("Line 2", vp.view())
         self.assertNotIn("Line 1", vp.view())
+
+    def test_viewport_empty_line_scrolling_constant_height(self) -> None:
+        """Verify Viewport rendered row count and enclosing border box height stay constant during scroll."""
+        content = "Line 1\n\nLine 3\n\n\nLine 6\nLine 7\n\n"
+        vp = Viewport(width=20, height=4)
+        vp.set_content(content)
+        box = Style().border(ROUNDED_BORDER).width(22)
+
+        for offset in range(vp.max_offset + 1):
+            vp.y_offset = offset
+            rendered_vp = vp.view()
+            vp_lines = rendered_vp.split("\n")
+            self.assertEqual(len(vp_lines), 4, f"Viewport height changed at offset {offset}")
+
+            bordered = box.render(rendered_vp)
+            box_lines = bordered.split("\n")
+            # 4 content rows + 2 border rows = 6 rows
+            self.assertEqual(len(box_lines), 6, f"Border box height changed at offset {offset}")
 
     def test_table_navigation(self) -> None:
         cols = [Column("ID", 5), Column("Name", 10)]

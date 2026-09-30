@@ -99,8 +99,8 @@ def place_overlay(
     Returns:
         The composited terminal view string.
     """
-    base_lines = base.splitlines() if base else []
-    overlay_lines = overlay.splitlines() if overlay else []
+    base_lines = base.replace("\r\n", "\n").replace("\r", "\n").split("\n") if base else []
+    overlay_lines = overlay.replace("\r\n", "\n").replace("\r", "\n").split("\n") if overlay else []
 
     if not overlay_lines:
         return base

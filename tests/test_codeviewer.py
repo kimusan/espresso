@@ -12,7 +12,7 @@ from espresso.beans.codeviewer import (
     highlight_python,
 )
 from espresso.core.keys import KeyMsg
-from espresso.crema import strip_ansi
+from espresso.crema import ROUNDED_BORDER, Style, strip_ansi
 
 
 class TestCodeViewer(unittest.TestCase):
@@ -69,6 +69,28 @@ class TestCodeViewer(unittest.TestCase):
         v2 = strip_ansi(cv.view())
         self.assertIn("fn main() {}", v2)
         self.assertIn("RUST", v2)
+
+    def test_set_size(self) -> None:
+        cv = CodeViewer(code="x = 1\ny = 2", width=40, height=10)
+        cv.set_size(60, 15)
+        self.assertEqual(cv.width, 60)
+        self.assertEqual(cv.height, 15)
+        self.assertEqual(cv.viewport.width, 60)
+
+    def test_code_viewer_empty_lines_scrolling_constant_height(self) -> None:
+        """Verify CodeViewer row count and border box height remain constant during scroll across empty lines."""
+        code = "line 1\n\nline 3\n\n\nline 6\nline 7\n\n"
+        cv = CodeViewer(code=code, width=40, height=6, show_footer=False)
+        box = Style().border(ROUNDED_BORDER).width(42)
+
+        for line in range(1, cv.total_lines + 1):
+            cv.set_cursor_line(line)
+            v = cv.view()
+            lines = v.split("\n")
+            self.assertEqual(len(lines), cv.viewport.height, f"CodeViewer height changed at cursor {line}")
+            b = box.render(v)
+            b_lines = b.split("\n")
+            self.assertEqual(len(b_lines), cv.viewport.height + 2, f"Border height changed at cursor {line}")
 
 
 if __name__ == "__main__":

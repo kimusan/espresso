@@ -186,6 +186,27 @@ class TestCremaStyleAndBox(unittest.TestCase):
         self.assertIn("\x1b[48;2;255;0;0m", content_row)
         self.assertIn("\x1b[48;2;0;0;255m", content_row)
 
+    def test_preserve_trailing_empty_lines(self) -> None:
+        """Verify that trailing empty lines are preserved by Style and layout functions."""
+        raw = "line 1\nline 2\n"
+        rendered = Style().render(raw)
+        lines = rendered.split("\n")
+        self.assertEqual(len(lines), 3)
+
+        bordered = Style().border(ROUNDED_BORDER).render(raw)
+        b_lines = bordered.split("\n")
+        # 3 content lines + 2 border lines (top + bottom) = 5 lines total
+        self.assertEqual(len(b_lines), 5)
+
+        jv = join_vertical(Align.LEFT, raw, "line 3")
+        self.assertEqual(len(jv.split("\n")), 4)
+
+        jh = join_horizontal(Align.TOP, raw, "foo\nbar\nbaz")
+        self.assertEqual(len(jh.split("\n")), 3)
+
+        pl = place(10, 5, Align.LEFT, Align.TOP, raw)
+        self.assertEqual(len(pl.split("\n")), 5)
+
 
 class TestCremaGradients(unittest.TestCase):
     def test_linear_gradient_foreground(self) -> None:

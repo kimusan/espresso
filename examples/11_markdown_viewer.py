@@ -160,9 +160,7 @@ class MarkdownViewerApp(Model):
         if isinstance(msg, WindowSizeMsg):
             self.width = max(60, msg.width)
             self.height = max(16, msg.height)
-            self.viewer.width = self.width - 4
-            self.viewer.height = self.height - 6
-            self.viewer.set_content(DOCS[self.active_doc_idx][1])
+            self.viewer.set_size(self.width - 4, self.height - 6)
             return self, None
 
         if isinstance(msg, MouseMsg):
@@ -197,7 +195,8 @@ class MarkdownViewerApp(Model):
         header = f"{header_title}   {tabs_bar}"
 
         # Markdown viewport inside rounded border
-        card = self.border_style.width(self.width - 2).render(self.viewer.view())
+        card_h = self.viewer.height + 2
+        card = self.border_style.width(self.width - 2).height(card_h).render(self.viewer.view())
 
         # Footer help
         help_text = "Tab / 1-3: Switch document • ↑/↓ or j/k: Scroll • PgUp/PgDn: Jump • q: Quit • Mouse Wheel enabled"

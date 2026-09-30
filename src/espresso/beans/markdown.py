@@ -23,7 +23,9 @@ from espresso.crema.width import string_width, truncate_ansi
 def render_markdown(text: str, width: int = 80) -> str:
     """Parse a markdown string and return terminal ANSI-styled lines."""
     lines: list[str] = []
-    raw_lines = text.splitlines()
+    if not text:
+        return ""
+    raw_lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
 
     # Pre-compile inline regexes
     bold_pattern = re.compile(r"(\*\*|__)(.*?)\1")
@@ -200,8 +202,21 @@ class MarkdownViewer(Model):
         """Update and re-parse the markdown document."""
         self.raw_content = content
         self.rendered_content = render_markdown(content, width=self.width)
+        viewport_h = max(2, self.height - 1 if self.show_footer else self.height)
+        self.viewport.width = self.width
+        self.viewport.height = viewport_h
         self.viewport.set_content(self.rendered_content)
         self.viewport.y_offset = 0
+
+    def set_size(self, width: int, height: int) -> None:
+        """Resize the markdown viewer and adjust viewport."""
+        self.width = max(20, width)
+        self.height = max(4, height)
+        self.rendered_content = render_markdown(self.raw_content, width=self.width)
+        viewport_h = max(2, self.height - 1 if self.show_footer else self.height)
+        self.viewport.width = self.width
+        self.viewport.height = viewport_h
+        self.viewport.set_content(self.rendered_content)
 
     def init(self) -> Cmd | None:
         return None

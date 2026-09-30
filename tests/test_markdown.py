@@ -7,7 +7,7 @@ import unittest
 from espresso.beans.markdown import MarkdownViewer, render_markdown
 from espresso.core.keys import KeyMsg
 from espresso.core.mouse import MouseAction, MouseButton, MouseMsg
-from espresso.crema import strip_ansi
+from espresso.crema import ROUNDED_BORDER, Style, strip_ansi
 
 
 class TestMarkdownViewer(unittest.TestCase):
@@ -86,6 +86,28 @@ def test():
         # Wheel up
         viewer, _ = viewer.update(MouseMsg(x=5, y=5, button=MouseButton.WHEEL_UP, action=MouseAction.PRESS))
         self.assertEqual(viewer.viewport.y_offset, 0)
+
+    def test_set_size(self) -> None:
+        viewer = MarkdownViewer(content="# Title\n\nBody", width=40, height=10)
+        viewer.set_size(60, 15)
+        self.assertEqual(viewer.width, 60)
+        self.assertEqual(viewer.height, 15)
+        self.assertEqual(viewer.viewport.width, 60)
+
+    def test_markdown_viewer_empty_lines_scrolling_constant_height(self) -> None:
+        """Verify MarkdownViewer row count and border box height remain constant during scroll."""
+        md = "# Heading 1\n\n\nParagraph 1\n\n\nParagraph 2\n\n"
+        viewer = MarkdownViewer(content=md, width=40, height=6, show_footer=False)
+        box = Style().border(ROUNDED_BORDER).width(42)
+
+        for offset in range(viewer.viewport.max_offset + 1):
+            viewer.viewport.y_offset = offset
+            v = viewer.view()
+            lines = v.split("\n")
+            self.assertEqual(len(lines), viewer.viewport.height, f"MarkdownViewer height changed at offset {offset}")
+            b = box.render(v)
+            b_lines = b.split("\n")
+            self.assertEqual(len(b_lines), viewer.viewport.height + 2, f"Border height changed at offset {offset}")
 
 
 if __name__ == "__main__":

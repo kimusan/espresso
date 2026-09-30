@@ -145,10 +145,7 @@ class EditorApp(Model):
                 editor_h = max(6, h - 8)
                 self.textarea.width = editor_w
                 self.textarea.height = editor_h
-                self.codeviewer.width = editor_w
-                self.codeviewer.height = editor_h
-                self.codeviewer.viewport.width = editor_w
-                self.codeviewer.viewport.height = max(2, editor_h)
+                self.codeviewer.set_size(editor_w, editor_h)
                 self.help.width = editor_w + 2
                 self.quickfix.height = min(8, max(4, h // 3))
                 return self, None
@@ -239,7 +236,13 @@ class EditorApp(Model):
         header = f"{badge}{file_info}"
 
         # Editor Box
-        box = self.box_style.width(self.textarea.width) if self.textarea.width else self.box_style
+        box_h = (self.textarea.height + 2) if self.textarea.height else None
+        box = self.box_style
+        if self.textarea.width:
+            box = box.width(self.textarea.width)
+        if box_h:
+            box = box.height(box_h)
+
         if self.preview_mode:
             content_view = self.codeviewer.view()
         else:
@@ -248,7 +251,7 @@ class EditorApp(Model):
 
         # Status Bar
         if self.preview_mode:
-            total_lines = len(self.codeviewer.code.splitlines())
+            total_lines = self.codeviewer.total_lines
             cursor_info = f" Ln {self.codeviewer.cursor_line} of {total_lines} (Syntax Preview) "
         else:
             row, col = self.textarea.cursor
@@ -275,7 +278,7 @@ class EditorApp(Model):
         help_rendered = self.help.view()
 
         base_view = join_vertical(Align.LEFT, header, editor_view, status_line, help_rendered)
-        total_h = len(base_view.splitlines())
+        total_h = len(base_view.replace("\r\n", "\n").replace("\r", "\n").split("\n"))
         return self.quickfix.wrap_view(base_view, width=bar_w, height=total_h)
 
 

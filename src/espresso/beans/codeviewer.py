@@ -99,7 +99,7 @@ THEME_MONOKAI = SyntaxTheme(
 
 def highlight_python(code: str, theme: SyntaxTheme) -> list[str]:
     """Highlight Python source code using the standard library tokenize module."""
-    raw_lines = code.splitlines()
+    raw_lines = code.replace("\r\n", "\n").replace("\r", "\n").split("\n") if code else [""]
     if not code.strip():
         return [theme.default.render(l) for l in raw_lines]
 
@@ -183,7 +183,7 @@ def highlight_code(code: str, language: str = "python", theme: SyntaxTheme | Non
         return highlight_python(code, th)
 
     # Generic regex tokenization for other languages
-    raw_lines = code.splitlines()
+    raw_lines = code.replace("\r\n", "\n").replace("\r", "\n").split("\n") if code else [""]
     kw_re = re.compile(r"\b(func|fn|function|var|let|const|type|struct|interface|package|import|export|return|if|else|switch|case|for|select|match|impl|trait|pub)\b")
     num_re = re.compile(r"\b\d+(\.\d+)?\b")
     str_re = re.compile(r"(\".*?\"|'.*?'|`.*?`)")
@@ -231,7 +231,7 @@ class CodeViewer(Model):
         self._rebuild_content()
 
     def _rebuild_content(self) -> None:
-        raw_lines = self.code.splitlines() or [""]
+        raw_lines = self.code.replace("\r\n", "\n").replace("\r", "\n").split("\n") if self.code else [""]
         highlighted = highlight_code(self.code, self.language, self.theme)
 
         gutter_w = max(2, len(str(len(raw_lines))))
@@ -261,6 +261,14 @@ class CodeViewer(Model):
             self.language = language
         self._rebuild_content()
 
+    def set_size(self, width: int, height: int) -> None:
+        """Resize the code viewer and adjust viewport."""
+        self.width = max(20, width)
+        self.height = max(4, height)
+        self.viewport.width = self.width
+        self.viewport.height = max(2, self.height - (1 if self.show_footer else 0))
+        self._rebuild_content()
+
     def set_cursor_line(self, line: int) -> None:
         """Set the active cursor line and adjust viewport."""
         self.cursor_line = max(1, line)
@@ -272,6 +280,13 @@ class CodeViewer(Model):
         elif target_offset >= self.viewport.y_offset + self.viewport.height:
             self.viewport.y_offset = target_offset - self.viewport.height + 1
 
+    @property
+    def total_lines(self) -> int:
+        """Return total line count preserving trailing empty lines."""
+        if not self.code:
+            return 1
+        return len(self.code.replace("\r\n", "\n").replace("\r", "\n").split("\n"))
+
     def init(self) -> Cmd | None:
         return None
 
@@ -280,8 +295,7 @@ class CodeViewer(Model):
         if isinstance(msg, KeyMsg):
             match msg.key:
                 case "down" | "j":
-                    total_lines = len(self.code.splitlines())
-                    if self.cursor_line < total_lines:
+                    if self.cursor_line < self.total_lines:
                         self.set_cursor_line(self.cursor_line + 1)
                     return self, None
                 case "up" | "k":
@@ -289,8 +303,7 @@ class CodeViewer(Model):
                         self.set_cursor_line(self.cursor_line - 1)
                     return self, None
                 case "pgdown" | "pagedown":
-                    total_lines = len(self.code.splitlines())
-                    self.set_cursor_line(min(total_lines, self.cursor_line + self.viewport.height))
+                    self.set_cursor_line(min(self.total_lines, self.cursor_line + self.viewport.height))
                     return self, None
                 case "pgup" | "pageup":
                     self.set_cursor_line(max(1, self.cursor_line - self.viewport.height))
@@ -299,7 +312,7 @@ class CodeViewer(Model):
                     self.set_cursor_line(1)
                     return self, None
                 case "end" | "G":
-                    self.set_cursor_line(len(self.code.splitlines()))
+                    self.set_cursor_line(self.total_lines)
                     return self, None
 
         self.viewport, cmd = self.viewport.update(msg)
@@ -311,7 +324,7 @@ class CodeViewer(Model):
         if not self.show_footer:
             return body
 
-        total_lines = len(self.code.splitlines())
+        total_lines = self.total_lines
         name = self.filename or f"snippet.{self.language}"
         pct = int(self.viewport.scroll_percent * 100)
         status_left = Style().bold(True).foreground("#00E5FF").render(f" {name} ")

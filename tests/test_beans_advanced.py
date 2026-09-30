@@ -14,7 +14,7 @@ from espresso.beans.timer import (
     TimerTimeoutMsg,
 )
 from espresso.core.keys import Key, KeyMsg
-from espresso.crema import strip_ansi
+from espresso.crema import ROUNDED_BORDER, Style, strip_ansi
 
 
 class TestTextAreaComponent(unittest.TestCase):
@@ -203,6 +203,30 @@ class TestTextAreaComponent(unittest.TestCase):
         # Attempting second enter when max_lines=2
         ta.update(KeyMsg("enter"))
         self.assertEqual(ta.line_count, 2)
+
+    def test_cursor_setter(self) -> None:
+        ta = TextArea()
+        ta.set_value("line 1\nline 2\nline 3")
+        ta.cursor = (1, 3)
+        self.assertEqual(ta.cursor, (1, 3))
+
+    def test_textarea_empty_lines_scrolling_constant_height(self) -> None:
+        """Verify TextArea row count and border box height remain constant during scroll."""
+        code = "line 1\n\nline 3\n\n\nline 6\nline 7\n\n"
+        for show_line_numbers in (True, False):
+            ta = TextArea(show_line_numbers=show_line_numbers, height=4, width=30)
+            ta.set_value(code)
+            box = Style().border(ROUNDED_BORDER).width(32)
+
+            max_offset = max(0, ta.line_count - ta.height)
+            for offset in range(max_offset + 1):
+                ta.row_offset = offset
+                v = ta.view()
+                lines = v.split("\n")
+                self.assertEqual(len(lines), 4, f"TextArea height changed at offset {offset}")
+                b = box.render(v)
+                b_lines = b.split("\n")
+                self.assertEqual(len(b_lines), 6, f"Border height changed at offset {offset}")
 
 
 class TestHelpComponent(unittest.TestCase):

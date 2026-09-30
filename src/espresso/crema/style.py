@@ -293,7 +293,10 @@ class Style:
     def render(self, *parts: Any) -> str:
         """Format and render text content according to the style rules."""
         raw_text = " ".join(str(p) for p in parts)
-        lines = raw_text.splitlines() if raw_text else [""]
+        if not raw_text:
+            lines = [""]
+        else:
+            lines = raw_text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
 
         # 1. Determine inner content width
         max_line_w = max((string_width(l) for l in lines), default=0)

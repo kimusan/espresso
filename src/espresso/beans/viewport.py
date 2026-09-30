@@ -25,7 +25,10 @@ class Viewport(Model):
 
     def set_content(self, text: str) -> None:
         """Set the text content to be displayed in the viewport."""
-        self.lines = text.splitlines() if text else []
+        if not text:
+            self.lines = []
+        else:
+            self.lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
         self.y_offset = min(self.y_offset, max(0, len(self.lines) - self.height))
 
     @property
@@ -94,4 +97,8 @@ class Viewport(Model):
         while len(truncated) < self.height:
             truncated.append("")
 
-        return self.style.render("\n".join(truncated))
+        vp_style = self.style
+        if vp_style._width is None and self.width > 0:
+            vp_style = vp_style.width(self.width)
+
+        return vp_style.render("\n".join(truncated))
