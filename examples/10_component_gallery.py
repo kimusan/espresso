@@ -59,10 +59,21 @@ from espresso.beans import (
     Tree,
     TreeNode,
     TreeNodeSelectMsg,
+    LayoutDirection,
+    Metric,
+    MetricGroup,
+    MetricLayout,
+    MetricTrend,
+    NavStack,
+    StatusBar,
+    StatusSection,
 )
 from espresso.crema import (
     Align,
+    Cell,
+    FlexBox,
     ROUNDED_BORDER,
+    Row,
     Style,
     join_horizontal,
     join_vertical,
@@ -120,7 +131,7 @@ class ComponentGallery(Model):
 
         # --- Component 1: Tabs ---
         self.tabs = Tabs(
-            titles=["Filterable List", "File Picker", "CLI Prompts", "Tree View"],
+            titles=["Filterable List", "File Picker", "CLI Prompts", "Tree View", "FlexBox & KPIs"],
             active_tab=0,
             tab_style=TabStyle.PILL,
             show_numbers=True,
@@ -142,6 +153,10 @@ class ComponentGallery(Model):
             ListItem("Line Diffing Buffer", "Zero-flicker double buffered screen redraw", "renderer"),
             ListItem("SGR Mouse Protocol", "Mouse clicks, dragging, and wheel scrolling", "mouse"),
             ListItem("Adaptive Colors", "Light/Dark background detection & NO_COLOR", "color"),
+            ListItem("Responsive FlexBox", "Stickers-inspired 2D proportional grid with ratios", "layout"),
+            ListItem("Multi-Section StatusBar", "Teacup-inspired responsive header/footer bar", "statusbar"),
+            ListItem("KPI Metric Cards", "OrtizAlec-inspired stat cards with trend arrows", "metric"),
+            ListItem("NavStack & Breadcrumbs", "BubbleO-inspired view stack with breadcrumb trail", "navstack"),
         ]
         self.list = List(
             items=list_items,
@@ -256,6 +271,62 @@ class ComponentGallery(Model):
             buttons=("Deploy Now", "Cancel"),
             width=50,
             border_foreground="#00E676",
+        )
+
+        # --- Component 8: FlexBox & Metrics & NavStack ---
+        self.metrics = MetricGroup(
+            [
+                Metric("Requests", "14,820", unit="/s", delta="+14.2%", trend=MetricTrend.UP, width=22),
+                Metric("Latency", "18.4", unit="ms", delta="-2.1ms", trend=MetricTrend.DOWN, invert_trend=True, width=22),
+                Metric("Cluster CPU", "46.8%", delta="+4.1%", trend=MetricTrend.UP, width=22),
+                Metric("Memory", "3.2 GB", delta="-120MB", trend=MetricTrend.DOWN, invert_trend=True, width=22),
+            ],
+            layout=MetricLayout.CARD,
+            direction=LayoutDirection.VERTICAL,
+        )
+
+        class ClusterDoc(Model):
+            def __init__(self, title: str, body: str, hint: str):
+                self.title = title
+                self.body = body
+                self.hint = hint
+            def init(self): return None
+            def update(self, msg): return self, None
+            def view(self):
+                lines = [
+                    f"{Style().bold(True).foreground('#00E5FF').render(self.title)}",
+                    f"{Style().foreground('#555577').render('--------------------------------------------------')}",
+                    f"{Style().foreground('#D0D0D0').render(self.body)}",
+                    "",
+                    f"{Style().bold(True).foreground('#00E676').render(self.hint)}",
+                ]
+                return "\n".join(lines)
+
+        self.nav_stack = NavStack(
+            initial_title="Overview",
+            initial_model=ClusterDoc(
+                "Global Cluster Infrastructure (Level 1)",
+                "• 8 worker nodes across us-east-1 (Primary) and eu-west-1 (Replica)\n"
+                "• 48 container pods active, 0 restarts in the last 24h\n"
+                "• Network mesh latency: 1.2ms (healthy)",
+                "💡 Click below or press 'p' to drill down into Microservices →",
+            ),
+        )
+
+        self.statusbar = StatusBar(
+            left=[
+                StatusSection("READY", Style().bold(True).foreground("#000000").background("#00E676").padding(0, 1), priority=3),
+                StatusSection("git:main*", Style().foreground("#D0D0D0").background("#2A2A3E").padding(0, 1), priority=2),
+            ],
+            center=[
+                StatusSection("cluster-prod-01.espresso.internal", Style().foreground("#FFD54F")),
+            ],
+            right=[
+                StatusSection("py 3.12", Style().foreground("#8888AA")),
+                StatusSection("utf-8", Style().foreground("#00E5FF")),
+                StatusSection("100% HEALTH", Style().bold(True).foreground("#FFFFFF").background("#7D56F4").padding(0, 1), priority=3),
+            ],
+            background="#161622",
         )
 
         self._sync_child_dimensions()
@@ -456,13 +527,66 @@ class ComponentGallery(Model):
                             self.status_msg = f"Inspecting node: {node.label}"
                             return self, None
 
+            elif curr_tab == 4:
+                # Tab 4: Click Left panel -> toggle metric layout
+                layouts = [MetricLayout.CARD, MetricLayout.TAG, MetricLayout.LIST]
+                next_idx = (layouts.index(self.metrics.layout) + 1) % len(layouts)
+                self.metrics.layout = layouts[next_idx]
+                layout_name = self.metrics.layout.value.upper()
+                self.status_msg = f"Metrics layout switched to {layout_name}"
+                _, toast_cmd = self.toast_manager.add(f"Metrics: {layout_name} mode", ToastLevel.INFO, duration=2.0)
+                return self, toast_cmd
+
         else:
             # Right Panel Interaction
             if curr_tab == 2:
                 self.active_prompt_idx = (self.active_prompt_idx + 1) % 3
                 return self, None
+            elif curr_tab == 4:
+                return self._cycle_navstack()
 
         return self, None
+
+    def _cycle_navstack(self) -> tuple[ComponentGallery, Cmd | None]:
+        if self.nav_stack.depth == 1:
+            class ServicesTier(Model):
+                def init(self): return None
+                def update(self, msg): return self, None
+                def view(self):
+                    lines = [
+                        Style().bold(True).foreground("#00E676").render("Microservices Tier (Level 2)"),
+                        Style().foreground("#555577").render("--------------------------------------------------"),
+                        "• api-gateway: 4 pods (0.01% error rate)\n• auth-svc: 2 pods (0.8ms token validation)\n• billing-svc: 3 pods (PCI-DSS compliant)",
+                        "",
+                        Style().bold(True).foreground("#FFD54F").render("💡 Click again to drill down into Database Shards →"),
+                    ]
+                    return "\n".join(lines)
+            self.nav_stack.push("Services", ServicesTier())
+            self.status_msg = "Drilled down into Services"
+            _, toast_cmd = self.toast_manager.add("NavStack: Pushed Services", ToastLevel.SUCCESS, duration=2.0)
+            return self, toast_cmd
+        elif self.nav_stack.depth == 2:
+            class DatabaseTier(Model):
+                def init(self): return None
+                def update(self, msg): return self, None
+                def view(self):
+                    lines = [
+                        Style().bold(True).foreground("#FFD54F").render("Database Cluster Shard 01 (Level 3)"),
+                        Style().foreground("#555577").render("--------------------------------------------------"),
+                        "• PostgreSQL 16 Primary: 4,800 IOPS (healthy)\n• Read replica us-east-1b: 0.1ms replication lag\n• WAL archive compression: 82%",
+                        "",
+                        Style().bold(True).foreground("#FF5252").render("💡 Click or press Esc to pop back to Overview ←"),
+                    ]
+                    return "\n".join(lines)
+            self.nav_stack.push("Database", DatabaseTier())
+            self.status_msg = "Drilled down into Database Shards"
+            _, toast_cmd = self.toast_manager.add("NavStack: Pushed Database", ToastLevel.SUCCESS, duration=2.0)
+            return self, toast_cmd
+        else:
+            self.nav_stack.pop()
+            self.status_msg = "Popped NavStack to parent"
+            _, toast_cmd = self.toast_manager.add("NavStack: Popped back", ToastLevel.INFO, duration=2.0)
+            return self, toast_cmd
 
     def update(self, msg: Msg) -> tuple[ComponentGallery, Cmd | None]:
         cmds: list[Cmd] = []
@@ -557,9 +681,22 @@ class ComponentGallery(Model):
                     prev_tab = (self.tabs.active_tab - 1) % len(self.tabs.titles)
                     self.tabs, _ = self.tabs.update(KeyMsg(str(prev_tab + 1)))
                     return self, None
-                case "1" | "2" | "3" | "4":
+                case "1" | "2" | "3" | "4" | "5":
                     self.tabs, _ = self.tabs.update(msg)
                     return self, None
+                case "p":
+                    if self.tabs.active_tab == 4:
+                        return self._cycle_navstack()
+                case "b":
+                    if self.tabs.active_tab == 4 and self.nav_stack.depth > 1:
+                        self.nav_stack.pop()
+                        return self, None
+                case "l":
+                    if self.tabs.active_tab == 4:
+                        layouts = [MetricLayout.CARD, MetricLayout.TAG, MetricLayout.LIST]
+                        next_idx = (layouts.index(self.metrics.layout) + 1) % len(layouts)
+                        self.metrics.layout = layouts[next_idx]
+                        return self, None
 
         # Delegate to active tab
         curr_tab = self.tabs.active_tab
@@ -660,6 +797,11 @@ class ComponentGallery(Model):
                     )
                     cmds.append(toast_cmd)
             return self, cmds[0] if cmds else None
+
+        elif curr_tab == 4:
+            # Tab 4: NavStack event delegation
+            self.nav_stack, ns_cmd = self.nav_stack.update(msg)
+            return self, ns_cmd
 
         return self, None
 
@@ -795,6 +937,31 @@ class ComponentGallery(Model):
             p_right = make_panel("🌿 Node Inspector", "\n".join(tree_lines), w_right, content_h, border_fg="#69F0AE")
             return p_left, p_right
 
+        elif curr_tab == 4:
+            # Tab 4: Stickers FlexBox & Metrics & BubbleO NavStack & Teacup StatusBar
+            inner_w_left = max(10, w_left - 4)
+            inner_h = max(4, content_h - 2)
+
+            # Left Panel: Responsive FlexBox Grid with Metric Cards & Tags
+            fb = FlexBox(width=inner_w_left, height=inner_h)
+            r1 = fb.new_row(ratio_y=4)
+            r1.new_cell(
+                content=lambda w, h: self.metrics.view(),
+                ratio_x=1,
+            )
+            r2 = fb.new_row(ratio_y=1)
+            hint_box = Style().foreground("#8888AA").render("💡 Click or press 'l' to toggle Metric layout (Card/Tag/List)\n💡 Press 'p' to push view, 'b' or Esc to pop NavStack")
+            r2.new_cell(content=hint_box, ratio_x=1)
+
+            p_left = make_panel("📊 Stickers FlexBox & Metrics", fb.render(), w_left, content_h, border_fg="#00E5FF")
+
+            # Right Panel: NavStack Breadcrumbs + View + Teacup StatusBar
+            nav_view = self.nav_stack.view()
+            sb_str = self.statusbar.set_width(w_right - 4).view()
+            p_right_content = join_vertical(Align.LEFT, nav_view, "", sb_str)
+            p_right = make_panel("🧭 BubbleO NavStack & Teacup StatusBar", p_right_content, w_right, content_h, border_fg="#7D56F4")
+            return p_left, p_right
+
         return "", ""
 
     def _render_header(self, total_w: int) -> str:
@@ -818,7 +985,7 @@ class ComponentGallery(Model):
         return Style().background("#1A1A28").render(truncate_ansi(header_line, total_w))
 
     def _render_footer(self, total_w: int) -> str:
-        tab_names = ["LIST & PAGINATOR", "FILESYSTEM PICKER", "CLI PROMPTS", "CODEBASE TREE"]
+        tab_names = ["LIST & PAGINATOR", "FILESYSTEM PICKER", "CLI PROMPTS", "CODEBASE TREE", "FLEXBOX & KPIS"]
         active_name = tab_names[self.tabs.active_tab]
         tab_badge = (
             Style()
@@ -826,7 +993,7 @@ class ComponentGallery(Model):
             .foreground("#000000")
             .background("#00E676")
             .padding(0, 1)
-            .render(f" TAB {self.tabs.active_tab + 1}/4: {active_name} ")
+            .render(f" TAB {self.tabs.active_tab + 1}/5: {active_name} ")
         )
 
         if self.toast_manager.has_toasts:
