@@ -10,12 +10,12 @@ from espresso.crema import Style, string_width, strip_ansi
 
 class TestMarquee(unittest.TestCase):
     def test_text_fits_width(self) -> None:
-        mq = Marquee("Short text", width=20)
+        mq = Marquee("Short text", width=20, loop_if_fits=False)
         v = strip_ansi(mq.view())
         self.assertEqual(string_width(v), 20)
         self.assertEqual(v.strip(), "Short text")
 
-        # Step does not change offset if text fits
+        # Step does not change offset if text fits and loop_if_fits is False
         mq.step()
         self.assertEqual(mq.offset, 0)
 

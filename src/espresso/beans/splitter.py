@@ -52,6 +52,8 @@ class Splitter(Model):
         divider_handle: str | None = None,
         divider_style: Style | None = None,
         active_divider_style: Style | None = None,
+        offset_x: int = 0,
+        offset_y: int = 0,
     ) -> None:
         self.pane1 = pane1
         self.pane2 = pane2
@@ -61,6 +63,8 @@ class Splitter(Model):
         self.min_pane1 = max(1, min_pane1)
         self.min_pane2 = max(1, min_pane2)
         self.ratio = max(0.05, min(0.95, ratio))
+        self.offset_x = offset_x
+        self.offset_y = offset_y
         self.is_dragging: bool = False
         self.is_focused: bool = True
 
@@ -74,6 +78,11 @@ class Splitter(Model):
         self.active_divider_style = active_divider_style or Style().bold(True).foreground("#00E5FF").background("#333355")
 
         self._sync_children_sizes()
+
+    def set_offset(self, x: int, y: int) -> None:
+        """Set the top-left screen position offset (column, row) for mouse hit-testing."""
+        self.offset_x = x
+        self.offset_y = y
 
     @property
     def total_available(self) -> int:
@@ -164,14 +173,20 @@ class Splitter(Model):
         resize_cmd: Cmd | None = None
 
         if isinstance(msg, MouseMsg):
+            local_x = msg.x - self.offset_x
+            local_y = msg.y - self.offset_y
             div_pos = self.divider_position
-            target_coord = msg.x if self.orientation == SplitterOrientation.HORIZONTAL else msg.y
+
+            target_coord = local_x if self.orientation == SplitterOrientation.HORIZONTAL else local_y
+            other_coord = local_y if self.orientation == SplitterOrientation.HORIZONTAL else local_x
+            max_other = self.height if self.orientation == SplitterOrientation.HORIZONTAL else self.width
 
             if msg.action == MouseAction.PRESS and msg.button == MouseButton.LEFT:
-                # Click directly on divider bar
-                if target_coord == div_pos:
+                # Click on or near divider bar (tolerance ±1 column/row) within component bounds
+                if 0 <= other_coord < max_other and abs(target_coord - div_pos) <= 1:
                     self.is_dragging = True
-                    return self, None
+                    resize_cmd = self.set_position(target_coord)
+                    return self, resize_cmd
 
             elif msg.action == MouseAction.MOTION:
                 if self.is_dragging:
@@ -182,6 +197,33 @@ class Splitter(Model):
                 if self.is_dragging:
                     self.is_dragging = False
                     return self, None
+
+            # Route mouse clicks to child panes when not dragging
+            if not self.is_dragging:
+                child_cmds: list[Cmd] = []
+                if self.orientation == SplitterOrientation.HORIZONTAL:
+                    if local_x < div_pos and isinstance(self.pane1, Model):
+                        p1_msg = msg.relative_to(self.offset_x, self.offset_y)
+                        self.pane1, c1 = self.pane1.update(p1_msg)
+                        if c1:
+                            child_cmds.append(c1)
+                    elif local_x > div_pos and isinstance(self.pane2, Model):
+                        p2_msg = msg.relative_to(self.offset_x + div_pos + 1, self.offset_y)
+                        self.pane2, c2 = self.pane2.update(p2_msg)
+                        if c2:
+                            child_cmds.append(c2)
+                else:
+                    if local_y < div_pos and isinstance(self.pane1, Model):
+                        p1_msg = msg.relative_to(self.offset_x, self.offset_y)
+                        self.pane1, c1 = self.pane1.update(p1_msg)
+                        if c1:
+                            child_cmds.append(c1)
+                    elif local_y > div_pos and isinstance(self.pane2, Model):
+                        p2_msg = msg.relative_to(self.offset_x, self.offset_y + div_pos + 1)
+                        self.pane2, c2 = self.pane2.update(p2_msg)
+                        if c2:
+                            child_cmds.append(c2)
+                return self, batch(*child_cmds) if child_cmds else None
 
         elif isinstance(msg, KeyMsg) and self.is_focused:
             step = 5 if (msg.key.ctrl or msg.key.alt) else 1
@@ -208,7 +250,7 @@ class Splitter(Model):
                         resize_cmd = self.set_ratio(0.5)
                         return self, resize_cmd
 
-        # Forward unhandled events to child models
+        # Forward unhandled non-mouse events to child models
         child_cmds: list[Cmd] = []
         if isinstance(self.pane1, Model):
             self.pane1, c1 = self.pane1.update(msg)

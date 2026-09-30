@@ -181,6 +181,7 @@ class InteractiveAnimatedApp(Model):
         self.border_style = Style().border(ROUNDED_BORDER).border_foreground("#7D56F4")
         self.footer_style = Style().foreground("#8888AA")
         self.card_style = Style().padding(1, 2)
+        self._sync_sizes()
 
     def init(self) -> Cmd | None:
         async def _ticker() -> Msg:
@@ -201,7 +202,18 @@ class InteractiveAnimatedApp(Model):
         self.sortable_list.width = inner_w - 2
         self.sortable_list.height = max(5, inner_h - 4)
 
+        # Set screen offsets (x, y) for mouse hit-testing within the bordered card
+        # Left border is at x=0, so inner content starts at x=1
+        self.splitter.set_offset(1, 3)
+        self.slider_vol.set_offset(1, 4)
+        self.slider_speed.set_offset(1, 6)
+        self.slider_bright.set_offset(1, 8)
+        self.range_slider.set_offset(1, 10)
+        self.sortable_list.set_offset(1, 6)
+
     def update(self, msg: Msg) -> tuple[InteractiveAnimatedApp, Cmd | None]:
+        cmds: list[Cmd] = []
+
         if isinstance(msg, WindowSizeMsg):
             self.width = max(60, msg.width)
             self.height = max(18, msg.height)
@@ -221,10 +233,12 @@ class InteractiveAnimatedApp(Model):
                 await asyncio.sleep(0.3)
                 return StreamTickMsg()
 
-            return self, _next_ticker
+            cmds.append(_next_ticker)
 
         # Marquee timer updates
         self.marquee, mq_cmd = self.marquee.update(msg)
+        if mq_cmd:
+            cmds.append(mq_cmd)
 
         if isinstance(msg, KeyMsg):
             match msg.key:
@@ -234,11 +248,11 @@ class InteractiveAnimatedApp(Model):
                     idx = int(str(msg.key)) - 1
                     self.active_tab = idx
                     self.tabs.set_active(idx)
-                    return self, None
+                    return self, batch(*cmds) if cmds else None
                 case "tab":
                     self.active_tab = (self.active_tab + 1) % len(self.tab_titles)
                     self.tabs.set_active(self.active_tab)
-                    return self, None
+                    return self, batch(*cmds) if cmds else None
 
         # Mouse clicks on header tab bar
         if isinstance(msg, MouseMsg) and msg.button == MouseButton.LEFT and msg.y == 0:
@@ -250,12 +264,10 @@ class InteractiveAnimatedApp(Model):
                     if cur_x <= msg.x < cur_x + t_len:
                         self.active_tab = idx
                         self.tabs.set_active(idx)
-                        return self, None
+                        return self, batch(*cmds) if cmds else None
                     cur_x += t_len + 2
 
         # Delegate to active tab component
-        cmds: list[Cmd] = [mq_cmd] if mq_cmd else []
-
         if self.active_tab == 0:
             self.splitter, c = self.splitter.update(msg)
             if c:

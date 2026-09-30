@@ -49,11 +49,15 @@ class SortableList(Model):
         picked_style: Style | None = None,
         handle_style: Style | None = None,
         target_indicator_style: Style | None = None,
+        offset_x: int = 0,
+        offset_y: int = 0,
     ) -> None:
         self.items: list[Any] = list(items or [])
         self.width = max(10, width)
         self.height = max(3, height)
         self.handle_char = handle_char
+        self.offset_x = offset_x
+        self.offset_y = offset_y
         def _default_formatter(it: Any) -> str:
             if isinstance(it, str):
                 return it
@@ -75,6 +79,11 @@ class SortableList(Model):
         self.picked_style = picked_style or Style().bold(True).foreground("#FFFFFF").background("#7D56F4")
         self.handle_style = handle_style or Style().foreground("#555577")
         self.target_indicator_style = target_indicator_style or Style().bold(True).foreground("#FFD54F")
+
+    def set_offset(self, x: int, y: int) -> None:
+        """Set the top-left screen position offset (column, row) for mouse hit-testing."""
+        self.offset_x = x
+        self.offset_y = y
 
     @property
     def selected_item(self) -> Any | None:
@@ -128,16 +137,20 @@ class SortableList(Model):
             return self, None
 
         if isinstance(msg, MouseMsg):
-            # Map click coordinate y to list row index
-            clicked_row = self.scroll_offset + msg.y
+            local_x = msg.x - self.offset_x
+            local_y = msg.y - self.offset_y
+
+            # Map local y coordinate to list row index
+            clicked_row = self.scroll_offset + local_y
 
             if msg.action == MouseAction.PRESS and msg.button == MouseButton.LEFT:
-                if 0 <= clicked_row < len(self.items):
-                    self.cursor = clicked_row
-                    self.dragging_index = clicked_row
-                    self.drag_target_index = clicked_row
-                    self.picked_index = None
-                    return self, None
+                if 0 <= local_x < self.width and 0 <= local_y < min(self.height, len(self.items) - self.scroll_offset):
+                    if 0 <= clicked_row < len(self.items):
+                        self.cursor = clicked_row
+                        self.dragging_index = clicked_row
+                        self.drag_target_index = clicked_row
+                        self.picked_index = None
+                        return self, None
 
             elif msg.action == MouseAction.MOTION:
                 if self.dragging_index is not None:
@@ -157,15 +170,17 @@ class SortableList(Model):
                     return self, None
 
             elif msg.button == MouseButton.WHEEL_UP:
-                if self.scroll_offset > 0:
-                    self.scroll_offset -= 1
-                return self, None
+                if 0 <= local_x < self.width and 0 <= local_y < self.height:
+                    if self.scroll_offset > 0:
+                        self.scroll_offset -= 1
+                    return self, None
 
             elif msg.button == MouseButton.WHEEL_DOWN:
-                max_offset = max(0, len(self.items) - self.height)
-                if self.scroll_offset < max_offset:
-                    self.scroll_offset += 1
-                return self, None
+                if 0 <= local_x < self.width and 0 <= local_y < self.height:
+                    max_offset = max(0, len(self.items) - self.height)
+                    if self.scroll_offset < max_offset:
+                        self.scroll_offset += 1
+                    return self, None
 
         elif isinstance(msg, KeyMsg):
             match msg.key:

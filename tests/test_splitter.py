@@ -97,6 +97,27 @@ class TestSplitter(unittest.TestCase):
         sp, _ = sp.update(MouseMsg(x=20, y=5, button=MouseButton.NONE, action=MouseAction.MOTION))
         self.assertEqual(sp.pane1_size, 50)
 
+    def test_mouse_drag_with_offset(self) -> None:
+        sp = Splitter("P1", "P2", orientation=SplitterOrientation.HORIZONTAL, width=81, height=10, ratio=0.5, offset_x=10, offset_y=5)
+        self.assertEqual(sp.divider_position, 40)
+        # On screen, divider is at screen x = 10 + 40 = 50, screen y = 5..14
+
+        # Clicking outside y bounds does nothing
+        sp, _ = sp.update(MouseMsg(x=50, y=2, button=MouseButton.LEFT, action=MouseAction.PRESS))
+        self.assertFalse(sp.is_dragging)
+
+        # Clicking at screen x=50, y=7 grabs divider
+        sp, _ = sp.update(MouseMsg(x=50, y=7, button=MouseButton.LEFT, action=MouseAction.PRESS))
+        self.assertTrue(sp.is_dragging)
+
+        # Dragging to screen x=65 -> local x = 55
+        sp, _ = sp.update(MouseMsg(x=65, y=7, button=MouseButton.LEFT, action=MouseAction.MOTION))
+        self.assertEqual(sp.pane1_size, 55)
+
+        # Release
+        sp, _ = sp.update(MouseMsg(x=65, y=7, button=MouseButton.LEFT, action=MouseAction.RELEASE))
+        self.assertFalse(sp.is_dragging)
+
 
 if __name__ == "__main__":
     unittest.main()

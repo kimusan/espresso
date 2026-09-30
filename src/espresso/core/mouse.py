@@ -46,6 +46,30 @@ class MouseMsg(Msg):
     def __str__(self) -> str:
         return f"MouseMsg({self.button.value}, {self.action.value}, x={self.x}, y={self.y})"
 
+    def translate(self, dx: int, dy: int) -> MouseMsg:
+        """Return a new MouseMsg offset by (dx, dy)."""
+        return MouseMsg(
+            x=self.x + dx,
+            y=self.y + dy,
+            button=self.button,
+            action=self.action,
+            ctrl=self.ctrl,
+            alt=self.alt,
+            shift=self.shift,
+        )
+
+    def relative_to(self, origin_x: int = 0, origin_y: int = 0) -> MouseMsg:
+        """Return a new MouseMsg relative to an (origin_x, origin_y) coordinate."""
+        return MouseMsg(
+            x=self.x - origin_x,
+            y=self.y - origin_y,
+            button=self.button,
+            action=self.action,
+            ctrl=self.ctrl,
+            alt=self.alt,
+            shift=self.shift,
+        )
+
 
 # SGR 1006 pattern: \x1b[<b;x;y(M|m)
 SGR_MOUSE_REGEX = re.compile(r"^\x1b\[<(\d+);(\d+);(\d+)([Mm])")

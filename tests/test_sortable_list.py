@@ -90,6 +90,24 @@ class TestSortableList(unittest.TestCase):
         self.assertIn("First Item", v)
         self.assertIn("Second Item", v)
 
+    def test_mouse_drag_with_offset(self) -> None:
+        items = ["A", "B", "C", "D"]
+        sl = SortableList(items=items, width=30, height=10, offset_x=2, offset_y=5)
+
+        # Click at screen x=5, y=5 (which is local x=3, local y=0 -> item 0: "A")
+        sl, _ = sl.update(MouseMsg(x=5, y=5, button=MouseButton.LEFT, action=MouseAction.PRESS))
+        self.assertEqual(sl.dragging_index, 0)
+
+        # Drag to screen y=7 (local y=2 -> item 2: "C")
+        sl, _ = sl.update(MouseMsg(x=5, y=7, button=MouseButton.LEFT, action=MouseAction.MOTION))
+        self.assertEqual(sl.drag_target_index, 2)
+
+        # Release to commit move of "A" to index 2
+        sl, cmd = sl.update(MouseMsg(x=5, y=7, button=MouseButton.LEFT, action=MouseAction.RELEASE))
+        self.assertIsNone(sl.dragging_index)
+        self.assertEqual(sl.items, ["B", "C", "A", "D"])
+        self.assertIsNotNone(cmd)
+
 
 if __name__ == "__main__":
     unittest.main()

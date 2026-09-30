@@ -130,6 +130,29 @@ class TestRangeSlider(unittest.TestCase):
         rs, _ = rs.update(MouseMsg(x=drag_x, y=0, button=MouseButton.LEFT, action=MouseAction.RELEASE))
         self.assertIsNone(rs.dragging_thumb)
 
+    def test_multi_slider_row_isolation(self) -> None:
+        # Simulate two sliders stacked vertically at row 4 and row 6
+        s1 = Slider(min_val=0, max_val=100, value=10, width=30, offset_x=1, offset_y=4)
+        s2 = Slider(min_val=0, max_val=100, value=20, width=30, offset_x=1, offset_y=6)
+
+        # Click at screen row 4 (s1's row)
+        click_msg = MouseMsg(x=15, y=4, button=MouseButton.LEFT, action=MouseAction.PRESS)
+        s1, _ = s1.update(click_msg)
+        s2, _ = s2.update(click_msg)
+
+        # Only s1 should be dragging
+        self.assertTrue(s1.is_dragging)
+        self.assertFalse(s2.is_dragging)
+
+        # Drag at screen row 4
+        drag_msg = MouseMsg(x=25, y=4, button=MouseButton.LEFT, action=MouseAction.MOTION)
+        s1, _ = s1.update(drag_msg)
+        s2, _ = s2.update(drag_msg)
+
+        # s1 changed, s2 stayed at 20
+        self.assertNotEqual(s1.value, 10)
+        self.assertEqual(s2.value, 20)
+
 
 if __name__ == "__main__":
     unittest.main()

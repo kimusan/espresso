@@ -47,6 +47,17 @@ class TestMouseParser(unittest.TestCase):
         self.assertEqual(events[1].button, MouseButton.LEFT)
         self.assertEqual(events[2], "q")
 
+    def test_translate_and_relative_to(self) -> None:
+        msg = MouseMsg(x=25, y=10, button=MouseButton.LEFT, action=MouseAction.PRESS)
+        translated = msg.translate(-5, 2)
+        self.assertEqual(translated.x, 20)
+        self.assertEqual(translated.y, 12)
+        self.assertEqual(translated.button, MouseButton.LEFT)
+
+        rel = msg.relative_to(5, 3)
+        self.assertEqual(rel.x, 20)
+        self.assertEqual(rel.y, 7)
+
 
 class TestMouseToggle(unittest.TestCase):
     def test_program_fluent_and_direct_mouse_controls(self) -> None:

@@ -40,6 +40,7 @@ class Marquee(Model):
         style: Style | None = None,
         tag: str = "marquee",
         auto_start: bool = True,
+        loop_if_fits: bool = True,
     ) -> None:
         self.text = text
         self.width = max(4, width)
@@ -50,6 +51,7 @@ class Marquee(Model):
         self.style = style or Style()
         self.tag = tag
         self.auto_start = auto_start
+        self.loop_if_fits = loop_if_fits
 
         self.offset: int = 0
         self.direction: int = 1  # 1 for forward, -1 for backward (bounce mode)
@@ -69,8 +71,10 @@ class Marquee(Model):
     def step(self) -> None:
         """Advance the animation by one character step."""
         text_w = string_width(self.text)
-        if text_w <= self.width:
-            # No scrolling needed if text fits
+        if self.mode == MarqueeMode.BOUNCE and text_w <= self.width:
+            self.offset = 0
+            return
+        if self.mode == MarqueeMode.LOOP and not self.loop_if_fits and text_w <= self.width:
             self.offset = 0
             return
 
@@ -81,7 +85,7 @@ class Marquee(Model):
         if self.mode == MarqueeMode.LOOP:
             loop_unit = f"{self.text}{self.separator}"
             unit_len = string_width(loop_unit)
-            self.offset = (self.offset + 1) % unit_len
+            self.offset = (self.offset + 1) % max(1, unit_len)
 
         elif self.mode == MarqueeMode.BOUNCE:
             max_offset = text_w - self.width
@@ -111,8 +115,11 @@ class Marquee(Model):
 
     def init(self) -> Cmd | None:
         """Emit initial animation tick if auto_start is True."""
-        if self.auto_start and string_width(self.text) > self.width:
-            return self.tick()
+        if self.auto_start:
+            if self.mode == MarqueeMode.LOOP and self.loop_if_fits:
+                return self.tick()
+            elif string_width(self.text) > self.width:
+                return self.tick()
         return None
 
     def update(self, msg: Msg) -> tuple[Marquee, Cmd | None]:
@@ -126,8 +133,12 @@ class Marquee(Model):
         """Render the visible slice of scrolling text padded to self.width."""
         text_w = string_width(self.text)
 
-        # 1. Fits within window: no scroll
-        if text_w <= self.width:
+        # 1. Fits within window in non-looping or bounce mode: no scroll
+        if self.mode == MarqueeMode.BOUNCE and text_w <= self.width:
+            pad = " " * (self.width - text_w)
+            return self.style.render(f"{self.text}{pad}")
+
+        if self.mode == MarqueeMode.LOOP and not self.loop_if_fits and text_w <= self.width:
             pad = " " * (self.width - text_w)
             return self.style.render(f"{self.text}{pad}")
 

@@ -51,6 +51,8 @@ class Slider(Model):
         thumb_style: Style | None = None,
         label_style: Style | None = None,
         value_style: Style | None = None,
+        offset_x: int = 0,
+        offset_y: int = 0,
     ) -> None:
         self.min_val = min_val
         self.max_val = max(min_val + 0.001, max_val)
@@ -59,6 +61,8 @@ class Slider(Model):
         self.label = label
         self.show_value = show_value
         self.value_format = value_format
+        self.offset_x = offset_x
+        self.offset_y = offset_y
 
         self.track_char = track_char
         self.filled_char = filled_char
@@ -73,6 +77,11 @@ class Slider(Model):
         self.is_dragging: bool = False
         self.focused: bool = True
         self._value = max(self.min_val, min(self.max_val, value))
+
+    def set_offset(self, x: int, y: int) -> None:
+        """Set the top-left screen position offset (column, row) for mouse hit-testing."""
+        self.offset_x = x
+        self.offset_y = y
 
     @property
     def value(self) -> float:
@@ -121,25 +130,32 @@ class Slider(Model):
         label_w, track_w = self._track_layout()
 
         if isinstance(msg, MouseMsg):
+            local_x = msg.x - self.offset_x
+            local_y = msg.y - self.offset_y
+
             # Mouse wheel
             if msg.button == MouseButton.WHEEL_UP:
-                cmd = self.set_value(self._value + self.step)
-                return self, cmd
+                if local_y == 0 and label_w <= local_x <= label_w + track_w:
+                    cmd = self.set_value(self._value + self.step)
+                    return self, cmd
+                return self, None
             elif msg.button == MouseButton.WHEEL_DOWN:
-                cmd = self.set_value(self._value - self.step)
-                return self, cmd
+                if local_y == 0 and label_w <= local_x <= label_w + track_w:
+                    cmd = self.set_value(self._value - self.step)
+                    return self, cmd
+                return self, None
 
             # Click or Drag
             if msg.action == MouseAction.PRESS and msg.button == MouseButton.LEFT:
-                if label_w <= msg.x <= label_w + track_w:
+                if local_y == 0 and label_w <= local_x <= label_w + track_w:
                     self.is_dragging = True
-                    ratio = (msg.x - label_w) / max(1, track_w - 1)
+                    ratio = (local_x - label_w) / max(1, track_w - 1)
                     target_val = self.min_val + ratio * (self.max_val - self.min_val)
                     cmd = self.set_value(target_val)
                     return self, cmd
 
             elif msg.action == MouseAction.MOTION and self.is_dragging:
-                ratio = (msg.x - label_w) / max(1, track_w - 1)
+                ratio = (local_x - label_w) / max(1, track_w - 1)
                 ratio = max(0.0, min(1.0, ratio))
                 target_val = self.min_val + ratio * (self.max_val - self.min_val)
                 cmd = self.set_value(target_val)
@@ -223,6 +239,8 @@ class RangeSlider(Model):
         active_thumb_style: Style | None = None,
         label_style: Style | None = None,
         value_style: Style | None = None,
+        offset_x: int = 0,
+        offset_y: int = 0,
     ) -> None:
         self.min_val = min_val
         self.max_val = max(min_val + 0.001, max_val)
@@ -231,6 +249,8 @@ class RangeSlider(Model):
         self.label = label
         self.show_value = show_value
         self.value_format = value_format
+        self.offset_x = offset_x
+        self.offset_y = offset_y
 
         self.track_char = track_char
         self.range_char = range_char
@@ -249,6 +269,11 @@ class RangeSlider(Model):
 
         self._low = max(self.min_val, min(self.max_val, low))
         self._high = max(self._low, min(self.max_val, high))
+
+    def set_offset(self, x: int, y: int) -> None:
+        """Set the top-left screen position offset (column, row) for mouse hit-testing."""
+        self.offset_x = x
+        self.offset_y = y
 
     @property
     def low(self) -> float:
@@ -304,9 +329,12 @@ class RangeSlider(Model):
         label_w, track_w = self._track_layout()
 
         if isinstance(msg, MouseMsg):
+            local_x = msg.x - self.offset_x
+            local_y = msg.y - self.offset_y
+
             if msg.action == MouseAction.PRESS and msg.button == MouseButton.LEFT:
-                if label_w <= msg.x <= label_w + track_w:
-                    ratio = max(0.0, min(1.0, (msg.x - label_w) / max(1, track_w - 1)))
+                if local_y == 0 and label_w <= local_x <= label_w + track_w:
+                    ratio = max(0.0, min(1.0, (local_x - label_w) / max(1, track_w - 1)))
                     target_val = self.min_val + ratio * (self.max_val - self.min_val)
                     # Pick closer thumb
                     dist_low = abs(target_val - self._low)
@@ -322,7 +350,7 @@ class RangeSlider(Model):
                     return self, cmd
 
             elif msg.action == MouseAction.MOTION and self.dragging_thumb is not None:
-                ratio = max(0.0, min(1.0, (msg.x - label_w) / max(1, track_w - 1)))
+                ratio = max(0.0, min(1.0, (local_x - label_w) / max(1, track_w - 1)))
                 target_val = self.min_val + ratio * (self.max_val - self.min_val)
                 if self.dragging_thumb == "low":
                     cmd = self.set_range(min(target_val, self._high), self._high)
