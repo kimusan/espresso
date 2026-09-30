@@ -65,3 +65,6 @@ Dashboard KPI stat cards, tags, and summary lists with delta trend indicators (`
 ## `NavStack`
 Hierarchical view router managing sub-model transitions, automatic message forwarding, breadcrumb trails, and auto-pop on `Esc`.
 
+## `DatePicker`
+Interactive monthly calendar widget with day/week navigation, month/year focus modes, mouse date selection, and min/max date clamping.
+

@@ -722,3 +722,76 @@ def view(self):
 - `auto_pop_on_back=True`: Automatically pops the top view on `Esc` or `Backspace`
 - Breadcrumbs trail rendering (`breadcrumbs_view()`)
 - Lifecycle notifications (`NavPushMsg`, `NavPopMsg`)
+
+---
+
+## 21. DatePicker
+
+The `DatePicker` component provides an interactive monthly calendar widget for selecting dates, inspired by `EthanEFung/bubble-datepicker`. It features keyboard and mouse navigation, month and year focus cycling, day-of-week custom start day, and min/max date boundary clamping.
+
+### Usage
+```python
+from datetime import date
+from espresso.beans import DatePicker, DateSelectMsg, DateChangeMsg
+from espresso.crema import ROUNDED_BORDER
+
+picker = DatePicker(
+    value=date.today(),
+    cursor_date=date.today(),
+    min_date=date(2025, 1, 1),
+    max_date=date(2027, 12, 31),
+    first_day_of_week=6,  # 6 = Sunday (default), 0 = Monday
+    show_header=True,
+    show_help=True,
+    border=ROUNDED_BORDER,
+    border_foreground="#7D56F4",
+)
+
+def update(self, msg):
+    match msg:
+        case DateSelectMsg(date=selected_date):
+            print(f"Date selected: {selected_date}")
+            return self, None
+        case DateChangeMsg(date=active_date):
+            print(f"Cursor moved: {active_date}")
+            return self, None
+
+    self.picker, cmd = self.picker.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.picker.view()
+```
+
+### Key Bindings & Shortcuts
+- **Calendar Mode**:
+  - `←` / `h`, `→` / `l`: Move cursor ±1 day
+  - `↑` / `k`, `↓` / `j`: Move cursor ±7 days (previous / next week)
+  - `[` / `PageUp`: Move to previous month
+  - `]` / `PageDown`: Move to next month
+  - `{` / `}`: Move to previous / next year (handles leap days automatically)
+  - `t`: Jump cursor to today's date
+  - `Enter` / `Space`: Confirm date selection (emits `DateSelectMsg`)
+  - `Tab` / `Shift+Tab`: Cycle focus between `CALENDAR` ⇄ `MONTH` ⇄ `YEAR`
+- **Month Mode**:
+  - `←` / `h` / `↑` / `k`: Previous month
+  - `→` / `l` / `↓` / `j`: Next month
+  - `Enter` / `Space` / `Esc`: Return focus to calendar grid
+- **Year Mode**:
+  - `←` / `h` / `↓` / `j`: Previous year
+  - `→` / `l` / `↑` / `k`: Next year
+  - `Enter` / `Space` / `Esc`: Return focus to calendar grid
+
+### Mouse Controls
+- **Header Arrows**: Click `◀` or `▶` to advance or retreat months.
+- **Header Text**: Click on the month or year name to switch focus directly to `MONTH` or `YEAR`.
+- **Date Cells**: Click on any date cell to jump to that date, select it, and emit `DateSelectMsg`.
+- **Mouse Wheel**: Wheel up / down scrolls months backward / forward.
+
+### Methods & Properties
+- `selected_date` / `value`: The currently confirmed `date` (or `None`).
+- `cursor_date`: The highlighted `date` cursor.
+- `select_date(d=None)`: Selects specified or current cursor date.
+- `set_date(d)`: Sets both cursor and selected date.
+- `set_focus(focus)`: Switch focus between `CALENDAR`, `MONTH`, `YEAR`, `NONE`.
+- `is_today(d)`, `is_selected(d)`, `is_disabled(d)`: Date status helpers.

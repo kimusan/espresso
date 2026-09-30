@@ -3,6 +3,12 @@
 Inspired by Bubbles.
 """
 
+from espresso.beans.datepicker import (
+    DateChangeMsg,
+    DatePicker,
+    DatePickerFocus,
+    DateSelectMsg,
+)
 from espresso.beans.dialog import Dialog, DialogResultMsg
 from espresso.beans.filepicker import FileEntry, FilePicker, FileSelectMsg, format_file_size
 from espresso.beans.help import Help, KeyBinding, KeyMap
@@ -134,5 +140,10 @@ __all__ = [
     "NavEntry",
     "NavPushMsg",
     "NavPopMsg",
+    # DatePicker
+    "DatePicker",
+    "DatePickerFocus",
+    "DateSelectMsg",
+    "DateChangeMsg",
 ]
 

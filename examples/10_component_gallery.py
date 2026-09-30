@@ -6,10 +6,11 @@ in a responsive, edge-to-edge full-window terminal layout:
 1. Tabs: Top tab navigation bar with hotkeys (1-4, Tab / Shift-Tab)
 2. List & Paginator: Filterable list with search (/) and live pagination
 3. FilePicker: Interactive filesystem browser with file sizes and hidden file toggle (.)
-4. Prompts: SelectPrompt, MultiSelectPrompt (checkboxes), and ConfirmPrompt
+4. Prompts & DatePicker: SelectPrompt, MultiSelectPrompt, ConfirmPrompt, and DatePicker
 5. Tree: Collapsible hierarchical directory tree
 6. Dialog & 2D Overlay: Modal card composited on top with backdrop dimming (press 'd')
 7. ToastManager: Transient auto-dismissing toast notifications (press 't')
+8. Responsive FlexBox & Metrics: Proportional grid and KPI stats cards
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from __future__ import annotations
 import random
 import shutil
 import sys
+from datetime import date
 from pathlib import Path
 
 # Add src/ to sys.path so example runs directly
@@ -40,6 +42,10 @@ from espresso import (
 from espresso.beans import (
     ConfirmPrompt,
     ConfirmSubmitMsg,
+    DateChangeMsg,
+    DatePicker,
+    DatePickerFocus,
+    DateSelectMsg,
     Dialog,
     DialogResultMsg,
     FilePicker,
@@ -193,7 +199,15 @@ class ComponentGallery(Model):
             question="Deploy changes immediately?",
             default=False,
         )
-        self.active_prompt_idx = 0  # 0: select, 1: multi, 2: confirm
+        self.datepicker = DatePicker(
+            value=date.today(),
+            cursor_date=date.today(),
+            show_header=True,
+            show_help=True,
+            border=ROUNDED_BORDER,
+            border_foreground="#7C4DFF",
+        )
+        self.active_prompt_idx = 0  # 0: select, 1: multi, 2: confirm, 3: datepicker
 
         # --- Component 5: Collapsible Tree ---
         tree_root = TreeNode(
@@ -497,28 +511,47 @@ class ComponentGallery(Model):
                             return self, None
 
             elif curr_tab == 2:
-                # Tab 2: CLI Prompts
-                # Card 0: rows 2-9 (options at rows 4-7)
-                if msg.y <= 9:
-                    self.active_prompt_idx = 0
-                    opt_idx = msg.y - 4
-                    if 0 <= opt_idx < len(self.select_prompt.options):
-                        self.select_prompt.cursor = opt_idx
-                        return self.update(KeyMsg("enter"))
-                # Card 1: rows 10-18 (checkboxes at rows 12-16)
-                elif msg.y <= 18:
-                    self.active_prompt_idx = 1
-                    opt_idx = msg.y - 12
-                    if 0 <= opt_idx < len(self.multiselect_prompt.options):
-                        self.multiselect_prompt.cursor = opt_idx
-                        return self.update(KeyMsg(" "))
-                # Card 2: rows 19-21 (question & buttons at row 20)
-                else:
-                    self.active_prompt_idx = 2
-                    if msg.x < w_left // 2:
-                        return self.update(KeyMsg("y"))
+                # Tab 2: CLI Prompts & DatePicker
+                if msg.x < w_left:
+                    # Card 0: rows 2-9 (options at rows 4-7)
+                    if msg.y <= 9:
+                        self.active_prompt_idx = 0
+                        opt_idx = msg.y - 4
+                        if 0 <= opt_idx < len(self.select_prompt.options):
+                            self.select_prompt.cursor = opt_idx
+                            return self.update(KeyMsg("enter"))
+                    # Card 1: rows 10-18 (checkboxes at rows 12-16)
+                    elif msg.y <= 18:
+                        self.active_prompt_idx = 1
+                        opt_idx = msg.y - 12
+                        if 0 <= opt_idx < len(self.multiselect_prompt.options):
+                            self.multiselect_prompt.cursor = opt_idx
+                            return self.update(KeyMsg(" "))
+                    # Card 2: rows 19-21 (question & buttons at row 20)
                     else:
-                        return self.update(KeyMsg("n"))
+                        self.active_prompt_idx = 2
+                        if msg.x < w_left // 2:
+                            return self.update(KeyMsg("y"))
+                        else:
+                            return self.update(KeyMsg("n"))
+                else:
+                    # Right side: DatePicker calendar click
+                    self.active_prompt_idx = 3
+                    dp_rel_x = msg.x - w_left - 3
+                    dp_rel_y = msg.y - 9
+                    if dp_rel_y >= 0:
+                        self.datepicker, dp_cmd = self.datepicker.handle_mouse_click(dp_rel_x, dp_rel_y)
+                        if dp_cmd:
+                            msg_res = dp_cmd()
+                            if isinstance(msg_res, DateSelectMsg):
+                                self.status_msg = f"Scheduled date: {msg_res.date.strftime('%Y-%m-%d')}"
+                                _, toast_cmd = self.toast_manager.add(
+                                    f"📅 Scheduled: {msg_res.date.strftime('%B %d, %Y')}",
+                                    ToastLevel.SUCCESS,
+                                    duration=3.5,
+                                )
+                                return self, toast_cmd
+                    return self, None
 
             elif curr_tab == 3:
                 # Tab 3: Tree View
@@ -744,12 +777,12 @@ class ComponentGallery(Model):
             return self, cmds[0] if cmds else None
 
         elif curr_tab == 2:
-            # Tab 2: CLI Prompts
+            # Tab 2: CLI Prompts & DatePicker
             if isinstance(msg, KeyMsg) and msg.key in ("pgup", "pgdown"):
                 if msg.key == "pgdown":
-                    self.active_prompt_idx = (self.active_prompt_idx + 1) % 3
+                    self.active_prompt_idx = (self.active_prompt_idx + 1) % 4
                 else:
-                    self.active_prompt_idx = (self.active_prompt_idx - 1) % 3
+                    self.active_prompt_idx = (self.active_prompt_idx - 1) % 4
                 return self, None
 
             if self.active_prompt_idx == 0:
@@ -788,6 +821,22 @@ class ComponentGallery(Model):
                         self.status_msg = status_str
                         _, toast_cmd = self.toast_manager.add(status_str, lvl, duration=3.0)
                         cmds.append(toast_cmd)
+                        if sub_msg.confirmed:
+                            self.active_prompt_idx = 3
+            elif self.active_prompt_idx == 3:
+                self.datepicker, p_cmd = self.datepicker.update(msg)
+                if p_cmd:
+                    sub_msg = p_cmd()
+                    if isinstance(sub_msg, DateSelectMsg):
+                        self.status_msg = f"Scheduled date: {sub_msg.date.strftime('%Y-%m-%d')}"
+                        _, toast_cmd = self.toast_manager.add(
+                            f"📅 Scheduled: {sub_msg.date.strftime('%B %d, %Y')}",
+                            ToastLevel.SUCCESS,
+                            duration=3.5,
+                        )
+                        cmds.append(toast_cmd)
+                    elif isinstance(sub_msg, DateChangeMsg):
+                        self.status_msg = f"Browsing calendar: {sub_msg.date.strftime('%B %Y')}"
 
             return self, cmds[0] if cmds else None
 
@@ -896,25 +945,32 @@ class ComponentGallery(Model):
             sel_opt = self.select_prompt.options[self.select_prompt.cursor]
             multi_cnt = len(self.multiselect_prompt.selected_indices)
             conf_val = "Yes (Confirmed)" if self.confirm_prompt.value else "No (Declined)"
+            sched_val = self.datepicker.value.strftime("%Y-%m-%d") if self.datepicker.value else "None"
+
+            # Highlight datepicker border when active_prompt_idx == 3
+            self.datepicker.border_foreground = "#00E5FF" if self.active_prompt_idx == 3 else "#33334A"
 
             summary_lines = [
                 f"{Style().bold(True).foreground('#E040FB').render('Configuration State')}",
-                "",
                 f"{Style().foreground('#8888AA').render('Target Host:')} {Style().bold(True).foreground('#00E5FF').render(str(sel_opt))}",
-                f"{Style().foreground('#8888AA').render('Pipelines:')} {Style().bold(True).foreground('#00E676').render(f'{multi_cnt} selected')}",
-                f"{Style().foreground('#8888AA').render('Deploy Flag:')} {Style().bold(True).foreground('#FFD54F').render(conf_val)}",
+                f"{Style().foreground('#8888AA').render('Pipelines:')} {Style().bold(True).foreground('#00E676').render(f'{multi_cnt} selected')}   {Style().foreground('#8888AA').render('Deploy Flag:')} {Style().bold(True).foreground('#FFD54F').render(conf_val)}",
+                f"{Style().foreground('#8888AA').render('Scheduled Date:')} {Style().bold(True).foreground('#00E676').render(sched_val)}",
                 "",
-                f"{Style().bold(True).foreground('#FAFAFA').render('Prompt Navigation:')}",
-                f"• {Style().foreground('#00E676').render('PgUp / PgDn')}: Switch active prompt card",
-                f"• {Style().foreground('#00E676').render('↑ / ↓ or j / k')}: Navigate choices",
-                f"• {Style().foreground('#00E676').render('Space')}: Toggle checkbox",
-                f"• {Style().foreground('#00E676').render('a')}: Select all / Deselect all",
-                f"• {Style().foreground('#00E676').render('y / n')}: Fast confirm answer",
-                f"• {Style().foreground('#00E676').render('Enter')}: Submit selection",
+                f"{Style().bold(True).foreground('#FAFAFA').render('📅 DatePicker (bubble-datepicker):')}",
+                self.datepicker.view(),
                 "",
-                f"{Style().bold(True).foreground('#FAFAFA').render('Active Focus:')} Prompt #{self.active_prompt_idx + 1}",
+                f"{Style().bold(True).foreground('#FFA726').render('Navigation & Hotkeys:')}",
+                f"• {Style().foreground('#00E676').render('PgUp / PgDn')}: Switch focus (Prompts 1-3 ⇄ DatePicker)",
+                f"• {Style().foreground('#00E676').render('Arrows / hjkl')}: Move cursor / dates",
+                f"• {Style().foreground('#00E676').render('Tab')}: In calendar, focus Month / Year",
+                f"• {Style().foreground('#00E676').render('Enter')}: Submit choice / Pick date",
+                f"• {Style().foreground('#00E676').render('Mouse')}: Click dates or ◀/▶ arrows directly",
+                "",
+                f"{Style().bold(True).foreground('#FAFAFA').render('Active Focus:')} " + (
+                    f"Prompt #{self.active_prompt_idx + 1}" if self.active_prompt_idx < 3 else "📅 DatePicker Calendar"
+                ),
             ]
-            p_right = make_panel("📊 Configuration Summary", "\n".join(summary_lines), w_right, content_h, border_fg="#7C4DFF")
+            p_right = make_panel("📊 Configuration & Scheduling", "\n".join(summary_lines), w_right, content_h, border_fg="#7C4DFF")
             return p_left, p_right
 
         elif curr_tab == 3:

@@ -42,7 +42,7 @@ Terminal applications in Python have historically required heavy object-oriented
 | :--- | :--- | :--- |
 | **`espresso`** | `bubbletea` | **The Strong Base**: Core TEA framework, runtime event loop, raw terminal driver, command primitives. |
 | **`espresso.crema`** | `lipgloss` | **The Smooth Crema**: Declarative styling, box model, TrueColor (24-bit RGB), ANSI 256, borders, border titles, TrueColor linear gradients, ANSI word-wrapping, and 2D layout alignment. |
-| **`espresso.beans`** | `bubbles` | **The Flavorful Beans**: Reusable UI components including TextArea, Help, Timer, Stopwatch, Spinners, TextInputs, Tables, Viewports, Progress, Paginator, Dialogs, Filterable Lists, FilePicker, Prompts, Toasts, Tabs, Tree, StatusBar, KPI Metrics, and NavStack. |
+| **`espresso.beans`** | `bubbles` | **The Flavorful Beans**: Reusable UI components including TextArea, Help, Timer, Stopwatch, Spinners, TextInputs, Tables, Viewports, Progress, Paginator, Dialogs, Filterable Lists, FilePicker, Prompts, Toasts, Tabs, Tree, StatusBar, KPI Metrics, NavStack, and DatePicker. |
 
 ---
 
@@ -151,7 +151,7 @@ Espresso provides built-in mouse tracking (SGR 1006) for clicks, releases, and w
 
 ## 🧩 Beans: Standard Component Library
 
-Espresso includes 20 ready-to-use building blocks that follow the exact same TEA model:
+Espresso includes 21 ready-to-use building blocks that follow the exact same TEA model:
 
 * **`TextArea`**: Multi-line interactive text editor with line numbers, cursor navigation, and viewport scrolling.
 * **`Help`**: Adaptive hotkey documentation rendering compact single-line or multi-column full keybinding views.
@@ -173,6 +173,7 @@ Espresso includes 20 ready-to-use building blocks that follow the exact same TEA
 * **`StatusBar`**: Multi-section responsive status bar with Left/Center/Right clusters and priority-based auto-truncation.
 * **`Metric` & `MetricGroup`**: Dashboard KPI stat cards, tags, and summary lists with delta trend arrows and inverted metrics.
 * **`NavStack`**: Hierarchical view router with push/pop management, breadcrumb trails, and automatic message forwarding.
+* **`DatePicker`**: Interactive calendar date picker with month/year navigation, mouse selection, and date range clamping.
 
 ---
 
