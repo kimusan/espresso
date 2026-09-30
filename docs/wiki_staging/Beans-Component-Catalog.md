@@ -86,3 +86,19 @@ Interactive selection menu paired with a live synchronized preview card below, c
 ## `ImageViewer`
 Terminal graphics viewer rendering 24-bit ANSI truecolor half-blocks (`▀`) and 10-step ASCII grayscale with native support for Netpbm PPM, 24-bit BMP, and raw RGB matrices.
 
+## `Splitter`
+Interactive dual-pane container (`Left | Right` or `Top / Bottom`) with a draggable and keyboard-resizable divider bar, min/max pane constraints, and automatic child sizing.
+
+## `Slider` & `RangeSlider`
+Tactile direct-manipulation numeric slider and dual-thumb range selector supporting click-to-seek, smooth mouse drag tracking, keyboard steps, and custom value badges.
+
+## `Sparkline`
+Real-time streaming charts with high-resolution 2D Unicode Braille curves (4× vertical resolution) and 1D block bars (`  ▂▃▄▅▆▇█`), auto-scaling, trend indicators (`↗`, `↘`, `→`), and vertical gradients.
+
+## `Marquee`
+Fixed-width smoothly scrolling animated text ticker with loop and bounce modes, configurable speed, and pause frames.
+
+## `SortableList`
+Reorderable item list supporting mouse drag-and-drop reordering with visual drop indicators (`▼ `, `[HOLDING]`) and keyboard `Space`+`Arrows` reordering.
+
+

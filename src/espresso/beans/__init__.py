@@ -63,6 +63,20 @@ from espresso.beans.spinner import (
     Spinner,
     SpinnerTickMsg,
 )
+from espresso.beans.marquee import Marquee, MarqueeMode, MarqueeTickMsg
+from espresso.beans.slider import (
+    RangeSlider,
+    RangeSliderChangeMsg,
+    Slider,
+    SliderChangeMsg,
+)
+from espresso.beans.sortable_list import ItemReorderedMsg, SortableItem, SortableList
+from espresso.beans.sparkline import Sparkline, SparklineMode, SparklineTickMsg
+from espresso.beans.splitter import (
+    Splitter,
+    SplitterOrientation,
+    SplitterResizeMsg,
+)
 from espresso.beans.statusbar import StatusBar, StatusSection
 from espresso.beans.table import Column, Table
 from espresso.beans.tabs import TabChangeMsg, TabStyle, Tabs
@@ -198,5 +212,26 @@ __all__ = [
     "RenderMode",
     "parse_ppm",
     "parse_bmp",
+    # Splitter
+    "Splitter",
+    "SplitterOrientation",
+    "SplitterResizeMsg",
+    # Slider
+    "Slider",
+    "RangeSlider",
+    "SliderChangeMsg",
+    "RangeSliderChangeMsg",
+    # Sparkline
+    "Sparkline",
+    "SparklineMode",
+    "SparklineTickMsg",
+    # Marquee
+    "Marquee",
+    "MarqueeMode",
+    "MarqueeTickMsg",
+    # SortableList
+    "SortableList",
+    "SortableItem",
+    "ItemReorderedMsg",
 ]
 

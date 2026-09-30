@@ -1058,3 +1058,211 @@ def view(self):
 - **Optional Pillow Bridge**: Automatically loads PNG, JPEG, GIF, and WebP if `PIL` is installed in the environment.
 - **Viewport Navigation**: Arrow keys and mouse wheel scroll large images seamlessly.
 
+---
+
+## 28. Splitter
+
+The `Splitter` component provides an interactive, draggable two-pane container (`Left | Right` or `Top / Bottom`) separated by a customizable divider bar. Users can resize panes directly with the mouse or via keyboard shortcuts.
+
+### Usage
+```python
+from espresso.beans import Splitter, SplitterOrientation, SplitterResizeMsg
+
+splitter = Splitter(
+    pane1=tree_view,
+    pane2=code_viewer,
+    orientation=SplitterOrientation.HORIZONTAL,
+    width=80,
+    height=24,
+    ratio=0.4,
+    min_pane1=15,
+    min_pane2=20,
+)
+
+def update(self, msg):
+    match msg:
+        case SplitterResizeMsg(ratio=r, pane1_size=p1, pane2_size=p2):
+            print(f"Resized: {p1} | {p2} (ratio: {r:.2f})")
+            return self, None
+
+    self.splitter, cmd = self.splitter.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.splitter.view()
+```
+
+### Controls & Features
+- **Mouse Drag**: Click and drag the divider bar (`│` or `─`) smoothly with the mouse.
+- **Keyboard Arrows**: `←` / `→` (horizontal) or `↑` / `↓` (vertical) step by 1 cell.
+- **Coarse Step**: `Ctrl+Arrows` steps by 5 cells.
+- **Reset**: `=` or `r` resets to an even 50/50 split.
+- **Child Sizing**: Automatically propagates dimensions to child models with `set_size(w, h)`.
+
+---
+
+## 29. Slider & RangeSlider
+
+Tactile direct-manipulation numeric slider components supporting smooth mouse dragging, click-to-seek, and keyboard step adjustment.
+
+### Usage
+```python
+from espresso.beans import Slider, RangeSlider, SliderChangeMsg, RangeSliderChangeMsg
+
+# Single-thumb slider
+vol_slider = Slider(
+    min_val=0,
+    max_val=100,
+    value=65,
+    step=1,
+    width=35,
+    label="Volume:",
+    value_format="{value:.0f}%",
+)
+
+# Dual-thumb range slider
+eq_slider = RangeSlider(
+    min_val=20,
+    max_val=20000,
+    low=250,
+    high=8000,
+    step=10,
+    width=45,
+    label="Bandpass:",
+    value_format="{low:.0f}Hz - {high:.0f}Hz",
+)
+
+def update(self, msg):
+    match msg:
+        case SliderChangeMsg(value=val, percent=pct):
+            print(f"Volume adjusted: {val} ({pct*100:.1f}%)")
+            return self, None
+        case RangeSliderChangeMsg(low=l, high=h):
+            print(f"Range adjusted: {l} to {h}")
+            return self, None
+
+    self.vol_slider, c1 = self.vol_slider.update(msg)
+    self.eq_slider, c2 = self.eq_slider.update(msg)
+    return self, batch(c1, c2)
+```
+
+### Controls
+- **Mouse Click**: Click anywhere on the track to seek to that value.
+- **Mouse Drag**: Click and drag thumb knob (`●`) smoothly across the track.
+- **Mouse Wheel**: Wheel up / down increments or decrements by `step`.
+- **Keyboard**: `←` / `→` (or `h` / `l`), `PageUp` / `PageDown` (5× step), `Home` / `End`.
+- **RangeSlider Tab**: Press `Tab` to switch active thumb between `low` and `high`.
+
+---
+
+## 30. Sparkline
+
+The `Sparkline` component renders real-time streaming data visualizations using either high-resolution 2D Unicode Braille curves (4× vertical resolution) or 1D vertical block bars (`  ▂▃▄▅▆▇█`).
+
+### Usage
+```python
+from espresso.beans import Sparkline, SparklineMode, SparklineTickMsg
+
+# Braille 2D curve with Truecolor gradient
+sparkline = Sparkline(
+    width=50,
+    height=3,
+    mode=SparklineMode.BRAILLE,
+    label="CPU Load:",
+    min_val=0,
+    max_val=100,
+    gradient_stops=["#00E5FF", "#7D56F4", "#FF007F"],
+)
+
+def update(self, msg):
+    if isinstance(msg, TelemetryMsg):
+        # Stream new data point
+        self.sparkline.push(msg.cpu_usage)
+        return self, None
+
+    return self, None
+
+def view(self):
+    return self.sparkline.view()
+```
+
+### Features & Modes
+- **`SparklineMode.BRAILLE`**: Uses Unicode Braille patterns (U+2800..U+28FF) mapping 2 horizontal dots by 4 vertical dots per cell, achieving ultra-smooth curves in tight terminal spaces.
+- **`SparklineMode.BLOCK`**: 8-level vertical block character bars (`  ▂▃▄▅▆▇█`).
+- **Telemetry & Stats**: Built-in current value badge, min/max/average properties, and directional trend indicators (`↗`, `↘`, `→`).
+- **Vertical Gradients**: Smoothly colors multi-row sparklines via Crema's `multi_gradient_colors`.
+
+---
+
+## 31. Marquee
+
+The `Marquee` component provides a fixed-width, smoothly scrolling animated text banner or ticker for news feeds, track titles, and alert headers.
+
+### Usage
+```python
+from espresso.beans import Marquee, MarqueeMode, MarqueeTickMsg
+
+marquee = Marquee(
+    text="🚀 Espresso 2.0: High-performance TUI framework in pure Python • 28+ Beans components • SGR mouse dragging",
+    width=40,
+    speed=0.1,
+    mode=MarqueeMode.LOOP,
+    separator="   ★   ",
+)
+
+def init(self):
+    return self.marquee.init()
+
+def update(self, msg):
+    self.marquee, cmd = self.marquee.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.marquee.view()
+```
+
+### Modes & Configuration
+- **`MarqueeMode.LOOP`**: Continuous seamless looping with configurable separator.
+- **`MarqueeMode.BOUNCE`**: Scrolls from beginning to end, pauses for `pause_frames`, then smoothly reverses direction.
+- **Auto-Fit**: Automatically disables scrolling and renders static text if the string fits within `width`.
+
+---
+
+## 32. SortableList
+
+The `SortableList` component allows users to reorder items dynamically via mouse drag-and-drop or intuitive keyboard shortcuts.
+
+### Usage
+```python
+from espresso.beans import SortableList, SortableItem, ItemReorderedMsg
+
+items = [
+    SortableItem(id="1", title="Write tests"),
+    SortableItem(id="2", title="Implement feature"),
+    SortableItem(id="3", title="Deploy release"),
+]
+
+sortable = SortableList(items=items, width=40, height=8)
+
+def update(self, msg):
+    match msg:
+        case ItemReorderedMsg(old_index=old, new_index=new, item=it):
+            print(f"Moved '{it}' from position {old} to {new}")
+            return self, None
+
+    self.sortable, cmd = self.sortable.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.sortable.view()
+```
+
+### Controls
+- **Mouse Drag-and-Drop**: Click on any row, drag it up or down to the target position, and release to commit. A highlighted `[HOLDING]` badge and insertion marker (`▼ `) indicate the drop target in real time.
+- **Keyboard Reordering**:
+  - `Space` / `Enter`: Grab highlighted item into holding mode.
+  - `↑` / `↓` (or `k` / `j`): Move the grabbed item up or down.
+  - `Space` / `Enter`: Drop item at current position.
+  - `Esc`: Cancel grab and return item to original position.
+
+
