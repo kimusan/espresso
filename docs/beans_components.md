@@ -361,24 +361,44 @@ def view(self):
 
 ## 12. List
 
-The `List` component is an interactive, searchable, and paginated list with real-time substring filtering.
+The `List` component is an interactive, searchable, and paginated or continuously scrollable list with real-time substring filtering, inspired by `charmbracelet/bubbles/list` and `treilik/bubblelister`.
+
+### Key Features
+- **Pagination Modes**: Discrete pages with `Paginator` (`PaginationMode.PAGINATED`) or smooth continuous line-by-line scrolling (`PaginationMode.SCROLL`) with dynamic percentage position indicators.
+- **Badges & Suffixes**: First-class right-aligned badges on `ListItem` (`badge="PROD"`, `badge_style=...`) or dynamic suffixes via `suffix_fn`.
+- **Line Numbering**: Absolute 1-based indexing (`show_numbers=True`) and Vim-style relative distance numbering (`relative_numbers=True`).
+- **Tree Guides**: Connected continuation guides for multi-line items (`show_tree_guides=True` using `╭`, `├`, `│`, `╰`).
+- **Custom Renderers**: Completely customize item rows with `item_renderer` or customize cursor markers with `prefix_fn`.
+- **Scrollbar**: Visual vertical scrollbar track (`│`) and thumb (`█`) via `show_scrollbar=True`.
+- **Native Mouse Support**: Wheel scrolling (`WHEEL_UP` / `WHEEL_DOWN`) and left-click selection emitting `ListSelectMsg`.
 
 ### Usage
 ```python
-from espresso.beans import List, ListItem, ListSelectMsg
+from espresso.beans import List, ListItem, ListSelectMsg, PaginationMode
+from espresso.crema import Style
 
 items = [
-    ListItem(title="git status", description="Show working tree status"),
-    ListItem(title="git diff", description="Show changes between commits"),
-    ListItem(title="git log", description="Show commit logs"),
+    ListItem(title="deploy-prod", description="Roll out Kubernetes cluster", badge="PROD", badge_style=Style().foreground("#00E676").bold(True)),
+    ListItem(title="db-migrate", description="Execute pending schema migrations", badge="DB", badge_style=Style().foreground("#29B6F6")),
+    ListItem(title="run-tests", description="Execute comprehensive test suite", badge="CI", badge_style=Style().foreground("#AB47BC")),
 ]
 
-list_view = List(items=items, title="Git Commands", per_page=5, width=45)
+list_view = List(
+    items=items,
+    title="Operations",
+    per_page=5,
+    width=50,
+    pagination_mode=PaginationMode.SCROLL,
+    show_numbers=True,
+    relative_numbers=False,
+    show_tree_guides=True,
+    show_scrollbar=True,
+)
 
 def update(self, msg):
     match msg:
         case ListSelectMsg(item=item, index=idx):
-            print(f"Executed: {item.title}")
+            print(f"Executed: {item.title} (index {idx})")
             return self, None
 
     self.list_view, cmd = self.list_view.update(msg)
@@ -388,14 +408,17 @@ def view(self):
     return self.list_view.view()
 ```
 
-### Features & Shortcuts
+### Keyboard & Mouse Shortcuts
 - `↑` / `k`: Move cursor up
 - `↓` / `j`: Move cursor down
-- `PageUp` / `PageDown`: Jump pages
-- `Home` / `End`: Jump to first / last item
+- `PageUp` / `PageDown`: Jump by page / viewport height
+- `Home` / `g`: Jump to first item
+- `End` / `G`: Jump to last item
 - `/`: Open inline search filter field
 - `Esc`: Clear search filter and close filter mode
 - `Enter`: Select highlighted item, emitting `ListSelectMsg(item, index)`
+- `Mouse Wheel`: Scroll list up and down
+- `Mouse Click`: Select and highlight the clicked item row
 
 ---
 

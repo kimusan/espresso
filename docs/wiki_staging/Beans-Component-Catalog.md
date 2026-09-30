@@ -36,7 +36,7 @@ Pagination manager supporting bullet dots (`DOTS`), numeric counters (`NUMERIC`)
 Modal confirmation and decision box with custom buttons, keyboard/mouse selection, and `place_overlay` backdrop dimming.
 
 ## `List`
-Searchable, filterable list with real-time `/` search query input, pagination, and `ListSelectMsg` submission.
+Searchable, filterable list with real-time `/` search query input, discrete pagination or continuous scrolling (`PaginationMode`), right-aligned badges, absolute and Vim relative numbering, tree continuation guides, and `ListSelectMsg` submission.
 
 ## `FilePicker`
 Interactive terminal filesystem browser with human-readable file sizes, extension filtering, parent directory traversal, and hidden file toggling.

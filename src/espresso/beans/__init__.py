@@ -12,7 +12,7 @@ from espresso.beans.datepicker import (
 from espresso.beans.dialog import Dialog, DialogResultMsg
 from espresso.beans.filepicker import FileEntry, FilePicker, FileSelectMsg, format_file_size
 from espresso.beans.help import Help, KeyBinding, KeyMap
-from espresso.beans.list import List, ListItem, ListSelectMsg
+from espresso.beans.list import List, ListItem, ListSelectMsg, PaginationMode
 from espresso.beans.metric import (
     LayoutDirection,
     Metric,
@@ -101,6 +101,7 @@ __all__ = [
     "List",
     "ListItem",
     "ListSelectMsg",
+    "PaginationMode",
     # FilePicker
     "FilePicker",
     "FileEntry",

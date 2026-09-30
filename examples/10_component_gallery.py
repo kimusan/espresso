@@ -53,6 +53,7 @@ from espresso.beans import (
     List,
     ListItem,
     ListSelectMsg,
+    PaginationMode,
     MultiSelectPrompt,
     MultiSelectSubmitMsg,
     SelectPrompt,
@@ -145,24 +146,24 @@ class ComponentGallery(Model):
 
         # --- Component 2: List & Paginator ---
         list_items = [
-            ListItem("Espresso TEA", "Lightweight Pure Python TUI Framework", "framework"),
-            ListItem("Crema Style Engine", "Declarative styling, borders, and gradients", "styling"),
-            ListItem("Beans Components", "Standard library of reusable UI widgets", "widgets"),
-            ListItem("Terminal Parser", "ANSI escape codes and mouse tracking", "terminal"),
-            ListItem("Overlay Compositor", "2D layer compositing with backdrop dimming", "overlay"),
-            ListItem("Paginator", "Dots, numeric, and compact pagination indicators", "paginator"),
-            ListItem("FilePicker", "Interactive directory browser with file size formats", "filesystem"),
-            ListItem("Dialog & Modal", "Card dialog with action buttons and keyboard focus", "dialog"),
-            ListItem("Interactive Prompts", "Select, MultiSelect checkboxes, and Confirm prompts", "prompts"),
-            ListItem("Collapsible Tree", "Hierarchical tree view with branch guides", "tree"),
-            ListItem("Toast Notifications", "Auto-dismissing asynchronous alerts", "toast"),
-            ListItem("Line Diffing Buffer", "Zero-flicker double buffered screen redraw", "renderer"),
-            ListItem("SGR Mouse Protocol", "Mouse clicks, dragging, and wheel scrolling", "mouse"),
-            ListItem("Adaptive Colors", "Light/Dark background detection & NO_COLOR", "color"),
-            ListItem("Responsive FlexBox", "Stickers-inspired 2D proportional grid with ratios", "layout"),
-            ListItem("Multi-Section StatusBar", "Teacup-inspired responsive header/footer bar", "statusbar"),
-            ListItem("KPI Metric Cards", "OrtizAlec-inspired stat cards with trend arrows", "metric"),
-            ListItem("NavStack & Breadcrumbs", "BubbleO-inspired view stack with breadcrumb trail", "navstack"),
+            ListItem("Espresso TEA", "Lightweight Pure Python TUI Framework", "framework", badge="CORE", badge_style=Style().foreground("#00E676").bold(True)),
+            ListItem("Crema Style Engine", "Declarative styling, borders, and gradients", "styling", badge="STABLE", badge_style=Style().foreground("#7D56F4")),
+            ListItem("Beans Components", "Standard library of reusable UI widgets", "widgets", badge="NEW", badge_style=Style().foreground("#FFB300").bold(True)),
+            ListItem("Terminal Parser", "ANSI escape codes and mouse tracking", "terminal", badge="CORE", badge_style=Style().foreground("#00E676")),
+            ListItem("Overlay Compositor", "2D layer compositing with backdrop dimming", "overlay", badge="STABLE", badge_style=Style().foreground("#7D56F4")),
+            ListItem("Paginator", "Dots, numeric, and compact pagination indicators", "paginator", badge="WIDGET", badge_style=Style().foreground("#29B6F6")),
+            ListItem("FilePicker", "Interactive directory browser with file size formats", "filesystem", badge="WIDGET", badge_style=Style().foreground("#29B6F6")),
+            ListItem("Dialog & Modal", "Card dialog with action buttons and keyboard focus", "dialog", badge="MODAL", badge_style=Style().foreground("#AB47BC")),
+            ListItem("Interactive Prompts", "Select, MultiSelect checkboxes, and Confirm prompts", "prompts", badge="CLI", badge_style=Style().foreground("#26A69A")),
+            ListItem("Collapsible Tree", "Hierarchical tree view with branch guides", "tree", badge="WIDGET", badge_style=Style().foreground("#29B6F6")),
+            ListItem("Toast Notifications", "Auto-dismissing asynchronous alerts", "toast", badge="ALERT", badge_style=Style().foreground("#FFA726")),
+            ListItem("Line Diffing Buffer", "Zero-flicker double buffered screen redraw", "renderer", badge="SPEED", badge_style=Style().foreground("#EC407A")),
+            ListItem("SGR Mouse Protocol", "Mouse clicks, dragging, and wheel scrolling", "mouse", badge="INPUT", badge_style=Style().foreground("#26C6DA")),
+            ListItem("Adaptive Colors", "Light/Dark background detection & NO_COLOR", "color", badge="THEME", badge_style=Style().foreground("#AB47BC")),
+            ListItem("Responsive FlexBox", "Stickers-inspired 2D proportional grid with ratios", "layout", badge="LAYOUT", badge_style=Style().foreground("#FF7043")),
+            ListItem("Multi-Section StatusBar", "Teacup-inspired responsive header/footer bar", "statusbar", badge="BAR", badge_style=Style().foreground("#7E57C2")),
+            ListItem("KPI Metric Cards", "OrtizAlec-inspired stat cards with trend arrows", "metric", badge="STAT", badge_style=Style().foreground("#66BB6A")),
+            ListItem("NavStack & Breadcrumbs", "BubbleO-inspired view stack with breadcrumb trail", "navstack", badge="NAV", badge_style=Style().foreground("#42A5F5")),
         ]
         self.list = List(
             items=list_items,
@@ -745,6 +746,41 @@ class ComponentGallery(Model):
 
         if curr_tab == 0:
             # Tab 0: Filterable List
+            if isinstance(msg, KeyMsg) and not self.list.filtering:
+                if msg.key == "n":
+                    if not self.list.show_numbers and not self.list.relative_numbers:
+                        self.list.show_numbers = True
+                        self.list.relative_numbers = False
+                        mode_name = "Absolute"
+                    elif self.list.show_numbers and not self.list.relative_numbers:
+                        self.list.show_numbers = True
+                        self.list.relative_numbers = True
+                        mode_name = "Vim Relative"
+                    else:
+                        self.list.show_numbers = False
+                        self.list.relative_numbers = False
+                        mode_name = "Off"
+                    self.status_msg = f"List numbering: {mode_name}"
+                    _, toast_cmd = self.toast_manager.add(f"Numbering: {mode_name}", ToastLevel.INFO, duration=2.0)
+                    return self, toast_cmd
+                elif msg.key == "s":
+                    if self.list.pagination_mode == PaginationMode.PAGINATED:
+                        self.list.pagination_mode = PaginationMode.SCROLL
+                        mode_name = "Continuous Scroll"
+                    else:
+                        self.list.pagination_mode = PaginationMode.PAGINATED
+                        mode_name = "Paginated"
+                    self.list._sync_scroll()
+                    self.status_msg = f"List mode: {mode_name}"
+                    _, toast_cmd = self.toast_manager.add(f"List: {mode_name}", ToastLevel.INFO, duration=2.0)
+                    return self, toast_cmd
+                elif msg.key == "x":
+                    self.list.show_tree_guides = not self.list.show_tree_guides
+                    g_name = "ON" if self.list.show_tree_guides else "OFF"
+                    self.status_msg = f"Tree guides: {g_name}"
+                    _, toast_cmd = self.toast_manager.add(f"Tree Guides: {g_name}", ToastLevel.INFO, duration=2.0)
+                    return self, toast_cmd
+
             self.list, list_cmd = self.list.update(msg)
             if list_cmd:
                 sub_msg = list_cmd()
@@ -872,26 +908,33 @@ class ComponentGallery(Model):
             p_left = make_panel("📦 Component Catalog", list_content, w_left, content_h, border_fg="#7D56F4")
 
             item = self.selected_item
+            mode_badge = "SCROLL" if self.list.pagination_mode == PaginationMode.SCROLL else "PAGINATED"
+            num_badge = "VIM RELATIVE" if self.list.relative_numbers else ("ABSOLUTE" if self.list.show_numbers else "OFF")
+            guide_badge = "ON" if self.list.show_tree_guides else "OFF"
+            item_badge = item.badge if (item and item.badge) else "NONE"
+
             inspector_lines = [
-                f"{Style().bold(True).foreground('#00E5FF').render(item.title)}",
-                f"{Style().foreground('#D0D0D0').render(item.description)}",
+                f"{Style().bold(True).foreground('#00E5FF').render(item.title if item else 'None')}  {Style().foreground('#00E676').bold(True).render(f'[{item_badge}]') if item and item.badge else ''}",
+                f"{Style().foreground('#D0D0D0').render(item.description if item else '')}",
                 "",
-                f"{Style().foreground('#8888AA').render('Category:')} {Style().bold(True).foreground('#FFD54F').render(str(item.value).upper())}",
+                f"{Style().foreground('#8888AA').render('Category:')} {Style().bold(True).foreground('#FFD54F').render(str(item.value).upper() if item else 'NONE')}   {Style().foreground('#8888AA').render('Mode:')} {Style().bold(True).foreground('#29B6F6').render(mode_badge)}",
+                f"{Style().foreground('#8888AA').render('Numbers:')} {Style().bold(True).foreground('#AB47BC').render(num_badge)}   {Style().foreground('#8888AA').render('Tree Guides:')} {Style().bold(True).foreground('#26A69A').render(guide_badge)}",
                 "",
                 f"{Style().bold(True).foreground('#FAFAFA').render('Code Usage:')}",
                 f"{Style().foreground('#666688').render('----------------------------------------')}",
-                f"{Style().foreground('#A0FFA0').render('from espresso.beans import List, ListItem')}",
+                f"{Style().foreground('#A0FFA0').render('from espresso.beans import List, ListItem, PaginationMode')}",
                 "",
-                f"{Style().foreground('#E0E0E0').render('items = [ListItem(\"Title\", \"Desc\")]')}",
-                f"{Style().foreground('#E0E0E0').render('catalog = List(items, per_page=6)')}",
+                f"{Style().foreground('#E0E0E0').render('items = [ListItem(\"Build\", \"Compile\", badge=\"CI/CD\")]')}",
+                f"{Style().foreground('#E0E0E0').render('lst = List(items, pagination_mode=PaginationMode.SCROLL)')}",
                 f"{Style().foreground('#666688').render('----------------------------------------')}",
                 "",
-                f"{Style().bold(True).foreground('#FFA726').render('Keyboard Controls:')}",
+                f"{Style().bold(True).foreground('#FFA726').render('Controls & Toggles:')}",
                 f"• {Style().foreground('#00E676').render('↑ / ↓ or j / k')}: Navigate items",
-                f"• {Style().foreground('#00E676').render('/')}: Live fuzzy search / filter",
-                f"• {Style().foreground('#00E676').render('Enter')}: Select & inspect item",
-                f"• {Style().foreground('#00E676').render('Esc')}: Clear search query",
-                f"• {Style().foreground('#00E676').render('PgUp / PgDn')}: Jump page",
+                f"• {Style().foreground('#00E676').render('s')}: Toggle scroll mode ({mode_badge})",
+                f"• {Style().foreground('#00E676').render('n')}: Toggle numbering ({num_badge})",
+                f"• {Style().foreground('#00E676').render('x')}: Toggle tree guides ({guide_badge})",
+                f"• {Style().foreground('#00E676').render('/')}: Filter • {Style().foreground('#00E676').render('Enter')}: Select",
+                f"• {Style().foreground('#00E676').render('Mouse')}: Click row to select, wheel to scroll",
             ]
             p_right = make_panel("🔍 Item Inspector", "\n".join(inspector_lines), w_right, content_h, border_fg="#00E5FF")
             return p_left, p_right
