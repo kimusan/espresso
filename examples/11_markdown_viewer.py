@@ -14,7 +14,7 @@ from pathlib import Path
 # Add src/ to sys.path so example runs directly
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from espresso import Cmd, KeyMsg, Model, MouseMsg, Msg, Program, WindowSizeMsg, quit_app
+from espresso import Cmd, KeyMsg, Model, MouseButton, MouseMsg, Msg, Program, WindowSizeMsg, quit_app
 from espresso.beans import MarkdownViewer, Tabs, TabStyle
 from espresso.crema import ROUNDED_BORDER, Style, join_horizontal, join_vertical, string_width
 
@@ -142,10 +142,12 @@ class MarkdownViewerApp(Model):
             show_numbers=True,
         )
 
+        inner_w = max(20, self.width - 2)
+        inner_h = max(4, self.height - 4)
         self.viewer = MarkdownViewer(
             content=DOCS[0][1],
-            width=self.width - 4,
-            height=self.height - 6,
+            width=inner_w,
+            height=inner_h,
             show_footer=True,
         )
 
@@ -160,10 +162,27 @@ class MarkdownViewerApp(Model):
         if isinstance(msg, WindowSizeMsg):
             self.width = max(60, msg.width)
             self.height = max(16, msg.height)
-            self.viewer.set_size(self.width - 4, self.height - 6)
+            inner_w = max(20, self.width - 2)
+            inner_h = max(4, self.height - 4)
+            self.viewer.set_size(inner_w, inner_h)
             return self, None
 
         if isinstance(msg, MouseMsg):
+            if msg.button == MouseButton.LEFT and msg.y == 0:
+                header_title_w = string_width(self.title_style.render("📖 Markdown Document Browser")) + 3
+                if msg.x >= header_title_w:
+                    cur_x = header_title_w
+                    for idx, doc in enumerate(DOCS):
+                        label = f"{idx + 1} {doc[0]}"
+                        tab_w = string_width(label) + 2
+                        if cur_x <= msg.x < cur_x + tab_w:
+                            if idx != self.active_doc_idx:
+                                self.active_doc_idx = idx
+                                self.tabs.set_active(idx)
+                                self.viewer.set_content(DOCS[idx][1])
+                            return self, None
+                        cur_x += tab_w + 2
+
             self.viewer, cmd = self.viewer.update(msg)
             return self, cmd
 
@@ -195,8 +214,9 @@ class MarkdownViewerApp(Model):
         header = f"{header_title}   {tabs_bar}"
 
         # Markdown viewport inside rounded border
-        card_h = self.viewer.height + 2
-        card = self.border_style.width(self.width - 2).height(card_h).render(self.viewer.view())
+        inner_w = max(20, self.width - 2)
+        inner_h = max(4, self.height - 4)
+        card = self.border_style.width(inner_w).height(inner_h + 2).render(self.viewer.view())
 
         # Footer help
         help_text = "Tab / 1-3: Switch document • ↑/↓ or j/k: Scroll • PgUp/PgDn: Jump • q: Quit • Mouse Wheel enabled"
@@ -206,7 +226,7 @@ class MarkdownViewerApp(Model):
 
 
 def main() -> None:
-    Program(MarkdownViewerApp()).run()
+    Program(MarkdownViewerApp(), alt_screen=True, mouse=True).run()
 
 
 if __name__ == "__main__":

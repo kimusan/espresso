@@ -15,7 +15,7 @@ from pathlib import Path
 # Add src/ to sys.path so example runs directly
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from espresso import Cmd, KeyMsg, Model, Msg, Program, WindowSizeMsg, batch, quit_app
+from espresso import Cmd, KeyMsg, Model, MouseMsg, Msg, Program, WindowSizeMsg, batch, quit_app
 from espresso.beans import (
     CodeViewer,
     Help,
@@ -226,6 +226,14 @@ class EditorApp(Model):
                         self.status_message = "Editing..."
                     return self, cmd
 
+            case MouseMsg():
+                if self.preview_mode:
+                    self.codeviewer, cmd = self.codeviewer.update(msg)
+                    return self, cmd
+                else:
+                    self.textarea, cmd = self.textarea.update(msg)
+                    return self, cmd
+
         return self, None
 
     def view(self) -> str:
@@ -284,5 +292,5 @@ class EditorApp(Model):
 
 if __name__ == "__main__":
     app = EditorApp()
-    p = Program(app, alt_screen=True)
+    p = Program(app, alt_screen=True, mouse=True)
     p.run()
