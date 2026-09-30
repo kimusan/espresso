@@ -20,6 +20,7 @@ from espresso.crema.color import (
     is_no_color,
     parse_color,
 )
+from espresso.crema.flexbox import Cell, FlexBox, Row
 from espresso.crema.gradient import gradient, hex_to_rgb, linear_gradient, multi_gradient, multi_gradient_colors
 from espresso.crema.layout import join_horizontal, join_vertical, place
 from espresso.crema.overlay import place_overlay, slice_ansi
@@ -31,6 +32,10 @@ __all__ = [
     # Style and Enums
     "Style",
     "Align",
+    # FlexBox Responsive Layout
+    "FlexBox",
+    "Row",
+    "Cell",
     # Borders
     "Border",
     "ROUNDED_BORDER",
