@@ -1094,6 +1094,8 @@ def view(self):
 
 ### Controls & Features
 - **Mouse Drag**: Click and drag the divider bar (`│` or `─`) smoothly with the mouse.
+- **Screen Offsets**: Configure `set_offset(x, y)` or `offset_x, offset_y` when placing the splitter inside borders, headers, or margins to ensure mouse hits map accurately to the divider.
+- **Child Mouse Routing**: Automatically translates and routes child mouse events into each pane's local coordinates.
 - **Keyboard Arrows**: `←` / `→` (horizontal) or `↑` / `↓` (vertical) step by 1 cell.
 - **Coarse Step**: `Ctrl+Arrows` steps by 5 cells.
 - **Reset**: `=` or `r` resets to an even 50/50 split.
@@ -1149,6 +1151,7 @@ def update(self, msg):
 ### Controls
 - **Mouse Click**: Click anywhere on the track to seek to that value.
 - **Mouse Drag**: Click and drag thumb knob (`●`) smoothly across the track.
+- **Row Isolation & Offsets**: Sliders check row bounds (`local_y == 0`), ensuring vertically stacked sliders never move together when one is dragged. Configure `set_offset(x, y)` to match layout coordinates.
 - **Mouse Wheel**: Wheel up / down increments or decrements by `step`.
 - **Keyboard**: `←` / `→` (or `h` / `l`), `PageUp` / `PageDown` (5× step), `Home` / `End`.
 - **RangeSlider Tab**: Press `Tab` to switch active thumb between `low` and `high`.
@@ -1222,9 +1225,8 @@ def view(self):
 ```
 
 ### Modes & Configuration
-- **`MarqueeMode.LOOP`**: Continuous seamless looping with configurable separator.
-- **`MarqueeMode.BOUNCE`**: Scrolls from beginning to end, pauses for `pause_frames`, then smoothly reverses direction.
-- **Auto-Fit**: Automatically disables scrolling and renders static text if the string fits within `width`.
+- **`MarqueeMode.LOOP`**: Continuous seamless looping with configurable separator. In `LOOP` mode, text loops infinitely even when it fits within window width (configurable via `loop_if_fits=True`).
+- **`MarqueeMode.BOUNCE`**: Scrolls from beginning to end, pauses for `pause_frames`, then smoothly reverses direction. Automatically stays static if the string fits within `width`.
 
 ---
 
@@ -1242,7 +1244,7 @@ items = [
     SortableItem(id="3", title="Deploy release"),
 ]
 
-sortable = SortableList(items=items, width=40, height=8)
+sortable = SortableList(items=items, width=40, height=8, offset_x=1, offset_y=6)
 
 def update(self, msg):
     match msg:
@@ -1258,7 +1260,7 @@ def view(self):
 ```
 
 ### Controls
-- **Mouse Drag-and-Drop**: Click on any row, drag it up or down to the target position, and release to commit. A highlighted `[HOLDING]` badge and insertion marker (`▼ `) indicate the drop target in real time.
+- **Mouse Drag-and-Drop**: Click on any row within list bounds, drag it up or down to the target position, and release to commit. Configure `set_offset(x, y)` to match layout coordinates. A highlighted `[HOLDING]` badge and insertion marker (`▼ `) indicate the drop target in real time.
 - **Keyboard Reordering**:
   - `Space` / `Enter`: Grab highlighted item into holding mode.
   - `↑` / `↓` (or `k` / `j`): Move the grabbed item up or down.
