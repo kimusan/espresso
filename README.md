@@ -42,7 +42,7 @@ Terminal applications in Python have historically required heavy object-oriented
 | :--- | :--- | :--- |
 | **`espresso`** | `bubbletea` | **The Strong Base**: Core TEA framework, runtime event loop, raw terminal driver, command primitives. |
 | **`espresso.crema`** | `lipgloss` | **The Smooth Crema**: Declarative styling, box model, TrueColor (24-bit RGB), ANSI 256, borders, border titles, TrueColor linear gradients, ANSI word-wrapping, and 2D layout alignment. |
-| **`espresso.beans`** | `bubbles` | **The Flavorful Beans**: Reusable UI components including TextArea, Help, Timer, Stopwatch, Spinners, TextInputs, Tables, Viewports, and Progress bars. |
+| **`espresso.beans`** | `bubbles` | **The Flavorful Beans**: Reusable UI components including TextArea, Help, Timer, Stopwatch, Spinners, TextInputs, Tables, Viewports, Progress, Paginator, Dialogs, Filterable Lists, FilePicker, Prompts, Toasts, Tabs, Tree, StatusBar, KPI Metrics, and NavStack. |
 
 ---
 
@@ -119,19 +119,39 @@ wrapped = wrap_ansi(long_styled_text, width=60)
 banner = linear_gradient("Espresso TrueColor Gradient", "#FF5E3A", "#FF2A68")
 ```
 
-### Layout Primitives
-Stack and stitch styled blocks side-by-side or vertically without breaking ANSI codes:
+### Layout Primitives, Responsive Grid & Overlays
+Stack and stitch styled blocks side-by-side, vertically, or in a responsive proportional grid:
 ```python
-from espresso.crema import join_horizontal, join_vertical, Align
+from espresso.crema import join_horizontal, join_vertical, place_overlay, FlexBox, Align
 
+# 2D Side-by-side join
 split_view = join_horizontal(Align.TOP, left_sidebar, "  ", right_content)
+
+# Responsive proportional grid (inspired by Stickers)
+grid = FlexBox(width=80, height=24)
+row = grid.new_row(ratio_y=1)
+row.new_cell("Sidebar", ratio_x=1, min_width=20)
+row.new_cell("Main View", ratio_x=3)
+
+# Floating modal compositor with backdrop dimming
+screen = place_overlay(background_view, dialog.view(), center=True, dim_backdrop=True)
 ```
+
+---
+
+## 🖱️ First-Class Mouse Support
+
+Espresso provides built-in mouse tracking (SGR 1006) for clicks, releases, and wheel scrolling:
+
+- **Program Toggle**: `Program(App(), mouse=True)` or `Program(App()).with_mouse(True)`
+- **Dynamic TEA Commands**: Emit `enable_mouse` or `disable_mouse` commands directly from `update()`
+- **Event Handling**: Pattern match `MouseMsg(action, button, x, y)` in `update()`
 
 ---
 
 ## 🧩 Beans: Standard Component Library
 
-Espresso includes ready-to-use building blocks that follow the exact same TEA model:
+Espresso includes 20 ready-to-use building blocks that follow the exact same TEA model:
 
 * **`TextArea`**: Multi-line interactive text editor with line numbers, cursor navigation, and viewport scrolling.
 * **`Help`**: Adaptive hotkey documentation rendering compact single-line or multi-column full keybinding views.
@@ -142,6 +162,17 @@ Espresso includes ready-to-use building blocks that follow the exact same TEA mo
 * **`Progress`**: Customizable gradient progress bars with percentage indicators.
 * **`Table`**: Column-based tabular data viewer with navigable row selection and sticky headers.
 * **`Viewport`**: Scrollable pane for viewing long-form text or logs.
+* **`Paginator`**: Pagination manager with bullet dots, numeric counters, descriptive ranges, and zero-jitter bounds slicing.
+* **`Dialog`**: Modal confirmation and decision box with custom action buttons and `place_overlay` backdrop dimming.
+* **`List`**: Searchable, filterable list with real-time `/` search query input, pagination, and selection events.
+* **`FilePicker`**: Interactive directory browser with file size formatting, extension filters, and hidden file toggle.
+* **`Prompt`**: CLI prompts (`SelectPrompt`, `MultiSelectPrompt` checkboxes, and `ConfirmPrompt` `[y/N]`).
+* **`ToastManager`**: Transient notification alerts (`INFO`, `SUCCESS`, `WARNING`, `ERROR`) with auto-dismiss timers.
+* **`Tabs`**: Top tab bar navigation with customizable styles (`PILL`, `LINE`, `BRACKET`) and hotkeys 1-9.
+* **`Tree`**: Hierarchical collapsible tree view with Unicode branch connectors (`├──`, `└──`).
+* **`StatusBar`**: Multi-section responsive status bar with Left/Center/Right clusters and priority-based auto-truncation.
+* **`Metric` & `MetricGroup`**: Dashboard KPI stat cards, tags, and summary lists with delta trend arrows and inverted metrics.
+* **`NavStack`**: Hierarchical view router with push/pop management, breadcrumb trails, and automatic message forwarding.
 
 ---
 
@@ -159,6 +190,8 @@ Explore the interactive demos in `examples/`:
 | **06 Commit Helper** | `python3 examples/06_git_commit_helper.py` | Practical developer tool for Conventional Commits |
 | **07 Editor** | `python3 examples/07_editor.py` | Multi-line text editor with TextArea, status bar, and Help |
 | **08 RSS Reader** | `python3 examples/08_rss_reader.py` | Fullscreen 3-panel RSS reader with live feed fetching from schulz.dk |
+| **09 Colors & Gradients** | `python3 examples/09_colors_and_gradients.py` | TrueColor showcase, multi-stop gradients, box background fills, palette cycling |
+| **10 Component Gallery** | `python3 examples/10_component_gallery.py` | Full-window edge-to-edge gallery of all 20 beans, mouse support, tabs, modals, prompts |
 
 ---
 

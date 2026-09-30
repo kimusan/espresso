@@ -97,6 +97,21 @@ A `Cmd` in Espresso is a callable that returns a `Msg` (or `None`). It can be:
 * **`espresso.sequence(*cmds)`**: Runs commands one after another in order.
 * **`espresso.tick(duration, msg)`**: Waits for a duration and emits a timer message.
 * **`espresso.quit_app`**: Instructs the event loop to shut down cleanly.
+* **`espresso.enable_mouse`**: Dynamic command returned by `update()` to activate SGR mouse tracking.
+* **`espresso.disable_mouse`**: Dynamic command returned by `update()` to deactivate SGR mouse tracking.
+
+---
+
+## Input Events (`Msg`)
+
+Espresso translates low-level terminal byte sequences into strongly-typed messages dispatched to `update(msg)`:
+
+1. **`KeyMsg(key, runes, alt, ctrl)`**: Keyboard strokes (e.g. `key="enter"`, `key="ctrl+c"`, `key="up"`).
+2. **`MouseMsg(action, button, x, y, alt, ctrl, shift)`**: SGR 1006 mouse events:
+   - `action`: `MouseAction.PRESS`, `RELEASE`, `MOTION`, `WHEEL`
+   - `button`: `MouseButton.LEFT`, `RIGHT`, `MIDDLE`, `WHEEL_UP`, `WHEEL_DOWN`
+   - `x`, `y`: 0-indexed terminal column and row coordinates.
+3. **`WindowSizeMsg(width, height)`**: Terminal window resize events.
 
 ---
 

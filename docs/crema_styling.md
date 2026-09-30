@@ -198,3 +198,96 @@ from espresso.crema import place, Align
 
 centered_box = place(80, 24, Align.CENTER, Align.CENTER, card)
 ```
+
+### `place_overlay(base, overlay, x=None, y=None, center=False, dim_backdrop=False)`
+Composite floating modals, popups, or dialog boxes directly over a background view with optional backdrop dimming:
+```python
+from espresso.crema import place_overlay
+
+# Center modal dialog with dimmed background screen
+composited = place_overlay(screen_view, dialog.view(), center=True, dim_backdrop=True)
+```
+
+---
+
+## Box Background Fills & Gradients
+
+`Style` supports solid color fills as well as 2-color and multi-stop background gradients across the interior of boxes:
+
+```python
+from espresso.crema import Style, ROUNDED_BORDER, Align
+
+# 1. Solid background fill
+card = (
+    Style()
+    .background("#1E1035")
+    .foreground("#FAFAFA")
+    .padding(1, 2)
+    .width(40)
+    .render("Solid background card")
+)
+
+# 2. Linear background gradient (vertical or horizontal)
+gradient_card = (
+    Style()
+    .background_gradient("#1A090D", "#4A1525", direction="vertical")
+    .foreground("#FFFFFF")
+    .border(ROUNDED_BORDER)
+    .border_foreground("#FF5E3A")
+    .width(40)
+    .height(6)
+    .align(Align.CENTER)
+    .align_vertical(Align.CENTER)
+    .render("Gradient Filled Box")
+)
+
+# 3. Multi-stop linear gradient
+multi_card = (
+    Style()
+    .background_gradient_multi(["#120826", "#1E1035", "#2D1219"], direction="horizontal")
+    .width(50)
+    .height(4)
+    .render("Multi-stop gradient interior")
+)
+```
+
+---
+
+## Responsive Proportional Grid (`FlexBox`)
+
+Inspired by `charm-and-friends/stickers`, `espresso.crema.flexbox` provides a 2D responsive grid layout container with:
+- **Proportional ratio weights**: Columns and rows allocate space according to `ratio_x` and `ratio_y`.
+- **Zero-jitter remainder distribution**: Extra pixel units are distributed across fractional remainders without column drifting.
+- **Constraints**: Support for `fixed_width`, `fixed_height`, `min_width`, and `min_height`.
+- **Dynamic callbacks**: Cells can take a string or a callable `(width, height) -> str` to render content tailored to the exact allocated dimensions.
+
+### Usage
+```python
+from espresso.crema import FlexBox, Style, ROUNDED_BORDER
+
+flex = FlexBox(width=80, height=20)
+
+# Row 1: Header (fixed height 3)
+r1 = flex.new_row(height=3)
+r1.new_cell(
+    content="Header Banner",
+    style=Style().background("#7D56F4").bold(True).foreground("#FFFFFF")
+)
+
+# Row 2: Proportional Split (Sidebar ratio 1, Main content ratio 3)
+r2 = flex.new_row(ratio_y=1)
+r2.new_cell(
+    content=lambda w, h: f"Sidebar ({w}x{h})",
+    ratio_x=1,
+    min_width=18,
+    style=Style().border(ROUNDED_BORDER).border_foreground("#555577")
+)
+r2.new_cell(
+    content=lambda w, h: f"Main Content Area ({w}x{h})",
+    ratio_x=3,
+    style=Style().border(ROUNDED_BORDER).border_foreground("#00E5FF")
+)
+
+# Render formatted grid
+print(flex.render())
+```
