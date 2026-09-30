@@ -3,7 +3,7 @@
 
 Interactive showcase demonstrating the full suite of newly added components
 in a responsive, edge-to-edge full-window terminal layout:
-1. Tabs: Top tab navigation bar with hotkeys (1-4, Tab / Shift-Tab)
+1. Tabs: Top tab navigation bar with hotkeys (1-6, Tab / Shift-Tab)
 2. List & Paginator: Filterable list with search (/) and live pagination
 3. FilePicker: Interactive filesystem browser with file sizes and hidden file toggle (.)
 4. Prompts & DatePicker: SelectPrompt, MultiSelectPrompt, ConfirmPrompt, and DatePicker
@@ -11,6 +11,7 @@ in a responsive, edge-to-edge full-window terminal layout:
 6. Dialog & 2D Overlay: Modal card composited on top with backdrop dimming (press 'd')
 7. ToastManager: Transient auto-dismissing toast notifications (press 't')
 8. Responsive FlexBox & Metrics: Proportional grid and KPI stats cards
+9. Pipelines & Media: Multi-stage task runner, master-detail selector, and ANSI truecolor image viewer
 """
 
 from __future__ import annotations
@@ -46,18 +47,34 @@ from espresso.beans import (
     DatePicker,
     DatePickerFocus,
     DateSelectMsg,
+    DetailItem,
+    DetailSelectMsg,
+    DetailSelector,
     Dialog,
     DialogResultMsg,
     FilePicker,
     FileSelectMsg,
+    ImageViewer,
+    LayoutDirection,
     List,
     ListItem,
     ListSelectMsg,
-    PaginationMode,
+    Metric,
+    MetricGroup,
+    MetricLayout,
+    MetricTrend,
     MultiSelectPrompt,
     MultiSelectSubmitMsg,
+    NavStack,
+    PaginationMode,
+    PipelineProgress,
+    PipelineStage,
+    RenderMode,
     SelectPrompt,
     SelectSubmitMsg,
+    StageStatus,
+    StatusBar,
+    StatusSection,
     TabStyle,
     Tabs,
     ToastDismissMsg,
@@ -66,14 +83,6 @@ from espresso.beans import (
     Tree,
     TreeNode,
     TreeNodeSelectMsg,
-    LayoutDirection,
-    Metric,
-    MetricGroup,
-    MetricLayout,
-    MetricTrend,
-    NavStack,
-    StatusBar,
-    StatusSection,
 )
 from espresso.crema import (
     Align,
@@ -138,7 +147,7 @@ class ComponentGallery(Model):
 
         # --- Component 1: Tabs ---
         self.tabs = Tabs(
-            titles=["Filterable List", "File Picker", "CLI Prompts", "Tree View", "FlexBox & KPIs"],
+            titles=["Filterable List", "File Picker", "CLI Prompts", "Tree View", "FlexBox & KPIs", "Pipelines & Media"],
             active_tab=0,
             tab_style=TabStyle.PILL,
             show_numbers=True,
@@ -344,6 +353,72 @@ class ComponentGallery(Model):
             background="#161622",
         )
 
+        # --- Component 9: PipelineProgress ---
+        self.pipeline = PipelineProgress(
+            stages=[
+                PipelineStage(title="Fetch Source & Dependencies", status=StageStatus.SUCCESS, duration=0.82),
+                PipelineStage(title="Lint & Static Analysis (flake8)", status=StageStatus.SUCCESS, duration=1.14),
+                PipelineStage(title="Compile & Run Unit Tests (231 tests)", status=StageStatus.RUNNING, duration=0.14),
+                PipelineStage(title="Build Optimized Wheel Distribution", status=StageStatus.PENDING),
+                PipelineStage(title="Publish Artifacts to Registry", status=StageStatus.PENDING),
+            ],
+            title="CI/CD Release Pipeline",
+            width=44,
+            show_stages=True,
+            show_timer=True,
+        )
+
+        # --- Component 10: DetailSelector ---
+        self.detail_selector = DetailSelector(
+            items=[
+                DetailItem(
+                    title="Espresso Runtime",
+                    tag="CORE",
+                    details="Declarative The Elm Architecture (TEA)\nevent loop with pure Python stdlib.\nZero external runtime dependencies.",
+                    metadata={"Version": "0.1.0", "Type": "Engine"},
+                ),
+                DetailItem(
+                    title="Crema Styling & 2D",
+                    tag="STABLE",
+                    details="Full ANSI truecolor & 256-color support,\n2D layer placement, gradient shading,\nand flexible rounded/double borders.",
+                    metadata={"Engine": "Crema", "Status": "Ready"},
+                ),
+                DetailItem(
+                    title="Beans Component Library",
+                    tag="WIDGETS",
+                    details="Rich library of 27+ terminal widgets\nincluding Table, Viewport, DatePicker,\nMarkdown, CodeViewer, QuickFix, etc.",
+                    metadata={"Count": "27+", "License": "MIT"},
+                ),
+                DetailItem(
+                    title="ANSI Half-Block Imaging",
+                    tag="MEDIA",
+                    details="Truecolor 24-bit half-block renderer (▀)\nsupporting PPM, BMP, and raw RGB matrices\nwith optional Pillow bridge.",
+                    metadata={"Mode": "24-bit RGB", "Ramp": "10-step"},
+                ),
+            ],
+            prompt="Select Framework Architecture Layer:",
+            width=44,
+            per_page=4,
+        )
+
+        # --- Component 11: ImageViewer ---
+        sunset_matrix = []
+        for y in range(20):
+            row = []
+            for x in range(32):
+                r = min(255, int(255 * (1.0 - y / 25)))
+                g = min(255, int(180 * (x / 32) * (1.0 - y / 30)))
+                b = min(255, int(220 * (y / 20)))
+                row.append((r, g, b))
+            sunset_matrix.append(row)
+        self.image_viewer = ImageViewer(
+            pixels=sunset_matrix,
+            width=38,
+            height=12,
+            mode=RenderMode.HALF_BLOCK,
+            title="Espresso Sunset 24-bit Half-Block",
+        )
+
         self._sync_child_dimensions()
 
     def _calc_layout(self) -> tuple[int, int, int]:
@@ -356,8 +431,9 @@ class ComponentGallery(Model):
         return content_h, w_left, w_right
 
     def _sync_child_dimensions(self) -> None:
-        content_h, w_left, _ = self._calc_layout()
+        content_h, w_left, w_right = self._calc_layout()
         inner_w_left = max(10, w_left - 4)
+        inner_w_right = max(10, w_right - 4)
         inner_h = max(4, content_h - 2)
 
         # Update List dimensions
@@ -369,6 +445,18 @@ class ComponentGallery(Model):
         # Update FilePicker dimensions
         self.file_picker.width = inner_w_left
         self.file_picker.height = inner_h - 2
+
+        # Update Pipeline, DetailSelector, and ImageViewer dimensions
+        if hasattr(self, "pipeline"):
+            self.pipeline.width = inner_w_left
+        if hasattr(self, "detail_selector"):
+            self.detail_selector.width = inner_w_left
+        if hasattr(self, "image_viewer"):
+            self.image_viewer.width = inner_w_right
+            self.image_viewer.height = max(4, min(14, inner_h // 2))
+            self.image_viewer.viewport.width = self.image_viewer.width
+            self.image_viewer.viewport.height = self.image_viewer.height
+            self.image_viewer._rebuild_rendered()
 
     def init(self) -> Cmd | None:
         _, toast_cmd = self.toast_manager.add(
@@ -724,7 +812,7 @@ class ComponentGallery(Model):
                     prev_tab = (self.tabs.active_tab - 1) % len(self.tabs.titles)
                     self.tabs, _ = self.tabs.update(KeyMsg(str(prev_tab + 1)))
                     return self, None
-                case "1" | "2" | "3" | "4" | "5":
+                case "1" | "2" | "3" | "4" | "5" | "6":
                     self.tabs, _ = self.tabs.update(msg)
                     return self, None
                 case "p":
@@ -896,6 +984,69 @@ class ComponentGallery(Model):
             # Tab 4: NavStack event delegation
             self.nav_stack, ns_cmd = self.nav_stack.update(msg)
             return self, ns_cmd
+
+        elif curr_tab == 5:
+            # Tab 5: Pipelines, DetailSelector, and ImageViewer
+            cmds: list[Cmd] = []
+            if isinstance(msg, KeyMsg):
+                if msg.key == "a":
+                    new_mode = RenderMode.ASCII if self.image_viewer.mode == RenderMode.HALF_BLOCK else RenderMode.HALF_BLOCK
+                    self.image_viewer.mode = new_mode
+                    self.image_viewer._rebuild_rendered()
+                    self.status_msg = f"ImageViewer render mode: {new_mode.value.upper()}"
+                    return self, None
+                elif msg.key == "n":
+                    advanced = False
+                    for idx, s in enumerate(self.pipeline.stages):
+                        if s.status == StageStatus.RUNNING:
+                            s.status = StageStatus.SUCCESS
+                            s.duration = round(random.uniform(0.4, 1.8), 2)
+                            if idx + 1 < len(self.pipeline.stages):
+                                self.pipeline.stages[idx + 1].status = StageStatus.RUNNING
+                                self.status_msg = f"Started: {self.pipeline.stages[idx + 1].title}"
+                            else:
+                                self.pipeline.is_finished = True
+                                self.status_msg = "Pipeline complete! All stages succeeded."
+                                _, toast_cmd = self.toast_manager.add(
+                                    "🚀 Pipeline build & deploy succeeded!",
+                                    ToastLevel.SUCCESS,
+                                    duration=3.0,
+                                )
+                                cmds.append(toast_cmd)
+                            advanced = True
+                            break
+                        elif s.status == StageStatus.PENDING:
+                            s.status = StageStatus.RUNNING
+                            self.status_msg = f"Started: {s.title}"
+                            advanced = True
+                            break
+                    if not advanced and self.pipeline.is_finished:
+                        self.status_msg = "Pipeline already finished. Press 'r' to reset."
+                    return self, cmds[0] if cmds else None
+                elif msg.key == "r":
+                    for idx, s in enumerate(self.pipeline.stages):
+                        s.status = StageStatus.PENDING if idx > 0 else StageStatus.RUNNING
+                    self.pipeline.is_finished = False
+                    self.pipeline.is_failed = False
+                    self.status_msg = "Pipeline reset to initial stage"
+                    return self, None
+
+            # Delegate to DetailSelector
+            self.detail_selector, d_cmd = self.detail_selector.update(msg)
+            if d_cmd:
+                sub_msg = d_cmd()
+                if isinstance(sub_msg, DetailSelectMsg):
+                    self.status_msg = f"Selected: {sub_msg.item.title}"
+                    _, toast_cmd = self.toast_manager.add(
+                        f"Selected: {sub_msg.item.title} ({sub_msg.item.tag})",
+                        ToastLevel.INFO,
+                        duration=2.5,
+                    )
+                    cmds.append(toast_cmd)
+
+            # Delegate to ImageViewer for scrolling
+            self.image_viewer, i_cmd = self.image_viewer.update(msg)
+            return self, cmds[0] if cmds else None
 
         return self, None
 
@@ -1070,6 +1221,33 @@ class ComponentGallery(Model):
             p_right = make_panel("🧭 BubbleO NavStack & Teacup StatusBar", p_right_content, w_right, content_h, border_fg="#7D56F4")
             return p_left, p_right
 
+        elif curr_tab == 5:
+            # Tab 5: Pipelines, DetailSelector, and ImageViewer
+            pipeline_view = self.pipeline.view()
+            selector_view = self.detail_selector.view()
+            p_left_content = join_vertical(Align.LEFT, pipeline_view, "", selector_view)
+            p_left = make_panel("🚀 CI/CD Pipeline & DetailSelector", p_left_content, w_left, content_h, border_fg="#00E676")
+
+            # Right panel: ImageViewer + Info
+            img_view = self.image_viewer.view()
+            mode_badge = "24-BIT HALF-BLOCK" if self.image_viewer.mode == RenderMode.HALF_BLOCK else "ASCII DENSITY"
+            info_lines = [
+                img_view,
+                "",
+                f"{Style().bold(True).foreground('#FFA726').render('Terminal Graphics (ImageViewer):')}",
+                f"{Style().foreground('#8888AA').render('Renderer:')} {Style().bold(True).foreground('#00E5FF').render(mode_badge)}",
+                f"{Style().foreground('#8888AA').render('Formats:')} {Style().foreground('#00E676').render('Netpbm PPM, 24-bit BMP, RGB matrix, Pillow bridge')}",
+                "",
+                f"{Style().bold(True).foreground('#FAFAFA').render('Hotkeys & Navigation:')}",
+                f"• {Style().foreground('#00E676').render('a')}: Toggle 24-bit Half-block (▀) ⇄ ASCII ramp",
+                f"• {Style().foreground('#00E676').render('n')}: Advance Pipeline stage",
+                f"• {Style().foreground('#00E676').render('r')}: Reset Pipeline execution",
+                f"• {Style().foreground('#00E676').render('↑ / ↓ or j / k')}: Navigate DetailSelector items",
+                f"• {Style().foreground('#00E676').render('Enter')}: Select DetailItem",
+            ]
+            p_right = make_panel("🖼️ ANSI Half-Block ImageViewer", "\n".join(info_lines), w_right, content_h, border_fg="#FF4081")
+            return p_left, p_right
+
         return "", ""
 
     def _render_header(self, total_w: int) -> str:
@@ -1093,7 +1271,7 @@ class ComponentGallery(Model):
         return Style().background("#1A1A28").render(truncate_ansi(header_line, total_w))
 
     def _render_footer(self, total_w: int) -> str:
-        tab_names = ["LIST & PAGINATOR", "FILESYSTEM PICKER", "CLI PROMPTS", "CODEBASE TREE", "FLEXBOX & KPIS"]
+        tab_names = ["LIST & PAGINATOR", "FILESYSTEM PICKER", "CLI PROMPTS", "CODEBASE TREE", "FLEXBOX & KPIS", "PIPELINES & MEDIA"]
         active_name = tab_names[self.tabs.active_tab]
         tab_badge = (
             Style()
@@ -1101,7 +1279,7 @@ class ComponentGallery(Model):
             .foreground("#000000")
             .background("#00E676")
             .padding(0, 1)
-            .render(f" TAB {self.tabs.active_tab + 1}/5: {active_name} ")
+            .render(f" TAB {self.tabs.active_tab + 1}/6: {active_name} ")
         )
 
         if self.toast_manager.has_toasts:

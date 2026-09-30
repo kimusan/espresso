@@ -3,16 +3,27 @@
 Inspired by Bubbles.
 """
 
+from espresso.beans.codeviewer import (
+    CodeViewer,
+    SyntaxTheme,
+    THEME_DRACULA,
+    THEME_ESPRESSO,
+    THEME_MONOKAI,
+    highlight_code,
+)
 from espresso.beans.datepicker import (
     DateChangeMsg,
     DatePicker,
     DatePickerFocus,
     DateSelectMsg,
 )
+from espresso.beans.detail_selector import DetailItem, DetailSelectMsg, DetailSelector
 from espresso.beans.dialog import Dialog, DialogResultMsg
 from espresso.beans.filepicker import FileEntry, FilePicker, FileSelectMsg, format_file_size
 from espresso.beans.help import Help, KeyBinding, KeyMap
+from espresso.beans.image import ImageViewer, RenderMode, parse_bmp, parse_ppm
 from espresso.beans.list import List, ListItem, ListSelectMsg, PaginationMode
+from espresso.beans.markdown import MarkdownViewer, render_markdown
 from espresso.beans.metric import (
     LayoutDirection,
     Metric,
@@ -22,6 +33,15 @@ from espresso.beans.metric import (
 )
 from espresso.beans.navstack import NavEntry, NavPopMsg, NavPushMsg, NavStack
 from espresso.beans.paginator import Paginator, PaginatorType
+from espresso.beans.pipeline_progress import (
+    PipelineCompleteMsg,
+    PipelineProgress,
+    PipelineStage,
+    StageCompleteMsg,
+    StageFailedMsg,
+    StageStartMsg,
+    StageStatus,
+)
 from espresso.beans.progress import Progress
 from espresso.beans.prompt import (
     ConfirmPrompt,
@@ -31,6 +51,7 @@ from espresso.beans.prompt import (
     SelectPrompt,
     SelectSubmitMsg,
 )
+from espresso.beans.quickfix import QuickFix, QuickFixItem, QuickFixSelectMsg
 from espresso.beans.spinner import (
     COFFEE,
     DOTS,
@@ -146,5 +167,36 @@ __all__ = [
     "DatePickerFocus",
     "DateSelectMsg",
     "DateChangeMsg",
+    # CodeViewer
+    "CodeViewer",
+    "SyntaxTheme",
+    "THEME_ESPRESSO",
+    "THEME_DRACULA",
+    "THEME_MONOKAI",
+    "highlight_code",
+    # MarkdownViewer
+    "MarkdownViewer",
+    "render_markdown",
+    # PipelineProgress
+    "PipelineProgress",
+    "PipelineStage",
+    "StageStatus",
+    "StageStartMsg",
+    "StageCompleteMsg",
+    "StageFailedMsg",
+    "PipelineCompleteMsg",
+    # QuickFix
+    "QuickFix",
+    "QuickFixItem",
+    "QuickFixSelectMsg",
+    # DetailSelector
+    "DetailSelector",
+    "DetailItem",
+    "DetailSelectMsg",
+    # ImageViewer
+    "ImageViewer",
+    "RenderMode",
+    "parse_ppm",
+    "parse_bmp",
 ]
 

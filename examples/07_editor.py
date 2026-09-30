@@ -16,7 +16,18 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from espresso import Cmd, KeyMsg, Model, Msg, Program, WindowSizeMsg, batch, quit_app
-from espresso.beans import Help, KeyBinding, KeyMap, Stopwatch, StopwatchTickMsg, TextArea
+from espresso.beans import (
+    CodeViewer,
+    Help,
+    KeyBinding,
+    KeyMap,
+    QuickFix,
+    QuickFixItem,
+    QuickFixSelectMsg,
+    Stopwatch,
+    StopwatchTickMsg,
+    TextArea,
+)
 from espresso.crema import (
     Align,
     ROUNDED_BORDER,
@@ -54,6 +65,8 @@ class EditorKeyMap:
 
     def __init__(self) -> None:
         self.save = KeyBinding("ctrl+s", "save file")
+        self.preview = KeyBinding("ctrl+p", "toggle syntax preview")
+        self.diagnostics = KeyBinding("ctrl+x", "toggle diagnostics")
         self.line_nums = KeyBinding("ctrl+l", "toggle line numbers")
         self.toggle_help = KeyBinding("ctrl+h", "toggle full help")
         self.quit = KeyBinding("ctrl+q", "quit editor")
@@ -63,12 +76,12 @@ class EditorKeyMap:
         self.page = KeyBinding("pgup/pgdn", "scroll by page")
 
     def short_help(self) -> list[KeyBinding]:
-        return [self.save, self.line_nums, self.toggle_help, self.quit]
+        return [self.save, self.preview, self.diagnostics, self.toggle_help, self.quit]
 
     def full_help(self) -> list[list[KeyBinding]]:
         return [
-            [self.save, self.line_nums, self.toggle_help, self.quit],
-            [self.nav_arrows, self.nav_home, self.tab, self.page],
+            [self.save, self.preview, self.diagnostics, self.line_nums],
+            [self.toggle_help, self.quit, self.nav_arrows, self.page],
         ]
 
 
@@ -78,6 +91,7 @@ class EditorApp(Model):
         self.status_message = "Ready"
         self.status_time = time.monotonic()
         self.is_modified = False
+        self.preview_mode = False
 
         # Component 1: TextArea
         self.textarea = TextArea(
@@ -88,11 +102,29 @@ class EditorApp(Model):
         )
         self.textarea.set_value(SAMPLE_CODE)
 
-        # Component 2: Help
+        # Component 2: CodeViewer (syntax-highlighted preview mode)
+        self.codeviewer = CodeViewer(
+            code=SAMPLE_CODE,
+            language="python",
+            width=76,
+            height=16,
+            show_footer=False,
+            filename=self.filename,
+        )
+
+        # Component 3: QuickFix (diagnostics drawer)
+        sample_diagnostics = [
+            QuickFixItem(file=self.filename, line=5, col=5, message="variable 'crema' could be annotated as Final", severity="info", code="C0103"),
+            QuickFixItem(file=self.filename, line=12, col=23, message="default argument 'Kim' hardcoded; consider config parameter", severity="hint", code="W0102"),
+            QuickFixItem(file=self.filename, line=20, col=11, message="call to 'brew_espresso' not verified by runtime contract", severity="warning", code="W1201"),
+        ]
+        self.quickfix = QuickFix(items=sample_diagnostics, height=6)
+
+        # Component 4: Help
         self.keymap = EditorKeyMap()
         self.help = Help(self.keymap, width=78)
 
-        # Component 3: Stopwatch (session timer)
+        # Component 5: Stopwatch (session timer)
         self.stopwatch = Stopwatch(interval=0.5, auto_start=True)
 
         # Styling
@@ -110,14 +142,29 @@ class EditorApp(Model):
         match msg:
             case WindowSizeMsg(width=w, height=h):
                 editor_w = max(40, w - 4)
-                # Subtract header (1 line), status bar (1 line), help (1-4 lines), borders (2 lines)
                 editor_h = max(6, h - 8)
                 self.textarea.width = editor_w
                 self.textarea.height = editor_h
+                self.codeviewer.width = editor_w
+                self.codeviewer.height = editor_h
+                self.codeviewer.viewport.width = editor_w
+                self.codeviewer.viewport.height = max(2, editor_h)
                 self.help.width = editor_w + 2
+                self.quickfix.height = min(8, max(4, h // 3))
                 return self, None
 
-            case KeyMsg(key="ctrl+q" | "esc"):
+            case QuickFixSelectMsg(item=item):
+                target_line = max(0, item.line - 1)
+                target_col = max(0, item.col - 1)
+                lines = self.textarea.lines
+                if target_line < len(lines):
+                    target_col = min(target_col, len(lines[target_line]))
+                self.textarea.cursor = (target_line, target_col)
+                self.codeviewer.set_cursor_line(item.line)
+                self.status_message = f"Jumped to line {item.line}: {item.message}"
+                return self, None
+
+            case KeyMsg(key="ctrl+q"):
                 return self, quit_app
 
             case KeyMsg(key="ctrl+s"):
@@ -126,8 +173,31 @@ class EditorApp(Model):
                 self.status_message = f"Saved at {cur_time}"
                 return self, None
 
+            case KeyMsg(key="ctrl+p"):
+                self.preview_mode = not self.preview_mode
+                if self.preview_mode:
+                    self.codeviewer.set_code(self.textarea.value)
+                    self.codeviewer.set_cursor_line(self.textarea.cursor[0] + 1)
+                    self.status_message = "Syntax Preview Mode (Ctrl+P to edit)"
+                else:
+                    target_line = max(0, self.codeviewer.cursor_line - 1)
+                    lines = self.textarea.lines
+                    col = 0
+                    if target_line < len(lines):
+                        col = min(self.textarea.cursor[1], len(lines[target_line]))
+                    self.textarea.cursor = (target_line, col)
+                    self.status_message = "Edit Mode (Ctrl+P for syntax preview)"
+                return self, None
+
+            case KeyMsg(key="ctrl+x"):
+                self.quickfix.toggle()
+                self.status_message = "Diagnostics opened" if self.quickfix.is_open else "Diagnostics closed"
+                return self, None
+
             case KeyMsg(key="ctrl+l"):
                 self.textarea.toggle_line_numbers()
+                self.codeviewer.show_line_numbers = self.textarea.show_line_numbers
+                self.codeviewer.set_code(self.codeviewer.code)
                 state = "enabled" if self.textarea.show_line_numbers else "disabled"
                 self.status_message = f"Line numbers {state}"
                 return self, None
@@ -140,30 +210,50 @@ class EditorApp(Model):
                 self.stopwatch, cmd = self.stopwatch.update(msg)
                 return self, cmd
 
-            case KeyMsg():
-                old_val = self.textarea.value
-                self.textarea, cmd = self.textarea.update(msg)
-                if self.textarea.value != old_val:
-                    self.is_modified = True
-                    self.status_message = "Editing..."
+            case KeyMsg() if self.quickfix.is_open and msg.key in ("esc", "q", "up", "k", "down", "j", "enter"):
+                self.quickfix, cmd = self.quickfix.update(msg)
                 return self, cmd
+
+            case KeyMsg(key="esc") if not self.quickfix.is_open:
+                return self, quit_app
+
+            case KeyMsg():
+                if self.preview_mode:
+                    self.codeviewer, cmd = self.codeviewer.update(msg)
+                    return self, cmd
+                else:
+                    old_val = self.textarea.value
+                    self.textarea, cmd = self.textarea.update(msg)
+                    if self.textarea.value != old_val:
+                        self.is_modified = True
+                        self.status_message = "Editing..."
+                    return self, cmd
 
         return self, None
 
     def view(self) -> str:
         # Header
-        badge = self.title_style.render("☕ ESPRESSO")
+        mode_badge = " [PREVIEW] " if self.preview_mode else " [EDIT] "
+        badge = self.title_style.render(f"☕ ESPRESSO{mode_badge}")
         file_info = f" {self.file_style.render(self.filename)}"
         header = f"{badge}{file_info}"
 
         # Editor Box
         box = self.box_style.width(self.textarea.width) if self.textarea.width else self.box_style
-        editor_view = box.render(self.textarea.view())
+        if self.preview_mode:
+            content_view = self.codeviewer.view()
+        else:
+            content_view = self.textarea.view()
+        editor_view = box.render(content_view)
 
         # Status Bar
-        row, col = self.textarea.cursor
-        total_lines = self.textarea.line_count
-        cursor_info = f" Ln {row + 1}, Col {col + 1} ({total_lines} lines) "
+        if self.preview_mode:
+            total_lines = len(self.codeviewer.code.splitlines())
+            cursor_info = f" Ln {self.codeviewer.cursor_line} of {total_lines} (Syntax Preview) "
+        else:
+            row, col = self.textarea.cursor
+            total_lines = self.textarea.line_count
+            cursor_info = f" Ln {row + 1}, Col {col + 1} ({total_lines} lines) "
 
         if self.is_modified:
             mod_badge = self.modified_style.render(" ● Modified ")
@@ -184,7 +274,9 @@ class EditorApp(Model):
         self.help.width = bar_w
         help_rendered = self.help.view()
 
-        return join_vertical(Align.LEFT, header, editor_view, status_line, help_rendered)
+        base_view = join_vertical(Align.LEFT, header, editor_view, status_line, help_rendered)
+        total_h = len(base_view.splitlines())
+        return self.quickfix.wrap_view(base_view, width=bar_w, height=total_h)
 
 
 if __name__ == "__main__":

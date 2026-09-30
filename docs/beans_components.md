@@ -813,8 +813,248 @@ def view(self):
 
 ### Methods & Properties
 - `selected_date` / `value`: The currently confirmed `date` (or `None`).
-- `cursor_date`: The highlighted `date` cursor.
+- cursor_date: The highlighted `date` cursor.
 - `select_date(d=None)`: Selects specified or current cursor date.
 - `set_date(d)`: Sets both cursor and selected date.
 - `set_focus(focus)`: Switch focus between `CALENDAR`, `MONTH`, `YEAR`, `NONE`.
 - `is_today(d)`, `is_selected(d)`, `is_disabled(d)`: Date status helpers.
+
+---
+
+## 22. PipelineProgress
+
+The `PipelineProgress` component manages multi-stage asynchronous task execution pipelines, inspired by `mritd/bubbles/progressbar`. It displays a live visual progress bar, per-stage status badges (`PENDING`, `RUNNING`, `SUCCESS`, `FAILED`, `SKIPPED`), elapsed execution times, and failure diagnostics.
+
+### Usage
+```python
+from espresso.beans import PipelineProgress, PipelineStage, StageStatus
+
+stages = [
+    PipelineStage(title="Fetch Source & Deps", status=StageStatus.SUCCESS, duration=0.82),
+    PipelineStage(title="Lint & Static Analysis", status=StageStatus.SUCCESS, duration=1.14),
+    PipelineStage(title="Run Unit Tests", status=StageStatus.RUNNING, duration=0.14),
+    PipelineStage(title="Build Optimized Wheel", status=StageStatus.PENDING),
+    PipelineStage(title="Publish to Registry", status=StageStatus.PENDING),
+]
+
+pipeline = PipelineProgress(
+    stages=stages,
+    title="Release Pipeline",
+    width=50,
+    show_stages=True,
+    show_timer=True,
+)
+
+def update(self, msg):
+    self.pipeline, cmd = self.pipeline.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.pipeline.view()
+```
+
+### Features & Controls
+- **Stages**: List of `PipelineStage` objects with custom `action` callables or manual state tracking.
+- **Messages**: Emits `StageStartMsg`, `StageCompleteMsg`, `StageFailedMsg`, and `PipelineCompleteMsg`.
+- **Keyboard / API**:
+  - `start()`: Begin automated async pipeline execution.
+  - `reset()`: Reset all stages to initial pending state.
+  - `advance()`: Advance the active stage to completion and start the next.
+
+---
+
+## 23. MarkdownViewer
+
+The `MarkdownViewer` component provides a pure Python terminal Markdown document viewer, inspired by `mistakenelf/teacup/markdown`. It parses and renders headings (H1-H6), bold, italic, code spans, fenced code blocks, blockquotes with `▌` bars, nested bullet and numbered lists, and horizontal rules, wrapped in a smooth scrollable `Viewport` with scroll percentage footer.
+
+### Usage
+```python
+from espresso.beans import MarkdownViewer
+
+doc = """# Release Notes
+Welcome to **Espresso 0.2.0**!
+- Added `MarkdownViewer`
+- Added `CodeViewer`
+> Simple, declarative, pure Python.
+"""
+
+md_viewer = MarkdownViewer(
+    markdown=doc,
+    width=70,
+    height=20,
+    show_footer=True,
+    filename="CHANGELOG.md",
+)
+
+def update(self, msg):
+    self.md_viewer, cmd = self.md_viewer.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.md_viewer.view()
+```
+
+### Key Bindings & Mouse Controls
+- `↑` / `k`, `↓` / `j`: Scroll line by line.
+- `PageUp` / `PageDown`: Scroll page by page.
+- `Home` / `g`, `End` / `G`: Jump to document top / bottom.
+- **Mouse Wheel**: Wheel up / down scrolls the document viewport.
+
+---
+
+## 24. CodeViewer
+
+The `CodeViewer` component provides a syntax-highlighted source code viewer with line numbers, active cursor line highlight (`▶`), and smooth viewport scrolling, inspired by `mistakenelf/teacup/code`. It uses Python's standard library `tokenize` module for Python syntax and regex tokenizers for JavaScript/TypeScript, Go, Rust, JSON, YAML, SQL, Shell, and Markdown.
+
+### Usage
+```python
+from espresso.beans import CodeViewer, THEME_ESPRESSO, THEME_DRACULA
+
+viewer = CodeViewer(
+    code='def brew(shots=2):\n    return f"{shots} shots"',
+    language="python",
+    width=60,
+    height=15,
+    theme=THEME_ESPRESSO,
+    show_line_numbers=True,
+    cursor_line=1,
+)
+
+def update(self, msg):
+    self.viewer, cmd = self.viewer.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.viewer.view()
+```
+
+### Predefined Themes
+- `THEME_ESPRESSO`: Hazelnut purple keywords, cyan builtins, vibrant green strings.
+- `THEME_DRACULA`: Dracula palette with pink keywords, yellow strings, and purple numbers.
+- `THEME_MONOKAI`: High-contrast green functions, orange numbers, and cyan operators.
+
+### Key Bindings & Mouse Controls
+- `↑` / `k`, `↓` / `j`: Move cursor line and scroll viewport smoothly.
+- `PageUp` / `PageDown`: Move cursor and scroll by viewport height.
+- `Home` / `g`, `End` / `G`: Jump to top or bottom line.
+- **Mouse Wheel**: Wheel up / down scrolls code viewport.
+
+---
+
+## 25. QuickFix
+
+The `QuickFix` component is a Neovim-style diagnostic bottom drawer for viewing compiler errors, warnings, and linter messages, inspired by `Genekkion/theHermit`. It displays items with severity badges (`ERR`, `WARN`, `INFO`, `HINT`), file paths, line/column numbers, and error codes. It can dock or overlay over any view using `wrap_view`.
+
+### Usage
+```python
+from espresso.beans import QuickFix, QuickFixItem, QuickFixSelectMsg
+
+items = [
+    QuickFixItem(file="src/brew.py", line=12, col=5, message="variable 'crema' unused", severity="warn", code="W0612"),
+    QuickFixItem(file="src/brew.py", line=25, col=1, message="syntax error: missing colon", severity="error", code="E0001"),
+]
+
+qf = QuickFix(items=items, height=6, toggle_key="ctrl+x")
+
+def update(self, msg):
+    match msg:
+        case QuickFixSelectMsg(item=item, index=idx):
+            print(f"Jump to {item.file}:{item.line}")
+            return self, None
+
+    self.qf, cmd = self.qf.update(msg)
+    return self, cmd
+
+def view(self):
+    main_ui = "Main editor content..."
+    return self.qf.wrap_view(main_ui, width=80, height=24)
+```
+
+### Key Bindings & Mouse Controls
+- `Ctrl+X` (configurable): Toggle drawer open / closed.
+- `↑` / `k`, `↓` / `j`: Navigate diagnostic items.
+- `Enter`: Select diagnostic issue and emit `QuickFixSelectMsg`.
+- `Esc` / `q`: Close drawer.
+- **Mouse Wheel**: Wheel up / down scrolls diagnostic list.
+
+---
+
+## 26. DetailSelector
+
+The `DetailSelector` component combines a single-choice selection list on top with a live synchronized preview card below, inspired by `mritd/bubbles/selector`. When items are navigated, the card below updates dynamically with item details and metadata.
+
+### Usage
+```python
+from espresso.beans import DetailSelector, DetailItem, DetailSelectMsg
+
+items = [
+    DetailItem(
+        title="Espresso Runtime",
+        tag="CORE",
+        details="Declarative The Elm Architecture event loop.",
+        metadata={"Version": "0.1.0"},
+    ),
+    DetailItem(
+        title="Crema Engine",
+        tag="STABLE",
+        details="ANSI truecolor styling, 2D layer compositor.",
+        metadata={"Engine": "Crema"},
+    ),
+]
+
+selector = DetailSelector(items=items, prompt="Select Layer:", width=50, per_page=4)
+
+def update(self, msg):
+    match msg:
+        case DetailSelectMsg(item=item, index=idx):
+            print(f"Selected layer: {item.title}")
+            return self, None
+
+    self.selector, cmd = self.selector.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.selector.view()
+```
+
+### Key Bindings & Mouse Controls
+- `↑` / `k`, `↓` / `j`: Move selection cursor and update preview card.
+- `PageUp` / `PageDown`: Move page backward / forward.
+- `Enter` / `Space`: Select highlighted item and emit `DetailSelectMsg`.
+- **Mouse Wheel**: Wheel up / down scrolls through items.
+
+---
+
+## 27. ImageViewer
+
+The `ImageViewer` component renders images and graphics in the terminal using 24-bit ANSI upper-half blocks (`▀`) and 10-step grayscale ASCII characters, inspired by `mistakenelf/teacup/image`. It provides pure Python standard library support for Netpbm PPM (`.ppm`), uncompressed 24-bit BMP (`.bmp`), and raw RGB pixel matrices, plus an optional Pillow bridge for PNG/JPEG when installed.
+
+### Usage
+```python
+from espresso.beans import ImageViewer, RenderMode
+
+# 1. From raw RGB matrix:
+pixels = [
+    [(255, 0, 0), (0, 255, 0)],
+    [(0, 0, 255), (255, 255, 0)],
+]
+viewer = ImageViewer(pixels=pixels, width=40, height=20, mode=RenderMode.HALF_BLOCK)
+
+# 2. From file (PPM or BMP natively):
+# viewer = ImageViewer.from_file("assets/logo.ppm", width=60, height=30)
+
+def update(self, msg):
+    self.viewer, cmd = self.viewer.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.viewer.view()
+```
+
+### Features & Formats
+- **24-bit ANSI Truecolor Half-Blocks**: Combines two vertical RGB pixels into a single `▀` character using foreground and background ANSI truecolor codes (`\x1b[38;2;R;G;Bm` + `\x1b[48;2;R;G;Bm`).
+- **ASCII Grayscale Mode**: 10-level luminance mapping ramp (` .:-=+*#%@`) for monochrome or non-truecolor terminals.
+- **Native Formats**: Supports Netpbm P3 (ASCII) and P6 (binary) PPM files, plus uncompressed 24-bit Windows BMP files with zero third-party dependencies.
+- **Optional Pillow Bridge**: Automatically loads PNG, JPEG, GIF, and WebP if `PIL` is installed in the environment.
+- **Viewport Navigation**: Arrow keys and mouse wheel scroll large images seamlessly.
+

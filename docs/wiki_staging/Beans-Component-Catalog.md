@@ -68,3 +68,21 @@ Hierarchical view router managing sub-model transitions, automatic message forwa
 ## `DatePicker`
 Interactive monthly calendar widget with day/week navigation, month/year focus modes, mouse date selection, and min/max date clamping.
 
+## `PipelineProgress`
+Multi-stage asynchronous task execution pipeline with live progress bar, per-stage status badges (`PENDING`, `RUNNING`, `SUCCESS`, `FAILED`, `SKIPPED`), elapsed execution times, and failure diagnostics.
+
+## `MarkdownViewer`
+Pure Python terminal Markdown document viewer parsing headings, bold, italic, code blocks, blockquotes, lists, and tables with smooth viewport scrolling.
+
+## `CodeViewer`
+Syntax-highlighted source code viewer with line numbers, active cursor line highlight (`▶`), themes (`THEME_ESPRESSO`, `THEME_DRACULA`, `THEME_MONOKAI`), and multi-language support (Python stdlib `tokenize` + regex tokenizers).
+
+## `QuickFix`
+Neovim-style diagnostic bottom drawer for viewing compiler/linter issues with severity badges (`ERR`, `WARN`, `INFO`, `HINT`), keyboard navigation, and seamless background view compositing via `wrap_view`.
+
+## `DetailSelector`
+Interactive selection menu paired with a live synchronized preview card below, collapsing to a concise summary on selection.
+
+## `ImageViewer`
+Terminal graphics viewer rendering 24-bit ANSI truecolor half-blocks (`▀`) and 10-step ASCII grayscale with native support for Netpbm PPM, 24-bit BMP, and raw RGB matrices.
+
