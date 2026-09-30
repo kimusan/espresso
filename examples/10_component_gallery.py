@@ -456,10 +456,11 @@ class ComponentGallery(Model):
             # Left Panel Interaction
             if curr_tab == 0:
                 # Tab 0: Filterable List
+                # Row 2 is title, row 3 is blank, items start on row 4 (2 lines per item: title + desc)
                 if msg.y == 2:
                     return self.update(KeyMsg("/"))
-                elif msg.y >= 3:
-                    item_idx_on_page = (msg.y - 3) // 2
+                elif msg.y >= 4:
+                    item_idx_on_page = (msg.y - 4) // 2
                     start_idx = self.list.paginator.page * self.list.per_page
                     target_idx = start_idx + item_idx_on_page
                     if 0 <= target_idx < len(self.list.filtered_items):
@@ -476,8 +477,12 @@ class ComponentGallery(Model):
 
             elif curr_tab == 1:
                 # Tab 1: FilePicker
-                if msg.y >= 3:
-                    entry_idx_on_screen = msg.y - 3
+                # Row 2 is path, row 3 is blank, entries start on row 4 (1 line per entry)
+                if msg.y == 2:
+                    # Click path breadcrumb: go to parent directory
+                    return self.update(KeyMsg("backspace"))
+                elif msg.y >= 4:
+                    entry_idx_on_screen = msg.y - 4
                     target_idx = self.file_picker.scroll_offset + entry_idx_on_screen
                     entries = self.file_picker.entries
                     if 0 <= target_idx < len(entries):
@@ -493,18 +498,21 @@ class ComponentGallery(Model):
 
             elif curr_tab == 2:
                 # Tab 2: CLI Prompts
-                if msg.y <= 7:
+                # Card 0: rows 2-9 (options at rows 4-7)
+                if msg.y <= 9:
                     self.active_prompt_idx = 0
-                    opt_idx = msg.y - 3
+                    opt_idx = msg.y - 4
                     if 0 <= opt_idx < len(self.select_prompt.options):
                         self.select_prompt.cursor = opt_idx
                         return self.update(KeyMsg("enter"))
-                elif msg.y <= 15:
+                # Card 1: rows 10-18 (checkboxes at rows 12-16)
+                elif msg.y <= 18:
                     self.active_prompt_idx = 1
-                    opt_idx = msg.y - 10
+                    opt_idx = msg.y - 12
                     if 0 <= opt_idx < len(self.multiselect_prompt.options):
                         self.multiselect_prompt.cursor = opt_idx
                         return self.update(KeyMsg(" "))
+                # Card 2: rows 19-21 (question & buttons at row 20)
                 else:
                     self.active_prompt_idx = 2
                     if msg.x < w_left // 2:
@@ -514,8 +522,9 @@ class ComponentGallery(Model):
 
             elif curr_tab == 3:
                 # Tab 3: Tree View
-                if msg.y >= 3:
-                    node_idx = msg.y - 3
+                # Nodes start immediately at row 2 (1 line per visible node)
+                if msg.y >= 2:
+                    node_idx = msg.y - 2
                     visible_nodes = self.tree.visible_nodes
                     if 0 <= node_idx < len(visible_nodes):
                         if self.tree.cursor == node_idx:

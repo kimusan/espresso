@@ -165,6 +165,51 @@ class TestMouseToggle(unittest.TestCase):
         asyncio.run(run_scenario())
 
 
+class TestGalleryMouseRowMapping(unittest.TestCase):
+    def test_row_coordinate_mappings(self) -> None:
+        import importlib.util
+        import sys
+        from pathlib import Path
+
+        repo_root = Path(__file__).resolve().parent.parent
+        spec = importlib.util.spec_from_file_location("gallery", repo_root / "examples" / "10_component_gallery.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        app = mod.ComponentGallery()
+
+        # 1. FilePicker (Tab 1): Row 4 is Entry 0 ('..'), Row 5 is Entry 1
+        app.tabs.active_tab = 1
+        app.file_picker.cursor = 4
+        app, _ = app.update(MouseMsg(x=10, y=4, button=MouseButton.LEFT, action=MouseAction.PRESS))
+        self.assertEqual(app.file_picker.cursor, 0)
+        self.assertEqual(app.file_picker.selected_entry.name, "..")
+
+        app, _ = app.update(MouseMsg(x=10, y=5, button=MouseButton.LEFT, action=MouseAction.PRESS))
+        self.assertEqual(app.file_picker.cursor, 1)
+
+        # 2. Tree View (Tab 3): Row 2 is Node 0, Row 3 is Node 1
+        app.tabs.active_tab = 3
+        app.tree.cursor = 4
+        app, _ = app.update(MouseMsg(x=10, y=2, button=MouseButton.LEFT, action=MouseAction.PRESS))
+        self.assertEqual(app.tree.cursor, 0)
+        self.assertEqual(app.tree.selected_node.label, "espresso")
+
+        app, _ = app.update(MouseMsg(x=10, y=3, button=MouseButton.LEFT, action=MouseAction.PRESS))
+        self.assertEqual(app.tree.cursor, 1)
+
+        # 3. List (Tab 0): Row 4 is Item 0 title, Row 5 is Item 0 desc, Row 6 is Item 1
+        app.tabs.active_tab = 0
+        app.list.cursor = 4
+        app, _ = app.update(MouseMsg(x=10, y=4, button=MouseButton.LEFT, action=MouseAction.PRESS))
+        self.assertEqual(app.list.cursor, 0)
+        app.list.cursor = 4
+        app, _ = app.update(MouseMsg(x=10, y=5, button=MouseButton.LEFT, action=MouseAction.PRESS))
+        self.assertEqual(app.list.cursor, 0)
+        app, _ = app.update(MouseMsg(x=10, y=6, button=MouseButton.LEFT, action=MouseAction.PRESS))
+        self.assertEqual(app.list.cursor, 1)
+
+
 if __name__ == "__main__":
     unittest.main()
 
