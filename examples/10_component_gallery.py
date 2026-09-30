@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Example 10: New Beans Gallery Showcase.
+"""Example 10: Full-Window Beans Component Gallery.
 
-Interactive showcase demonstrating the full suite of newly added components:
-1. Tabs: Tab bar navigation with hotkeys (1-4, Left/Right)
-2. List & Paginator: Filterable list with search (/) and pagination
+Interactive showcase demonstrating the full suite of newly added components
+in a responsive, edge-to-edge full-window terminal layout:
+1. Tabs: Top tab navigation bar with hotkeys (1-4, Tab / Shift-Tab)
+2. List & Paginator: Filterable list with search (/) and live pagination
 3. FilePicker: Interactive filesystem browser with file sizes and hidden file toggle (.)
-4. Prompts: SelectPrompt, MultiSelectPrompt, and ConfirmPrompt
+4. Prompts: SelectPrompt, MultiSelectPrompt (checkboxes), and ConfirmPrompt
 5. Tree: Collapsible hierarchical directory tree
 6. Dialog & 2D Overlay: Modal card composited on top with backdrop dimming (press 'd')
 7. ToastManager: Transient auto-dismissing toast notifications (press 't')
@@ -14,6 +15,7 @@ Interactive showcase demonstrating the full suite of newly added components:
 from __future__ import annotations
 
 import random
+import shutil
 import sys
 from pathlib import Path
 
@@ -33,11 +35,8 @@ from espresso.beans import (
     ListSelectMsg,
     MultiSelectPrompt,
     MultiSelectSubmitMsg,
-    Paginator,
-    PaginatorType,
     SelectPrompt,
     SelectSubmitMsg,
-    TabChangeMsg,
     TabStyle,
     Tabs,
     ToastDismissMsg,
@@ -54,13 +53,55 @@ from espresso.crema import (
     join_horizontal,
     join_vertical,
     place_overlay,
+    string_width,
+    truncate_ansi,
 )
+
+
+def make_panel(
+    title: str,
+    content: str,
+    w: int,
+    h: int,
+    border_fg: str = "#4A4A6A",
+    border_title_align: Align = Align.LEFT,
+) -> str:
+    """Render a framed box with guaranteed exact visual width w and exact line count h."""
+    w = max(4, w)
+    h = max(3, h)
+    inner_w = max(0, w - 2)
+    inner_h = max(0, h - 2)
+
+    raw_lines = content.splitlines() if content else []
+    # Truncate each line to inner_w
+    formatted_lines = [truncate_ansi(l, inner_w) for l in raw_lines[:inner_h]]
+    # Pad with spaces to reach inner_h so splitlines doesn't drop trailing empty strings
+    while len(formatted_lines) < inner_h:
+        formatted_lines.append(" " * inner_w)
+
+    rendered = (
+        Style()
+        .border(ROUNDED_BORDER)
+        .border_foreground(border_fg)
+        .border_title(f" {title} " if title else None, border_title_align)
+        .width(inner_w)
+        .render("\n".join(formatted_lines))
+    )
+
+    res_lines = rendered.splitlines()
+    while len(res_lines) < h:
+        res_lines.append(" " * w)
+    return "\n".join(res_lines[:h])
 
 
 class ComponentGallery(Model):
     def __init__(self) -> None:
-        self.width = 90
-        self.height = 26
+        # Query active terminal size on startup so first frame is full-screen
+        ts = shutil.get_terminal_size((100, 30))
+        self.width = max(80, ts.columns)
+        self.height = max(24, ts.lines)
+
+        self.status_msg = "Use Tab / 1-4 to navigate tabs, 'd' for modal dialog, 't' for toast, 'q' to quit"
 
         # --- Component 1: Tabs ---
         self.tabs = Tabs(
@@ -83,31 +124,35 @@ class ComponentGallery(Model):
             ListItem("Interactive Prompts", "Select, MultiSelect checkboxes, and Confirm prompts", "prompts"),
             ListItem("Collapsible Tree", "Hierarchical tree view with branch guides", "tree"),
             ListItem("Toast Notifications", "Auto-dismissing asynchronous alerts", "toast"),
+            ListItem("Line Diffing Buffer", "Zero-flicker double buffered screen redraw", "renderer"),
+            ListItem("SGR Mouse Protocol", "Mouse clicks, dragging, and wheel scrolling", "mouse"),
+            ListItem("Adaptive Colors", "Light/Dark background detection & NO_COLOR", "color"),
         ]
         self.list = List(
             items=list_items,
             title="Component Catalog",
-            per_page=5,
+            per_page=6,
             width=46,
-            height=12,
+            show_filter=True,
+            show_pagination=True,
         )
-        self.selected_list_info = "Press Enter on any item to inspect"
+        self.selected_item = list_items[0]
 
         # --- Component 3: FilePicker ---
         project_root = Path(__file__).resolve().parent.parent
         self.file_picker = FilePicker(
             directory=project_root,
-            height=12,
-            width=54,
+            height=14,
+            width=50,
             show_hidden=False,
             dir_allowed=True,
         )
-        self.selected_file_info = f"Current Directory: {project_root.name}"
+        self.selected_file_str = f"{project_root.name} (Directory)"
 
         # --- Component 4: Prompts ---
         self.select_prompt = SelectPrompt(
             question="Select deployment target:",
-            options=["Production Cluster", "Staging Environment", "Local Container", "Bare Metal"],
+            options=["Production Cluster", "Staging Environment", "Local Container", "Bare Metal Edge"],
         )
         self.multiselect_prompt = MultiSelectPrompt(
             question="Select build pipelines to trigger:",
@@ -134,16 +179,16 @@ class ComponentGallery(Model):
                             expanded=True,
                             children=[
                                 TreeNode("tea.py (The Elm Architecture)"),
-                                TreeNode("keys.py (Key parser)"),
-                                TreeNode("program.py (Runtime engine)"),
+                                TreeNode("keys.py (Key event parser)"),
+                                TreeNode("program.py (Runtime engine & renderer)"),
                             ],
                         ),
                         TreeNode(
                             label="crema",
                             expanded=True,
                             children=[
-                                TreeNode("style.py (Style box model)"),
-                                TreeNode("color.py (ANSI/RGB/Adaptive)"),
+                                TreeNode("style.py (Box model & borders)"),
+                                TreeNode("color.py (ANSI / RGB / Adaptive)"),
                                 TreeNode("overlay.py (2D layer compositor)"),
                                 TreeNode("gradient.py (Color gradients)"),
                             ],
@@ -152,13 +197,13 @@ class ComponentGallery(Model):
                             label="beans",
                             expanded=True,
                             children=[
-                                TreeNode("list.py (Filterable list)"),
-                                TreeNode("filepicker.py (Filesystem picker)"),
-                                TreeNode("dialog.py (Modal overlay)"),
+                                TreeNode("list.py (Filterable list & paginator)"),
+                                TreeNode("filepicker.py (Filesystem explorer)"),
+                                TreeNode("dialog.py (Modal overlay card)"),
                                 TreeNode("prompt.py (CLI prompts)"),
                                 TreeNode("toast.py (Toast manager)"),
-                                TreeNode("tabs.py (Tab navigation)"),
-                                TreeNode("tree.py (Collapsible tree)"),
+                                TreeNode("tabs.py (Tab navigation bar)"),
+                                TreeNode("tree.py (Collapsible tree view)"),
                             ],
                         ),
                     ],
@@ -167,22 +212,23 @@ class ComponentGallery(Model):
                     label="examples",
                     expanded=True,
                     children=[
-                        TreeNode("05_beans_showcase.py"),
-                        TreeNode("08_rss_reader.py"),
-                        TreeNode("10_component_gallery.py"),
+                        TreeNode("05_beans_showcase.py (Coffee wizard)"),
+                        TreeNode("08_rss_reader.py (Fullscreen RSS reader)"),
+                        TreeNode("09_colors_and_gradients.py (Palette demo)"),
+                        TreeNode("10_component_gallery.py (Full window gallery)"),
                     ],
                 ),
                 TreeNode(
                     label="tests",
                     children=[
-                        TreeNode("test_beans_new.py"),
-                        TreeNode("test_overlay.py"),
+                        TreeNode("test_beans_new.py (168 tests)"),
+                        TreeNode("test_overlay.py (2D compositor tests)"),
                     ],
                 ),
             ],
         )
         self.tree = Tree(nodes=[tree_root])
-        self.selected_tree_info = "Navigate with arrows, Space/Enter to expand"
+        self.selected_node_label = "espresso"
 
         # --- Component 6: Toast Manager ---
         self.toast_manager = ToastManager()
@@ -191,24 +237,39 @@ class ComponentGallery(Model):
         self.show_dialog = False
         self.dialog = Dialog(
             title="Deploy Application",
-            message="Are you sure you want to deploy the latest release to the production cluster?",
+            message="Are you sure you want to deploy the latest release to the production cluster?\nAll microservices will undergo rolling updates.",
             buttons=("Deploy Now", "Cancel"),
-            width=46,
+            width=50,
             border_foreground="#00E676",
         )
 
-        # Styling
-        self.panel_style = (
-            Style()
-            .border(ROUNDED_BORDER)
-            .border_foreground("#4A4A6A")
-            .padding(1, 2)
-        )
-        self.hint_style = Style().foreground("#8888AA")
-        self.accent_style = Style().bold(True).foreground("#00E5FF")
+        self._sync_child_dimensions()
+
+    def _calc_layout(self) -> tuple[int, int, int]:
+        """Calculate (content_h, w_left, w_right) to fill window edge-to-edge."""
+        W = max(70, self.width)
+        H = max(20, self.height)
+        content_h = max(8, H - 2)  # 1 row header, 1 row footer
+        w_left = max(35, int(W * 0.55))
+        w_right = W - w_left
+        return content_h, w_left, w_right
+
+    def _sync_child_dimensions(self) -> None:
+        content_h, w_left, _ = self._calc_layout()
+        inner_w_left = max(10, w_left - 4)
+        inner_h = max(4, content_h - 2)
+
+        # Update List dimensions
+        self.list.width = inner_w_left
+        self.list.per_page = max(2, (inner_h - 5) // 2)
+        self.list.paginator.per_page = self.list.per_page
+        self.list.paginator.set_total(len(self.list.filtered_items))
+
+        # Update FilePicker dimensions
+        self.file_picker.width = inner_w_left
+        self.file_picker.height = inner_h - 2
 
     def init(self) -> Cmd | None:
-        # Show welcome toast on startup
         _, toast_cmd = self.toast_manager.add(
             "Welcome to the Beans Component Gallery!",
             ToastLevel.INFO,
@@ -219,20 +280,21 @@ class ComponentGallery(Model):
     def update(self, msg: Msg) -> tuple[ComponentGallery, Cmd | None]:
         cmds: list[Cmd] = []
 
-        # Handle window resize
+        # Terminal Resize
         if isinstance(msg, WindowSizeMsg):
-            self.width = max(80, msg.width)
-            self.height = max(24, msg.height)
+            self.width = max(70, msg.width)
+            self.height = max(20, msg.height)
+            self._sync_child_dimensions()
             return self, None
 
-        # Handle Toast Dismiss Msg
+        # Toast Dismissal
         if isinstance(msg, ToastDismissMsg):
             self.toast_manager, t_cmd = self.toast_manager.update(msg)
             if t_cmd:
                 cmds.append(t_cmd)
             return self, None
 
-        # If modal dialog is open, route keyboard events exclusively to Dialog
+        # Modal Dialog takes priority if visible
         if self.show_dialog:
             if isinstance(msg, KeyMsg):
                 self.dialog, d_cmd = self.dialog.update(msg)
@@ -240,15 +302,16 @@ class ComponentGallery(Model):
                     res_msg = d_cmd()
                     if isinstance(res_msg, DialogResultMsg):
                         self.show_dialog = False
-                        # Trigger toast based on dialog result
                         if res_msg.action == "Deploy Now":
+                            self.status_msg = "Deployment sequence initiated!"
                             _, toast_cmd = self.toast_manager.add(
-                                "Deployment sequence initiated!",
+                                "🚀 Deployment sequence initiated!",
                                 ToastLevel.SUCCESS,
                                 duration=4.0,
                             )
                             cmds.append(toast_cmd)
                         else:
+                            self.status_msg = "Deployment cancelled."
                             _, toast_cmd = self.toast_manager.add(
                                 "Action cancelled.",
                                 ToastLevel.WARNING,
@@ -266,19 +329,18 @@ class ComponentGallery(Model):
                     self.show_dialog = True
                     return self, None
                 case "t":
-                    # Spawn a random toast notification
                     samples = [
-                        ("Build completed in 1.42s", ToastLevel.SUCCESS),
-                        ("Cache miss on key 'catalog_v2'", ToastLevel.WARNING),
-                        ("Database connection established", ToastLevel.INFO),
-                        ("Failed to sync remote repository", ToastLevel.ERROR),
+                        ("Build completed successfully in 1.42s", ToastLevel.SUCCESS),
+                        ("High memory utilization detected (82%)", ToastLevel.WARNING),
+                        ("Database replica connected (cluster-eu-west)", ToastLevel.INFO),
+                        ("Failed to reach registry endpoint", ToastLevel.ERROR),
                     ]
                     text, lvl = random.choice(samples)
+                    self.status_msg = text
                     _, toast_cmd = self.toast_manager.add(text, lvl, duration=3.0)
                     cmds.append(toast_cmd)
                     return self, toast_cmd
                 case "tab":
-                    # Cycle active tab
                     next_tab = (self.tabs.active_tab + 1) % len(self.tabs.titles)
                     self.tabs, _ = self.tabs.update(KeyMsg(str(next_tab + 1)))
                     return self, None
@@ -290,7 +352,7 @@ class ComponentGallery(Model):
                     self.tabs, _ = self.tabs.update(msg)
                     return self, None
 
-        # Route events to active tab component
+        # Delegate to active tab
         curr_tab = self.tabs.active_tab
 
         if curr_tab == 0:
@@ -299,9 +361,10 @@ class ComponentGallery(Model):
             if list_cmd:
                 sub_msg = list_cmd()
                 if isinstance(sub_msg, ListSelectMsg):
-                    self.selected_list_info = f"Selected: {sub_msg.item.title} ({sub_msg.item.description})"
+                    self.selected_item = sub_msg.item
+                    self.status_msg = f"Inspecting: {sub_msg.item.title}"
                     _, toast_cmd = self.toast_manager.add(
-                        f"Selected item: {sub_msg.item.title}",
+                        f"Selected: {sub_msg.item.title}",
                         ToastLevel.SUCCESS,
                         duration=2.5,
                     )
@@ -314,9 +377,11 @@ class ComponentGallery(Model):
             if fp_cmd:
                 sub_msg = fp_cmd()
                 if isinstance(sub_msg, FileSelectMsg):
-                    self.selected_file_info = f"Selected: {sub_msg.path.name} ({'Dir' if sub_msg.is_dir else 'File'})"
+                    kind = "Directory" if sub_msg.is_dir else "File"
+                    self.selected_file_str = f"{sub_msg.path.name} ({kind})"
+                    self.status_msg = f"Browsing: {sub_msg.path.name}"
                     _, toast_cmd = self.toast_manager.add(
-                        f"Picked {sub_msg.path.name}",
+                        f"Picked {sub_msg.path.name} ({kind})",
                         ToastLevel.INFO,
                         duration=2.5,
                     )
@@ -332,14 +397,14 @@ class ComponentGallery(Model):
                     self.active_prompt_idx = (self.active_prompt_idx - 1) % 3
                 return self, None
 
-            # Route to currently active prompt
             if self.active_prompt_idx == 0:
                 self.select_prompt, p_cmd = self.select_prompt.update(msg)
                 if p_cmd:
                     sub_msg = p_cmd()
                     if isinstance(sub_msg, SelectSubmitMsg):
+                        self.status_msg = f"Target selected: {sub_msg.selected}"
                         _, toast_cmd = self.toast_manager.add(
-                            f"Target chosen: {sub_msg.selected}",
+                            f"Target: {sub_msg.selected}",
                             ToastLevel.SUCCESS,
                             duration=3.0,
                         )
@@ -350,8 +415,9 @@ class ComponentGallery(Model):
                 if p_cmd:
                     sub_msg = p_cmd()
                     if isinstance(sub_msg, MultiSelectSubmitMsg):
+                        self.status_msg = f"Enabled {len(sub_msg.selected)} build pipelines"
                         _, toast_cmd = self.toast_manager.add(
-                            f"Enabled {len(sub_msg.selected)} pipelines",
+                            f"Pipelines: {len(sub_msg.selected)} active",
                             ToastLevel.INFO,
                             duration=3.0,
                         )
@@ -363,7 +429,8 @@ class ComponentGallery(Model):
                     sub_msg = p_cmd()
                     if isinstance(sub_msg, ConfirmSubmitMsg):
                         lvl = ToastLevel.SUCCESS if sub_msg.confirmed else ToastLevel.WARNING
-                        status_str = "Confirmed! Proceeding..." if sub_msg.confirmed else "Cancelled."
+                        status_str = "Confirmed! Proceeding..." if sub_msg.confirmed else "Deployment cancelled."
+                        self.status_msg = status_str
                         _, toast_cmd = self.toast_manager.add(status_str, lvl, duration=3.0)
                         cmds.append(toast_cmd)
 
@@ -375,9 +442,10 @@ class ComponentGallery(Model):
             if t_cmd:
                 sub_msg = t_cmd()
                 if isinstance(sub_msg, TreeNodeSelectMsg):
-                    self.selected_tree_info = f"Node: {sub_msg.node.label}"
+                    self.selected_node_label = sub_msg.node.label
+                    self.status_msg = f"Inspecting node: {sub_msg.node.label}"
                     _, toast_cmd = self.toast_manager.add(
-                        f"Selected node: {sub_msg.node.label}",
+                        f"Selected: {sub_msg.node.label}",
                         ToastLevel.INFO,
                         duration=2.5,
                     )
@@ -386,168 +454,215 @@ class ComponentGallery(Model):
 
         return self, None
 
-    def _render_tab_content(self) -> str:
+    def _render_tab_panels(self, content_h: int, w_left: int, w_right: int) -> tuple[str, str]:
         curr_tab = self.tabs.active_tab
 
         if curr_tab == 0:
-            # List Tab: Left column is list, right column is preview details
-            list_rendered = self.list.view()
-            detail_box = (
-                Style()
-                .border(ROUNDED_BORDER)
-                .border_foreground("#00E5FF")
-                .padding(1, 2)
-                .width(36)
-                .render(
-                    f"{Style().bold(True).foreground('#00E5FF').render('Item Inspector')}\n\n"
-                    f"{self.selected_list_info}\n\n"
-                    f"{self.hint_style.render('Keys:')}\n"
-                    f"• {Style().foreground('#00E676').render('↑/↓ or j/k')}: Navigate\n"
-                    f"• {Style().foreground('#00E676').render('/')}: Filter items\n"
-                    f"• {Style().foreground('#00E676').render('Enter')}: Select item\n"
-                    f"• {Style().foreground('#00E676').render('Esc')}: Clear filter\n"
-                )
-            )
-            return join_horizontal(Align.TOP, list_rendered, "  ", detail_box)
+            # Tab 0: List & Inspector
+            list_content = self.list.view()
+            p_left = make_panel("📦 Component Catalog", list_content, w_left, content_h, border_fg="#7D56F4")
+
+            item = self.selected_item
+            inspector_lines = [
+                f"{Style().bold(True).foreground('#00E5FF').render(item.title)}",
+                f"{Style().foreground('#D0D0D0').render(item.description)}",
+                "",
+                f"{Style().foreground('#8888AA').render('Category:')} {Style().bold(True).foreground('#FFD54F').render(str(item.value).upper())}",
+                "",
+                f"{Style().bold(True).foreground('#FAFAFA').render('Code Usage:')}",
+                f"{Style().foreground('#666688').render('----------------------------------------')}",
+                f"{Style().foreground('#A0FFA0').render('from espresso.beans import List, ListItem')}",
+                "",
+                f"{Style().foreground('#E0E0E0').render('items = [ListItem(\"Title\", \"Desc\")]')}",
+                f"{Style().foreground('#E0E0E0').render('catalog = List(items, per_page=6)')}",
+                f"{Style().foreground('#666688').render('----------------------------------------')}",
+                "",
+                f"{Style().bold(True).foreground('#FFA726').render('Keyboard Controls:')}",
+                f"• {Style().foreground('#00E676').render('↑ / ↓ or j / k')}: Navigate items",
+                f"• {Style().foreground('#00E676').render('/')}: Live fuzzy search / filter",
+                f"• {Style().foreground('#00E676').render('Enter')}: Select & inspect item",
+                f"• {Style().foreground('#00E676').render('Esc')}: Clear search query",
+                f"• {Style().foreground('#00E676').render('PgUp / PgDn')}: Jump page",
+            ]
+            p_right = make_panel("🔍 Item Inspector", "\n".join(inspector_lines), w_right, content_h, border_fg="#00E5FF")
+            return p_left, p_right
 
         elif curr_tab == 1:
-            # FilePicker Tab
-            fp_rendered = self.file_picker.view()
-            info_box = (
-                Style()
-                .border(ROUNDED_BORDER)
-                .border_foreground("#FF9100")
-                .padding(1, 2)
-                .width(28)
-                .render(
-                    f"{Style().bold(True).foreground('#FF9100').render('File Details')}\n\n"
-                    f"{self.selected_file_info}\n\n"
-                    f"{self.hint_style.render('Keys:')}\n"
-                    f"• {Style().foreground('#00E676').render('↑/↓')}: Browse\n"
-                    f"• {Style().foreground('#00E676').render('Enter')}: Open/Select\n"
-                    f"• {Style().foreground('#00E676').render('Backspace')}: Parent dir\n"
-                    f"• {Style().foreground('#00E676').render('.')}: Toggle hidden\n"
-                )
-            )
-            return join_horizontal(Align.TOP, fp_rendered, "  ", info_box)
+            # Tab 1: FilePicker & Details
+            fp_content = self.file_picker.view()
+            p_left = make_panel("📁 Filesystem Explorer", fp_content, w_left, content_h, border_fg="#FF9100")
+
+            entry = self.file_picker.selected_entry
+            entry_name = entry.name if entry else "None"
+            entry_type = "Directory" if (entry and entry.is_dir) else "Regular File"
+            entry_size = f"{entry.size} bytes" if (entry and not entry.is_dir) else "N/A"
+            curr_dir = str(self.file_picker.current_path)
+
+            file_lines = [
+                f"{Style().bold(True).foreground('#FFA726').render(entry_name)}",
+                f"{Style().foreground('#8888AA').render('Type:')} {Style().foreground('#FAFAFA').render(entry_type)}",
+                f"{Style().foreground('#8888AA').render('Size:')} {Style().foreground('#00E676').render(entry_size)}",
+                "",
+                f"{Style().bold(True).foreground('#FAFAFA').render('Current Folder:')}",
+                f"{Style().foreground('#00E5FF').render(truncate_ansi(curr_dir, w_right - 6))}",
+                "",
+                f"{Style().bold(True).foreground('#FAFAFA').render('FilePicker Features:')}",
+                f"• {Style().foreground('#66BB6A').render('Human-readable sizes')} (KB, MB, GB)",
+                f"• {Style().foreground('#66BB6A').render('Icons')} for folders (📁) and files (📄)",
+                f"• {Style().foreground('#66BB6A').render('Hidden file filter')} toggleable with '.'",
+                "",
+                f"{Style().bold(True).foreground('#FFA726').render('Shortcuts:')}",
+                f"• {Style().foreground('#00E676').render('↑ / ↓')}: Move selection cursor",
+                f"• {Style().foreground('#00E676').render('Enter')}: Open folder / Pick file",
+                f"• {Style().foreground('#00E676').render('Backspace / h')}: Go up to parent (..)",
+                f"• {Style().foreground('#00E676').render('.')}: Toggle hidden files",
+            ]
+            p_right = make_panel("📄 File Details & Actions", "\n".join(file_lines), w_right, content_h, border_fg="#FFA726")
+            return p_left, p_right
 
         elif curr_tab == 2:
-            # Prompts Tab: Stack all 3 prompts
+            # Tab 2: CLI Prompts & Summary
             p0 = self.select_prompt.view()
             p1 = self.multiselect_prompt.view()
             p2 = self.confirm_prompt.view()
 
-            card0 = (
-                Style()
-                .border(ROUNDED_BORDER)
-                .border_foreground("#7D56F4" if self.active_prompt_idx == 0 else "#333344")
-                .padding(0, 1)
-                .render(p0)
-            )
-            card1 = (
-                Style()
-                .border(ROUNDED_BORDER)
-                .border_foreground("#7D56F4" if self.active_prompt_idx == 1 else "#333344")
-                .padding(0, 1)
-                .render(p1)
-            )
-            card2 = (
-                Style()
-                .border(ROUNDED_BORDER)
-                .border_foreground("#7D56F4" if self.active_prompt_idx == 2 else "#333344")
-                .padding(0, 1)
-                .render(p2)
-            )
+            card0 = Style().border(ROUNDED_BORDER).border_foreground("#00E5FF" if self.active_prompt_idx == 0 else "#33334A").render(p0)
+            card1 = Style().border(ROUNDED_BORDER).border_foreground("#00E5FF" if self.active_prompt_idx == 1 else "#33334A").render(p1)
+            card2 = Style().border(ROUNDED_BORDER).border_foreground("#00E5FF" if self.active_prompt_idx == 2 else "#33334A").render(p2)
 
-            prompt_col = join_vertical(Align.LEFT, card0, card1, card2)
-            hint_box = (
-                Style()
-                .border(ROUNDED_BORDER)
-                .border_foreground("#7D56F4")
-                .padding(1, 2)
-                .width(32)
-                .render(
-                    f"{Style().bold(True).foreground('#7D56F4').render('Prompt Controls')}\n\n"
-                    f"Active: Prompt #{self.active_prompt_idx + 1}\n\n"
-                    f"{self.hint_style.render('Navigation:')}\n"
-                    f"• {Style().foreground('#00E676').render('PgUp/PgDn')}: Switch Prompt\n"
-                    f"• {Style().foreground('#00E676').render('↑/↓')}: Select option\n"
-                    f"• {Style().foreground('#00E676').render('Space')}: Toggle checkbox\n"
-                    f"• {Style().foreground('#00E676').render('a')}: Select all\n"
-                    f"• {Style().foreground('#00E676').render('Enter')}: Submit\n"
-                )
-            )
-            return join_horizontal(Align.TOP, prompt_col, "  ", hint_box)
+            prompts_joined = join_vertical(Align.LEFT, card0, card1, card2)
+            p_left = make_panel("⚡ Interactive CLI Prompts", prompts_joined, w_left, content_h, border_fg="#E040FB")
+
+            sel_opt = self.select_prompt.options[self.select_prompt.cursor]
+            multi_cnt = len(self.multiselect_prompt.selected_indices)
+            conf_val = "Yes (Confirmed)" if self.confirm_prompt.value else "No (Declined)"
+
+            summary_lines = [
+                f"{Style().bold(True).foreground('#E040FB').render('Configuration State')}",
+                "",
+                f"{Style().foreground('#8888AA').render('Target Host:')} {Style().bold(True).foreground('#00E5FF').render(str(sel_opt))}",
+                f"{Style().foreground('#8888AA').render('Pipelines:')} {Style().bold(True).foreground('#00E676').render(f'{multi_cnt} selected')}",
+                f"{Style().foreground('#8888AA').render('Deploy Flag:')} {Style().bold(True).foreground('#FFD54F').render(conf_val)}",
+                "",
+                f"{Style().bold(True).foreground('#FAFAFA').render('Prompt Navigation:')}",
+                f"• {Style().foreground('#00E676').render('PgUp / PgDn')}: Switch active prompt card",
+                f"• {Style().foreground('#00E676').render('↑ / ↓ or j / k')}: Navigate choices",
+                f"• {Style().foreground('#00E676').render('Space')}: Toggle checkbox",
+                f"• {Style().foreground('#00E676').render('a')}: Select all / Deselect all",
+                f"• {Style().foreground('#00E676').render('y / n')}: Fast confirm answer",
+                f"• {Style().foreground('#00E676').render('Enter')}: Submit selection",
+                "",
+                f"{Style().bold(True).foreground('#FAFAFA').render('Active Focus:')} Prompt #{self.active_prompt_idx + 1}",
+            ]
+            p_right = make_panel("📊 Configuration Summary", "\n".join(summary_lines), w_right, content_h, border_fg="#7C4DFF")
+            return p_left, p_right
 
         elif curr_tab == 3:
-            # Tree Tab
-            tree_rendered = self.tree.view()
-            tree_box = (
-                Style()
-                .border(ROUNDED_BORDER)
-                .border_foreground("#00E676")
-                .padding(1, 2)
-                .width(44)
-                .render(tree_rendered)
-            )
-            info_box = (
-                Style()
-                .border(ROUNDED_BORDER)
-                .border_foreground("#00E676")
-                .padding(1, 2)
-                .width(36)
-                .render(
-                    f"{Style().bold(True).foreground('#00E676').render('Hierarchy Explorer')}\n\n"
-                    f"{self.selected_tree_info}\n\n"
-                    f"{self.hint_style.render('Tree Keys:')}\n"
-                    f"• {Style().foreground('#00E676').render('↑/↓')}: Navigate nodes\n"
-                    f"• {Style().foreground('#00E676').render('Space/Right')}: Expand\n"
-                    f"• {Style().foreground('#00E676').render('Left')}: Collapse / Parent\n"
-                    f"• {Style().foreground('#00E676').render('Enter')}: Select node\n"
-                )
-            )
-            return join_horizontal(Align.TOP, tree_box, "  ", info_box)
+            # Tab 3: Tree View & Node Inspector
+            tree_content = self.tree.view()
+            p_left = make_panel("🌳 Project Codebase Tree", tree_content, w_left, content_h, border_fg="#00E676")
 
-        return ""
+            node = self.tree.selected_node
+            label = node.label if node else "None"
+            is_dir = "Directory / Package" if (node and not node.is_leaf) else "Module / File"
+            child_cnt = len(node.children) if (node and not node.is_leaf) else 0
 
-    def view(self) -> str:
-        # 1. Header with title and Tabs
-        header_title = (
+            tree_lines = [
+                f"{Style().bold(True).foreground('#00E676').render(label)}",
+                f"{Style().foreground('#8888AA').render('Node Type:')} {Style().foreground('#FAFAFA').render(is_dir)}",
+                f"{Style().foreground('#8888AA').render('Child Nodes:')} {Style().bold(True).foreground('#00E5FF').render(str(child_cnt))}",
+                "",
+                f"{Style().bold(True).foreground('#FAFAFA').render('Tree Features:')}",
+                f"• {Style().foreground('#66BB6A').render('Collapsible & expandable')} hierarchy",
+                f"• {Style().foreground('#66BB6A').render('Unicode branch lines')} (├──, └──, │)",
+                f"• {Style().foreground('#66BB6A').render('Parent jump')} on Left arrow",
+                "",
+                f"{Style().bold(True).foreground('#FFA726').render('Tree Controls:')}",
+                f"• {Style().foreground('#00E676').render('↑ / ↓ or j / k')}: Navigate tree items",
+                f"• {Style().foreground('#00E676').render('Space / →')}: Expand / collapse folder",
+                f"• {Style().foreground('#00E676').render('← / h')}: Collapse folder / Jump to parent",
+                f"• {Style().foreground('#00E676').render('Enter')}: Select node & inspect",
+            ]
+            p_right = make_panel("🌿 Node Inspector", "\n".join(tree_lines), w_right, content_h, border_fg="#69F0AE")
+            return p_left, p_right
+
+        return "", ""
+
+    def _render_header(self, total_w: int) -> str:
+        title_badge = (
             Style()
             .bold(True)
-            .foreground("#FAFAFA")
+            .foreground("#FFFFFF")
             .background("#7D56F4")
             .padding(0, 2)
-            .render("ESPRESSO BEANS COMPONENT GALLERY")
+            .render("☕ ESPRESSO BEANS GALLERY")
         )
-        tabs_view = self.tabs.view()
-        header = join_horizontal(Align.CENTER, header_title, "   ", tabs_view)
+        tabs_str = self.tabs.view()
+        left_part = f"{title_badge}  {tabs_str}"
+        left_w = string_width(left_part)
 
-        # 2. Main Tab Content
-        content = self._render_tab_content()
+        dim_badge = Style().foreground("#777799").render(f"[{total_w}x{self.height}] ")
+        dim_w = string_width(dim_badge)
 
-        # 3. Footer Bar with hotkey hints and active toasts
-        hotkey_hints = (
-            f"  {Style().bold(True).foreground('#00E5FF').render('Tab')}: Switch Tab  •  "
-            f"{Style().bold(True).foreground('#00E5FF').render('1-4')}: Quick Jump  •  "
-            f"{Style().bold(True).foreground('#00E5FF').render('d')}: Modal Dialog  •  "
-            f"{Style().bold(True).foreground('#00E5FF').render('t')}: Trigger Toast  •  "
-            f"{Style().bold(True).foreground('#FF5252').render('q')}: Quit"
+        spacing = max(1, total_w - left_w - dim_w)
+        header_line = f"{left_part}{' ' * spacing}{dim_badge}"
+        return Style().background("#1A1A28").render(truncate_ansi(header_line, total_w))
+
+    def _render_footer(self, total_w: int) -> str:
+        tab_names = ["LIST & PAGINATOR", "FILESYSTEM PICKER", "CLI PROMPTS", "CODEBASE TREE"]
+        active_name = tab_names[self.tabs.active_tab]
+        tab_badge = (
+            Style()
+            .bold(True)
+            .foreground("#000000")
+            .background("#00E676")
+            .padding(0, 1)
+            .render(f" TAB {self.tabs.active_tab + 1}/4: {active_name} ")
         )
-        footer_style = Style().foreground("#A0A0C0")
-        footer = footer_style.render(hotkey_hints)
 
-        # 4. Toasts (if active, render below content)
-        toast_view = self.toast_manager.view()
+        if self.toast_manager.has_toasts:
+            latest_toast = self.toast_manager.toasts[-1]
+            lvl_icons = {"success": "✔", "error": "✖", "warning": "⚠", "info": "ℹ"}
+            icon = lvl_icons.get(latest_toast.level.value, "ℹ")
+            status_text = f" {icon} {latest_toast.message} "
+            status_part = Style().bold(True).foreground("#FFD54F").background("#2E2000").render(status_text)
+        else:
+            status_part = Style().foreground("#9999BB").render(f" {self.status_msg}")
 
-        # Assemble base view
-        sections = [header, "", content, ""]
-        if toast_view:
-            sections.append(toast_view)
-        sections.append(footer)
-        base_view = join_vertical(Align.LEFT, *sections)
+        hints = (
+            f"{Style().bold(True).foreground('#00E5FF').render('[Tab]')} Next  "
+            f"{Style().bold(True).foreground('#00E5FF').render('[1-4]')} Jump  "
+            f"{Style().bold(True).foreground('#00E5FF').render('[d]')} Dialog  "
+            f"{Style().bold(True).foreground('#00E5FF').render('[t]')} Toast  "
+            f"{Style().bold(True).foreground('#FF5252').render('[q]')} Quit "
+        )
 
-        # 5. Composite Dialog Modal overlay if active
+        left_str = f"{tab_badge} {status_part}"
+        left_w = string_width(left_str)
+        hints_w = string_width(hints)
+
+        spacing = max(1, total_w - left_w - hints_w)
+        footer_line = f"{left_str}{' ' * spacing}{hints}"
+        return Style().background("#14141E").render(truncate_ansi(footer_line, total_w))
+
+    def view(self) -> str:
+        total_w = self.width
+        total_h = self.height
+        content_h, w_left, w_right = self._calc_layout()
+
+        # 1. Header (1 line)
+        header = self._render_header(total_w)
+
+        # 2. Main 2-Panel Content (content_h lines)
+        p_left, p_right = self._render_tab_panels(content_h, w_left, w_right)
+        panels_row = join_horizontal(Align.TOP, p_left, p_right)
+
+        # 3. Footer Bar (1 line)
+        footer = self._render_footer(total_w)
+
+        base_view = join_vertical(Align.LEFT, header, panels_row, footer)
+
+        # 4. Floating Modal Overlay if active
         if self.show_dialog:
             dialog_view = self.dialog.view()
             return place_overlay(base_view, dialog_view, center=True, dim_backdrop=True)
