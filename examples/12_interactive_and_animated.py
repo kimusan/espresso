@@ -319,8 +319,8 @@ class InteractiveAnimatedApp(Model):
             content_view = f"{title}\n\n{spark1}\n\n{spark2}\n\n{ticker_label}\n{ticker}"
 
         elif self.active_tab == 3:
-            title = Style().bold(True).foreground("#00E5FF").render("📋 Drag-and-Drop Task Prioritization (Mouse Drag or Space+Arrows):")
-            hint = Style().faint(True).render("• Mouse: Click and drag an item to a new row\n• Keyboard: Press Space to grab/drop, Up/Down to move, Esc to cancel")
+            title = Style().bold(True).foreground("#00E5FF").render("📋 Drag-and-Drop Task Prioritization (Mouse Drag or Keyboard):")
+            hint = Style().faint(True).render("• Mouse: Click and drag an item to a new row\n• Keyboard: Space/Enter to grab/drop, Up/Down to move (or Shift+Up/Down to move directly)")
             s_list = self.sortable_list.view()
             content_view = f"{title}\n{hint}\n\n{s_list}"
 

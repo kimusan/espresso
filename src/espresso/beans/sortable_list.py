@@ -184,6 +184,26 @@ class SortableList(Model):
 
         elif isinstance(msg, KeyMsg):
             match msg.key:
+                case "shift+up" | "alt+up" | "ctrl+up" | "K":
+                    # Direct move item up
+                    idx = self.picked_index if self.picked_index is not None else self.cursor
+                    if idx > 0:
+                        cmd = self.move_item(idx, idx - 1)
+                        if self.picked_index is not None:
+                            self.picked_index = idx - 1
+                        return self, cmd
+                    return self, None
+
+                case "shift+down" | "alt+down" | "ctrl+down" | "J":
+                    # Direct move item down
+                    idx = self.picked_index if self.picked_index is not None else self.cursor
+                    if idx < len(self.items) - 1:
+                        cmd = self.move_item(idx, idx + 1)
+                        if self.picked_index is not None:
+                            self.picked_index = idx + 1
+                        return self, cmd
+                    return self, None
+
                 case "up" | "k":
                     if self.picked_index is not None:
                         # Move picked item up
@@ -214,7 +234,7 @@ class SortableList(Model):
                             self._adjust_scroll()
                     return self, None
 
-                case "space" | "enter":
+                case " " | "space" | "enter":
                     # Toggle pick up / drop
                     if self.picked_index is None:
                         self.picked_index = self.cursor

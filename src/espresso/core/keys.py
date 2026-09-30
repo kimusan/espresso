@@ -23,8 +23,12 @@ class Key:
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, str):
+            if other in (" ", "space") and (self.name in (" ", "space") or self.char == " "):
+                return True
             return self.name == other or (self.char is not None and self.char == other)
         if isinstance(other, Key):
+            if (self.name in (" ", "space") or self.char == " ") and (other.name in (" ", "space") or other.char == " "):
+                return True
             return self.name == other.name
         return False
 
@@ -48,6 +52,8 @@ class KeyMsg(Msg):
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, str):
+            if other in (" ", "space") and (self.key.name in (" ", "space") or self.key.char == " "):
+                return True
             return str(self.key) == other or (self.key.char is not None and self.key.char == other)
         if isinstance(other, Key):
             return self.key == other
