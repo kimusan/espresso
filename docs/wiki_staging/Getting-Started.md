@@ -43,3 +43,21 @@ Run it:
 ```bash
 python3 app.py
 ```
+
+## Built-in CLI Toolkit
+
+Espresso includes the `espresso` command-line utility for exploration and development:
+
+```bash
+# List all 14 interactive built-in example applications
+espresso list
+
+# Run any example by ID (e.g. 14 for Developer Workspace)
+espresso run 14
+
+# Launch the interactive 39-component gallery
+espresso gallery
+
+# Scaffold a new TEA application with boilerplate ready to go
+espresso new my_app.py
+```

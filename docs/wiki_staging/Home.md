@@ -12,6 +12,7 @@
 
 ## Architecture at a Glance
 
-* **`espresso`**: The core runtime engine coordinating terminal raw mode, event loop, SGR mouse tracking, and TEA dispatch.
-* **`espresso.crema`**: The styling and layout engine with TrueColor, ANSI 256, box model, border titles, word wrapping, gradients, 2D joins, modal overlays, and responsive proportional FlexBox.
-* **`espresso.beans`**: The standard component library (21 components: TextArea, Help, Timer, Stopwatch, Spinners, TextInputs, Tables, Viewports, Progress, Paginator, Dialogs, Lists, FilePicker, Prompts, Toasts, Tabs, Tree, StatusBar, KPI Metrics, NavStack, and DatePicker).
+* **`espresso`**: The core runtime engine coordinating terminal raw mode, event loop, flicker-free line-diffing alt-screen renderer, SGR mouse tracking, and desktop gesture synthesis (`MouseGestureTracker`).
+* **`espresso.crema`**: The styling and layout engine with TrueColor, ANSI 256, box model, border titles, word wrapping, gradients, 2D joins, modal overlays, responsive proportional `FlexBox`, and multi-column `Grid`.
+* **`espresso.beans`**: The standard component library (39 components: TextArea, Help, Timer, Stopwatch, Spinners, TextInputs, Tables, Viewports, Progress, Paginator, Dialogs, Lists, FilePicker, Prompts, Toasts, Tabs, Tree, StatusBar, Metric/MetricGroup, NavStack, DatePicker, PipelineProgress, MarkdownViewer, CodeViewer, QuickFix, DetailSelector, ImageViewer, Splitter, Sliders, Sparkline, Marquee, SortableList, Spring, Confetti, DiffViewer, Form/FormBuilder, CommandPalette, GitTree, and BarChart).
+* **`espresso` CLI**: Standalone developer toolkit for listing (`espresso list`), running (`espresso run`), previewing (`espresso gallery`), and scaffolding (`espresso new`) applications.

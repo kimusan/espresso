@@ -108,10 +108,55 @@ Espresso translates low-level terminal byte sequences into strongly-typed messag
 
 1. **`KeyMsg(key, runes, alt, ctrl)`**: Keyboard strokes (e.g. `key="enter"`, `key="ctrl+c"`, `key="up"`).
 2. **`MouseMsg(action, button, x, y, alt, ctrl, shift)`**: SGR 1006 mouse events:
-   - `action`: `MouseAction.PRESS`, `RELEASE`, `MOTION`, `WHEEL`
-   - `button`: `MouseButton.LEFT`, `RIGHT`, `MIDDLE`, `WHEEL_UP`, `WHEEL_DOWN`
+   - `action`: `MouseAction.PRESS`, `RELEASE`, `MOTION`, `DOUBLE_CLICK`
+   - `button`: `MouseButton.LEFT`, `RIGHT`, `MIDDLE`, `WHEEL_UP`, `WHEEL_DOWN`, `WHEEL_LEFT`, `WHEEL_RIGHT`
    - `x`, `y`: 0-indexed terminal column and row coordinates.
+   - Coordinate helpers: `.translate(dx, dy)` and `.relative_to(origin_x, origin_y)` for nested component coordinate transformation.
 3. **`WindowSizeMsg(width, height)`**: Terminal window resize events.
+
+---
+
+## Mouse Gesture Tracking (`MouseGestureTracker`)
+
+Low-level terminal mouse drivers emit discrete raw mouse press, release, and motion events. To enable rich desktop-grade interactions, Espresso provides `MouseGestureTracker`:
+
+- **Double-Click Synthesis**: Detects when two `MouseAction.PRESS` events occur within a configurable time threshold (default 350ms) and spatial tolerance ($\le 1$ cell), emitting a synthetic `MouseAction.DOUBLE_CLICK` event.
+- **Drag & Drop**: Enables smooth tracking of drag trajectories across component boundaries for sliders, splitters, and sortable lists.
+- **Sub-Component Routing**: Mouse coordinates can be shifted into local sub-component space using `msg.relative_to(origin_x, origin_y)`.
+
+```python
+from espresso.core.mouse import MouseGestureTracker, MouseAction, MouseMsg
+
+tracker = MouseGestureTracker(timeout=0.35)
+
+def update(self, msg: Msg) -> tuple[Model, Cmd | None]:
+    if isinstance(msg, MouseMsg):
+        # Synthesize double clicks transparently
+        msg = tracker.process(msg)
+        if msg.action == MouseAction.DOUBLE_CLICK:
+            self.toggle_expanded()
+    return self, None
+```
+
+---
+
+## High-Performance Alt-Screen Line Diffing
+
+A major historical drawback of terminal UIs is visual flicker caused by full-screen clearing (`\x1b[2J` or `\x1b[H\x1b[2J`) between frames. Espresso solves this with a **line-diffing terminal renderer**:
+
+1. **Line Cache**: Retains the exact line buffer of the previously rendered frame (`self._last_rendered_lines`).
+2. **Deterministic Diffing**: Upon receiving a new frame string from `model.view()`, splits it into lines and compares each row against the cache.
+3. **Targeted ANSI Invalidation**: Only modified lines are sent to stdout. Cursor jump escapes (`\x1b[{row};1H`) jump directly to the changed row, followed by an erase-in-line sequence (`\x1b[2K`) and the new row content.
+4. **Boundary Clamping**: Every rendered frame is strictly clamped to `min(term_h, len(new_lines))` and truncated to `term_w` with `truncate_ansi()`, completely preventing terminal scroll-creep and auto-wrap overflows.
+
+```
+Frame N:          Frame N+1:          Output sent to terminal:
+┌──────────┐     ┌──────────┐
+│ Line 1   │     │ Line 1   │        (Skipped - matches cache)
+│ Line 2   │ ──> │ Line 2 * │  ───>  \x1b[2;1H\x1b[2KLine 2 *
+│ Line 3   │     │ Line 3   │        (Skipped - matches cache)
+└──────────┘     └──────────┘
+```
 
 ---
 
@@ -132,3 +177,32 @@ class ParentApp(Model):
     def view(self) -> str:
         return f"Form:\n{self.text_input.view()}"
 ```
+
+---
+
+## Built-in CLI Tool Architecture (`espresso`)
+
+Espresso installs a standalone command-line executable (`espresso`) designed for development, debugging, and rapid prototyping:
+
+```bash
+# Discover all 14 interactive example programs
+espresso list
+
+# Execute any example by ID or file path
+espresso run 14
+espresso run 08
+
+# Open the 39-component visual interactive gallery
+espresso gallery
+
+# Scaffold an idiomatic TEA application template
+espresso new my_app.py
+
+# Print version and environment info
+espresso --version
+```
+
+### CLI Implementation Principles
+- **Zero-Dependency Launcher**: Operates using Python's standard `argparse` and `subprocess` modules.
+- **Dynamic Example Discovery**: Inspects `examples/` directory and extracts program descriptions dynamically.
+- **Scaffolder (`espresso new`)**: Emits a clean, typed starter template pre-wired with Elm architecture, `Program`, alt-screen mode, mouse handling, and Crema styling.

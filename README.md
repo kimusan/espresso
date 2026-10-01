@@ -40,9 +40,9 @@ Terminal applications in Python have historically required heavy object-oriented
 
 | Layer | Charm Equivalent | Description |
 | :--- | :--- | :--- |
-| **`espresso`** | `bubbletea` | **The Strong Base**: Core TEA framework, runtime event loop, raw terminal driver, command primitives. |
-| **`espresso.crema`** | `lipgloss` | **The Smooth Crema**: Declarative styling, box model, TrueColor (24-bit RGB), ANSI 256, borders, border titles, TrueColor linear gradients, ANSI word-wrapping, and 2D layout alignment. |
-| **`espresso.beans`** | `bubbles` | **The Flavorful Beans**: Reusable UI components including TextArea, Help, Timer, Stopwatch, Spinners, TextInputs, Tables, Viewports, Progress, Paginator, Dialogs, Filterable Lists, FilePicker, Prompts, Toasts, Tabs, Tree, StatusBar, KPI Metrics, NavStack, and DatePicker. |
+| **`espresso`** | `bubbletea` | **The Strong Base**: Core TEA framework, runtime event loop, raw terminal driver, command primitives, line-diffing alt-screen renderer, SGR mouse tracking, and gesture engine. |
+| **`espresso.crema`** | `lipgloss` | **The Smooth Crema**: Declarative styling, box model, TrueColor (24-bit RGB), ANSI 256, borders, border titles, TrueColor linear gradients, ANSI word-wrapping, 2D layout alignment, FlexBox, and responsive Grid. |
+| **`espresso.beans`** | `bubbles` | **The Flavorful Beans**: 39 reusable UI components including TextArea, GitTree, CommandPalette, BarChart, Splitter, Sliders, Form, DiffViewer, SortableList, Confetti, CodeViewer, MarkdownViewer, Tables, Viewports, and more. |
 
 ---
 
@@ -120,38 +120,43 @@ banner = linear_gradient("Espresso TrueColor Gradient", "#FF5E3A", "#FF2A68")
 ```
 
 ### Layout Primitives, Responsive Grid & Overlays
-Stack and stitch styled blocks side-by-side, vertically, or in a responsive proportional grid:
+Stack and stitch styled blocks side-by-side, vertically, in a proportional flex layout, or in a responsive multi-column grid:
 ```python
-from espresso.crema import join_horizontal, join_vertical, place_overlay, FlexBox, Align
+from espresso.crema import join_horizontal, join_vertical, place_overlay, Grid, FlexBox, Align
 
-# 2D Side-by-side join
+# 1. 2D Side-by-side join
 split_view = join_horizontal(Align.TOP, left_sidebar, "  ", right_content)
 
-# Responsive proportional grid (inspired by Stickers)
-grid = FlexBox(width=80, height=24)
-row = grid.new_row(ratio_y=1)
+# 2. Multi-column grid & auto-fitting panels
+grid_view = Grid.columns([card1, card2, card3], cols=3, gap=1, total_width=80)
+card_panel = Grid.panel("System Metrics", metrics_text, width=32, height=12)
+
+# 3. Responsive proportional layout (FlexBox)
+flex = FlexBox(width=80, height=24)
+row = flex.new_row(ratio_y=1)
 row.new_cell("Sidebar", ratio_x=1, min_width=20)
 row.new_cell("Main View", ratio_x=3)
 
-# Floating modal compositor with backdrop dimming
+# 4. Floating modal compositor with backdrop dimming
 screen = place_overlay(background_view, dialog.view(), center=True, dim_backdrop=True)
 ```
 
 ---
 
-## 🖱️ First-Class Mouse Support
+## 🖱️ First-Class Mouse & Gesture Support
 
-Espresso provides built-in mouse tracking (SGR 1006) for clicks, releases, and wheel scrolling:
+Espresso provides built-in mouse tracking (SGR 1006) with advanced gesture synthesis:
 
 - **Program Toggle**: `Program(App(), mouse=True)` or `Program(App()).with_mouse(True)`
 - **Dynamic TEA Commands**: Emit `enable_mouse` or `disable_mouse` commands directly from `update()`
 - **Event Handling**: Pattern match `MouseMsg(action, button, x, y)` in `update()`
+- **Gestures Supported**: `MouseAction.PRESS`, `RELEASE`, `MOTION`, `DOUBLE_CLICK`, and drag-and-drop tracking with `MouseGestureTracker`
 
 ---
 
 ## 🧩 Beans: Standard Component Library
 
-Espresso includes 21 ready-to-use building blocks that follow the exact same TEA model:
+Espresso includes **39 ready-to-use building blocks** that follow the exact same TEA model:
 
 * **`TextArea`**: Multi-line interactive text editor with line numbers, cursor navigation, and viewport scrolling.
 * **`Help`**: Adaptive hotkey documentation rendering compact single-line or multi-column full keybinding views.
@@ -174,6 +179,12 @@ Espresso includes 21 ready-to-use building blocks that follow the exact same TEA
 * **`Metric` & `MetricGroup`**: Dashboard KPI stat cards, tags, and summary lists with delta trend arrows and inverted metrics.
 * **`NavStack`**: Hierarchical view router with push/pop management, breadcrumb trails, and automatic message forwarding.
 * **`DatePicker`**: Interactive calendar date picker with month/year navigation, mouse selection, and date range clamping.
+* **`PipelineProgress`**: Multi-stage CI/CD workflow pipeline visualizer with real-time spinners, checkmarks, and timestamps.
+* **`MarkdownViewer`**: Streaming GitHub-flavored markdown viewer with code blocks, tables, lists, and mouse scrolling.
+* **`CodeViewer`**: Syntax-highlighted source code editor viewer (Python, JS, Go, Rust, SQL, JSON) with line numbers and themes.
+* **`QuickFix`**: Interactive diagnostics and code action list with severity badges (`ERROR`, `WARNING`, `INFO`).
+* **`DetailSelector`**: Master-detail dual-pane list selector with real-time preview panels and category filtering.
+* **`ImageViewer`**: Terminal ASCII and Unicode half-block TrueColor image renderer for BMP and PPM formats.
 * **`Splitter`**: Interactive dual-pane container (`Horizontal` / `Vertical`) with draggable divider bar and keyboard resizing.
 * **`Slider` & `RangeSlider`**: Tactile numeric sliders and dual-thumb range bars with mouse dragging.
 * **`Sparkline`**: High-resolution 2D Unicode Braille curves and 1D block charts with trend indicators.
@@ -182,7 +193,7 @@ Espresso includes 21 ready-to-use building blocks that follow the exact same TEA
 * **`Spring`**: Physical damped harmonic oscillator simulation solving harmonic differential equations.
 * **`Confetti`**: 2D celebratory particle physics emitter (radial bursts, cannons, rain) with drag & gravity.
 * **`DiffViewer`**: Git diff visualizer with Unified and Split dual-pane views and intra-line word diffs.
-* **`Form`**: Composite multi-field container with field/form validation, error badges, and Tab cycling.
+* **`Form` & `FormBuilder`**: Composite multi-field container with field/form validation, error badges, and Tab cycling.
 * **`CommandPalette`**: Fuzzy spotlight search runner (Ctrl+P / Cmd+P) with recents tracking and modal overlay.
 * **`GitTree`**: Multi-column collapsible file tree with Git status badges (`[M]`, `[A]`, `[D]`, `[?]`) and branch headers.
 * **`BarChart`**: Horizontal and vertical bar charts with sub-character precision, auto-scaling, and TrueColor gradients.

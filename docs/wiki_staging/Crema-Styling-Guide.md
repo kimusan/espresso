@@ -77,3 +77,21 @@ row.new_cell("Left Sidebar", ratio_x=1, min_width=20)
 row.new_cell("Main Content", ratio_x=3)
 print(flex.render())
 ```
+
+## Multi-Column Grid & Framed Panels (`Grid`)
+
+`espresso.crema.Grid` provides declarative helpers for multi-column grids and framed card panels:
+
+- `Grid.columns(cards, cols=2, gap=1, total_width=80)`: Lay out multi-line cards in fixed columns with gap spacing.
+- `Grid.auto_fit(cards, total_width, min_col_width=25, gap=1)`: Responsive multi-column layout fitting columns dynamically based on terminal width.
+- `Grid.panel(title, content, width=40, height=None, border=ROUNDED_BORDER, border_foreground="#7D56F4")`: Framed card panel with embedded title badge and safe line width truncation.
+
+```python
+from espresso.crema import Grid, ROUNDED_BORDER
+
+# Responsive auto-fitting cards
+cards_grid = Grid.auto_fit([card1, card2, card3], total_width=80, min_col_width=25)
+
+# Framed panel
+panel = Grid.panel("System Health", "CPU: 14%\nRAM: 3.2GB", width=30, height=6)
+```

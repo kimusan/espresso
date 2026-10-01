@@ -291,3 +291,61 @@ r2.new_cell(
 # Render formatted grid
 print(flex.render())
 ```
+
+---
+
+## Multi-Column Grid & Framed Panels (`Grid`)
+
+`espresso.crema.Grid` provides high-level static layout helpers for rendering multi-column grids and framed card panels with zero boilerplate.
+
+### 1. Fixed Column Grid (`Grid.columns`)
+Lays out a sequence of rendered card strings across a fixed number of columns with configurable column gaps and widths:
+
+```python
+from espresso.crema import Grid
+
+# Equal column distribution within a total terminal width
+grid_str = Grid.columns(
+    cards=[card1, card2, card3, card4],
+    cols=2,
+    gap=2,
+    total_width=80,
+)
+
+# Explicit column widths
+custom_grid = Grid.columns(
+    cards=[sidebar, main_pane],
+    cols=2,
+    col_widths=[25, 55],
+    gap=1,
+)
+```
+
+### 2. Responsive Auto-Fitting Grid (`Grid.auto_fit`)
+Automatically calculates the optimal number of columns that can fit within the available canvas width given a minimum column width:
+
+```python
+# Automatically fits 1, 2, 3, or more columns based on terminal width
+responsive_grid = Grid.auto_fit(
+    cards=[card1, card2, card3, card4, card5],
+    total_width=terminal_width,
+    min_col_width=28,
+    gap=2,
+)
+```
+
+### 3. Framed Card Panels (`Grid.panel`)
+Constructs a styled, framed panel container with an embedded title badge, custom borders, and automatic content line truncation to prevent horizontal overflow:
+
+```python
+from espresso.crema import Grid, ROUNDED_BORDER
+
+panel = Grid.panel(
+    title="System Metrics",
+    content="CPU: 12%\nMemory: 4.2GB / 16GB\nLoad: 0.85",
+    width=34,
+    height=8,
+    border=ROUNDED_BORDER,
+    border_foreground="#7D56F4",
+)
+```
