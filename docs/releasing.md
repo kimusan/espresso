@@ -100,9 +100,9 @@ Once the tag is pushed to GitHub, the `.github/workflows/release.yml` pipeline t
 1. **Tests**: Validates all tests across Python 3.10, 3.11, 3.12, 3.13.
 2. **PyPI Build**: Packages `.tar.gz` and `.whl` and validates with `twine check`.
 3. **Zipapp Build**: Packages universal `espresso.pyz`.
-4. **Binary Compilation**: Builds standalone native executables for Linux, macOS (Apple Silicon + Intel), and Windows via PyInstaller.
+4. **Binary Compilation**: Builds standalone native executables for Linux (x86_64), macOS (Apple Silicon arm64), and Windows (.exe) via PyInstaller.
 5. **PyPI Publish**: Uploads packages to PyPI automatically.
-6. **GitHub Release**: Attaches all 6 distribution packages plus cryptographic `SHA256SUMS` to the GitHub release.
+6. **GitHub Release**: Attaches all distribution packages plus cryptographic `SHA256SUMS` and formatted release notes to the GitHub release.
 
 ---
 
