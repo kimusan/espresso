@@ -266,7 +266,7 @@ Explore the interactive demos in `examples/`:
 * [Crema Styling & Layout Guide](docs/crema_styling.md)
 * [Beans Component Catalog](docs/beans_components.md)
 * [Release & Packaging Guide](docs/releasing.md)
-* [GitHub Wiki Staging Files](docs/wiki_staging/)
+* [GitHub Project Wiki](https://github.com/kimusan/espresso/wiki)
 
 ---
 
