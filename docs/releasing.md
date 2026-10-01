@@ -44,7 +44,10 @@ Espresso uses **PyPI Trusted Publishing (OIDC)**, which eliminates the need to s
 Espresso includes an interactive release script that runs tests, bumps the version, creates the chore commit, and creates the tag automatically:
 
 ```bash
-# Preview what will happen (dry run)
+# Preview changelog release notes ahead of time without making changes:
+./scripts/release.py --preview-changelog patch
+
+# Preview release pipeline (dry run)
 ./scripts/release.py --dry-run patch
 
 # Release a patch (e.g. 0.2.0 -> 0.2.1)
@@ -55,15 +58,20 @@ Espresso includes an interactive release script that runs tests, bumps the versi
 
 # Release an explicit version and automatically push:
 ./scripts/release.py --push 0.3.0
+
+# Headless / plain CLI mode (for scripts or CI):
+./scripts/release.py --cli patch
 ```
 
 The script will:
 1. Verify git working directory is clean.
-2. Ensure the full test suite passes.
-3. Update `src/espresso/__init__.py`.
-4. Create the git commit: `chore(release): bump version to vX.Y.Z`.
-5. Create the annotated git tag: `vX.Y.Z`.
-6. Prompt you to push (or print the exact push/rollback commands).
+2. Verify release tag is available.
+3. Ensure the full test suite passes.
+4. Update `src/espresso/__init__.py`.
+5. Parse git history and update `CHANGELOG.md` (Keep a Changelog format with categorized Conventional Commits).
+6. Create the git chore commit: `chore(release): bump version to vX.Y.Z`.
+7. Create the annotated git tag: `vX.Y.Z`.
+8. Prompt you to push (or print the exact push/rollback commands).
 
 ---
 

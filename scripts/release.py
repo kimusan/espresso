@@ -25,7 +25,9 @@ import re
 import subprocess
 import sys
 import time
+from collections import defaultdict
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 # Ensure src/ is on sys.path to import espresso
@@ -35,6 +37,19 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 INIT_FILE = SRC_DIR / "espresso" / "__init__.py"
+CHANGELOG_FILE = REPO_ROOT / "CHANGELOG.md"
+REPO_URL = "https://github.com/kimusan/espresso"
+
+CHANGELOG_PREAMBLE = """# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)."""
+
+CONVENTIONAL_COMMIT_RE = re.compile(
+    r"^(?P<type>[a-zA-Z]+)(?:\((?P<scope>[^)]+)\))?(?P<breaking>!)?:\s*(?P<desc>.+)$"
+)
 
 # Espresso Framework Imports
 from espresso import Cmd, KeyMsg, Model, Msg, Program, WindowSizeMsg, batch, quit_app
@@ -165,6 +180,193 @@ def update_version_in_init(new_version: str, dry_run: bool) -> None:
         INIT_FILE.write_text(new_content, encoding="utf-8")
 
 
+
+@dataclass
+class Commit:
+    hash: str
+    type: str
+    scope: str
+    description: str
+    breaking: bool = False
+
+
+def get_last_tag() -> str | None:
+    """Retrieve the most recent annotated git tag, if any."""
+    res = subprocess.run(
+        ["git", "describe", "--tags", "--abbrev=0"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if res.returncode == 0:
+        tag = res.stdout.strip()
+        if tag:
+            return tag
+    return None
+
+
+def get_commits_since_tag(last_tag: str | None = None) -> list[Commit]:
+    """Fetch and parse git commits since last_tag (or all commits if last_tag is None)."""
+    cmd = ["git", "log", "--pretty=format:%h%x09%s"]
+    if last_tag:
+        cmd.append(f"{last_tag}..HEAD")
+
+    res = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True, text=True)
+    if res.returncode != 0:
+        return []
+
+    commits: list[Commit] = []
+    for line in res.stdout.strip().splitlines():
+        if not line.strip() or "\t" not in line:
+            continue
+        h, subject = line.split("\t", 1)
+        h = h.strip()
+        subject = subject.strip()
+
+        # Skip release chore commits to avoid circular self-reference
+        if subject.startswith("chore(release):") or subject.startswith("chore: release"):
+            continue
+
+        match = CONVENTIONAL_COMMIT_RE.match(subject)
+        if match:
+            c_type = match.group("type").lower()
+            scope = (match.group("scope") or "").strip()
+            desc = match.group("desc").strip()
+            breaking = bool(match.group("breaking"))
+            commits.append(Commit(hash=h, type=c_type, scope=scope, description=desc, breaking=breaking))
+        else:
+            commits.append(Commit(hash=h, type="misc", scope="", description=subject, breaking=False))
+
+    return commits
+
+
+def categorize_commits(commits: list[Commit]) -> dict[str, list[Commit]]:
+    """Group commits into Keep a Changelog semantic categories."""
+    categories: dict[str, list[Commit]] = defaultdict(list)
+    for c in commits:
+        if c.breaking:
+            categories["breaking"].append(c)
+        if c.type in ("feat",):
+            categories["feat"].append(c)
+        elif c.type in ("fix",):
+            categories["fix"].append(c)
+        elif c.type in ("perf",):
+            categories["perf"].append(c)
+        elif c.type in ("docs",):
+            categories["docs"].append(c)
+        elif c.type in ("refactor",):
+            categories["refactor"].append(c)
+        elif c.type in ("test",):
+            categories["test"].append(c)
+        elif c.type in ("build", "ci", "chore"):
+            categories["maintenance"].append(c)
+        else:
+            categories["misc"].append(c)
+    return categories
+
+
+def generate_changelog_entry(
+    new_version: str,
+    last_tag: str | None = None,
+    repo_url: str = REPO_URL,
+    commits: list[Commit] | None = None,
+) -> str:
+    """Generate Markdown formatted release notes for new_version."""
+    if commits is None:
+        commits = get_commits_since_tag(last_tag)
+
+    today = date.today().isoformat()
+    if last_tag:
+        header = f"## [{new_version}]({repo_url}/compare/{last_tag}...v{new_version}) - {today}"
+    else:
+        header = f"## [{new_version}]({repo_url}/releases/tag/v{new_version}) - {today}"
+
+    if not commits:
+        return f"{header}\n\n- Maintenance and internal improvements.\n"
+
+    categories = categorize_commits(commits)
+    sections = [
+        ("breaking", "### 💥 Breaking Changes"),
+        ("feat", "### 🚀 Features"),
+        ("fix", "### 🐛 Bug Fixes"),
+        ("perf", "### ⚡ Performance Improvements"),
+        ("docs", "### 📖 Documentation"),
+        ("refactor", "### ♻️ Code Refactoring"),
+        ("test", "### 🧪 Tests"),
+        ("maintenance", "### 🛠️ Maintenance & Packaging"),
+        ("misc", "### 📦 Miscellaneous"),
+    ]
+
+    lines = [header, ""]
+    for key, title in sections:
+        items = categories.get(key, [])
+        if not items:
+            continue
+        lines.append(title)
+        lines.append("")
+        for c in items:
+            hash_link = f"[{c.hash}]({repo_url}/commit/{c.hash})"
+            desc = c.description
+            if desc and desc[0].islower():
+                desc = desc[0].upper() + desc[1:]
+            if c.scope:
+                lines.append(f"- **{c.scope}**: {desc} ({hash_link})")
+            else:
+                lines.append(f"- {desc} ({hash_link})")
+        lines.append("")
+
+    return "\n".join(lines).strip()
+
+
+def update_changelog_file(
+    changelog_path: Path,
+    new_entry: str,
+    new_version: str,
+    dry_run: bool = False,
+) -> None:
+    """Insert or update a release entry in CHANGELOG.md adhering to Keep a Changelog."""
+    if not changelog_path.exists():
+        content = f"{CHANGELOG_PREAMBLE}\n\n{new_entry.strip()}\n"
+        if not dry_run:
+            changelog_path.write_text(content, encoding="utf-8")
+        return
+
+    existing = changelog_path.read_text(encoding="utf-8")
+
+    # If the version already exists, replace it cleanly
+    version_section_re = re.compile(
+        rf"^## \[{re.escape(new_version)}\].*?(?=(?:\n## \[|\Z))",
+        re.MULTILINE | re.DOTALL,
+    )
+    if version_section_re.search(existing):
+        updated = version_section_re.sub(new_entry.strip(), existing, count=1)
+        if not dry_run:
+            changelog_path.write_text(updated, encoding="utf-8")
+        return
+
+    # Otherwise insert before the first ## [
+    first_section = re.search(r"^## \[", existing, re.MULTILINE)
+    if first_section:
+        preamble = existing[:first_section.start()].rstrip()
+        rest = existing[first_section.start():].lstrip()
+        updated = f"{preamble}\n\n{new_entry.strip()}\n\n{rest}"
+    else:
+        updated = f"{existing.rstrip()}\n\n{new_entry.strip()}\n"
+
+    if not dry_run:
+        changelog_path.write_text(updated, encoding="utf-8")
+
+
+def run_changelog_update(new_version: str, dry_run: bool) -> str:
+    """Orchestrate changelog generation and update. Returns human-readable summary."""
+    last_tag = get_last_tag()
+    commits = get_commits_since_tag(last_tag)
+    entry = generate_changelog_entry(new_version, last_tag, REPO_URL, commits)
+    update_changelog_file(CHANGELOG_FILE, entry, new_version, dry_run)
+    num_commits = len(commits)
+    return f"Updated CHANGELOG.md ({num_commits} commit{'s' if num_commits != 1 else ''} categorized)"
+
+
 def git_commit_and_tag(new_version: str, dry_run: bool) -> None:
     tag_name = f"v{new_version}"
     commit_msg = f"chore(release): bump version to {tag_name}"
@@ -173,8 +375,12 @@ def git_commit_and_tag(new_version: str, dry_run: bool) -> None:
         return
 
     # 1. git add
+    paths_to_add = [str(INIT_FILE.relative_to(REPO_ROOT))]
+    if CHANGELOG_FILE.exists():
+        paths_to_add.append(str(CHANGELOG_FILE.relative_to(REPO_ROOT)))
+
     res_add = subprocess.run(
-        ["git", "add", str(INIT_FILE.relative_to(REPO_ROOT))],
+        ["git", "add"] + paths_to_add,
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -207,7 +413,10 @@ def do_rollback(new_version: str) -> None:
     tag_name = f"v{new_version}"
     subprocess.run(["git", "tag", "-d", tag_name], cwd=REPO_ROOT, capture_output=True)
     subprocess.run(["git", "reset", "--soft", "HEAD~1"], cwd=REPO_ROOT, capture_output=True)
+    subprocess.run(["git", "restore", "--staged", "."], cwd=REPO_ROOT, capture_output=True)
     subprocess.run(["git", "restore", str(INIT_FILE)], cwd=REPO_ROOT, capture_output=True)
+    if CHANGELOG_FILE.exists():
+        subprocess.run(["git", "restore", str(CHANGELOG_FILE)], cwd=REPO_ROOT, capture_output=True)
 
 
 @dataclass(frozen=True)
@@ -243,6 +452,7 @@ class ReleaseTUI(Model):
         dry_run: bool = False,
         skip_tests: bool = False,
         push_immediate: bool = False,
+        no_changelog: bool = False,
     ) -> None:
         self.curr_ver = curr_ver
         self.next_ver = next_ver
@@ -250,6 +460,7 @@ class ReleaseTUI(Model):
         self.dry_run = dry_run
         self.skip_tests = skip_tests
         self.push_immediate = push_immediate
+        self.no_changelog = no_changelog
 
         self.width = 80
         self.height = 24
@@ -288,6 +499,16 @@ class ReleaseTUI(Model):
                 description="Update __version__ in src/espresso/__init__.py",
             )
         )
+
+        if not self.no_changelog:
+            stages.append(
+                PipelineStage(
+                    title="Generate CHANGELOG.md",
+                    action=lambda: run_changelog_update(self.next_ver, self.dry_run),
+                    description="Categorize conventional commits and update CHANGELOG.md",
+                )
+            )
+
         stages.append(
             PipelineStage(
                 title=f"Chore Commit & Tag ({self.tag_name})",
@@ -530,9 +751,16 @@ class ReleaseTUI(Model):
 # CLI Runner (Fallback for Non-Interactive / CI environments)
 # ==============================================================================
 
-def run_cli_mode(curr_ver: str, next_ver: str, dry_run: bool, skip_tests: bool, push: bool) -> int:
+def run_cli_mode(
+    curr_ver: str,
+    next_ver: str,
+    dry_run: bool,
+    skip_tests: bool,
+    push: bool,
+    no_changelog: bool = False,
+) -> int:
     tag_name = f"v{next_ver}"
-    total_steps = 4 if skip_tests else 5
+    total_steps = 3 + (0 if skip_tests else 1) + (0 if no_changelog else 1)
     step = 1
 
     print(f"\n{C_BOLD}{C_MAGENTA}☕ Espresso Release Helper (CLI Mode){C_RESET}")
@@ -567,6 +795,13 @@ def run_cli_mode(curr_ver: str, next_ver: str, dry_run: bool, skip_tests: bool, 
     print(f"  {C_GREEN}✓{C_RESET} Updated __version__ to '{next_ver}'")
 
     # Step 5
+    if not no_changelog:
+        print(f"\n{C_BOLD}{C_CYAN}[Step {step}/{total_steps}]{C_RESET} Updating CHANGELOG.md")
+        step += 1
+        summary = run_changelog_update(next_ver, dry_run)
+        print(f"  {C_GREEN}✓{C_RESET} {summary}")
+
+    # Step 6
     print(f"\n{C_BOLD}{C_CYAN}[Step {step}/{total_steps}]{C_RESET} Creating chore commit and tag {tag_name}")
     step += 1
     git_commit_and_tag(next_ver, dry_run)
@@ -600,11 +835,12 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  ./scripts/release.py patch       # Interactive TUI: bump patch (0.2.0 -> 0.2.1)
-  ./scripts/release.py minor       # Interactive TUI: bump minor (0.2.0 -> 0.3.0)
-  ./scripts/release.py 0.3.0       # Interactive TUI: explicit version
-  ./scripts/release.py --push patch # Interactive TUI with automated push
-  ./scripts/release.py --cli patch  # Headless CLI mode
+  ./scripts/release.py patch            # Interactive TUI: bump patch (0.2.0 -> 0.2.1)
+  ./scripts/release.py minor            # Interactive TUI: bump minor (0.2.0 -> 0.3.0)
+  ./scripts/release.py 0.3.0            # Interactive TUI: explicit version
+  ./scripts/release.py --push patch      # Interactive TUI with automated push
+  ./scripts/release.py --cli patch       # Headless CLI mode
+  ./scripts/release.py --preview-changelog patch # Preview release notes without changes
 """,
     )
     parser.add_argument(
@@ -631,15 +867,43 @@ Examples:
         action="store_true",
         help="Force plain CLI mode instead of interactive Espresso TUI",
     )
+    parser.add_argument(
+        "--no-changelog",
+        action="store_true",
+        help="Skip generating and updating CHANGELOG.md",
+    )
+    parser.add_argument(
+        "--preview-changelog",
+        action="store_true",
+        help="Preview generated changelog release notes for the target version and exit",
+    )
 
     args = parser.parse_args()
 
     curr_ver = get_current_version()
     next_ver = calculate_next_version(curr_ver, args.target)
 
+    # If user requested --preview-changelog, generate and display changelog and exit
+    if args.preview_changelog:
+        last_tag = get_last_tag()
+        entry = generate_changelog_entry(next_ver, last_tag)
+        print(f"\n{C_BOLD}{C_MAGENTA}☕ Changelog Preview for v{next_ver}:{C_RESET}\n")
+        print(entry)
+        print()
+        sys.exit(0)
+
     # If user requested --cli or stdin is not a TTY: use CLI mode
     if args.cli or not sys.stdin.isatty():
-        sys.exit(run_cli_mode(curr_ver, next_ver, args.dry_run, args.skip_tests, args.push))
+        sys.exit(
+            run_cli_mode(
+                curr_ver,
+                next_ver,
+                args.dry_run,
+                args.skip_tests,
+                args.push,
+                args.no_changelog,
+            )
+        )
 
     # Otherwise launch full Espresso TUI application!
     app = ReleaseTUI(
@@ -648,6 +912,7 @@ Examples:
         dry_run=args.dry_run,
         skip_tests=args.skip_tests,
         push_immediate=args.push,
+        no_changelog=args.no_changelog,
     )
     program = Program(app, alt_screen=True, mouse=True)
     program.run()
