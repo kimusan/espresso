@@ -33,5 +33,20 @@ class TestReleaseScript(unittest.TestCase):
         self.assertRegex(ver, r"^\d+\.\d+\.\d+")
 
 
+    def test_release_tui_model(self) -> None:
+        from espresso.crema import strip_ansi
+        from release import ReleaseTUI
+
+        app = ReleaseTUI(curr_ver="0.2.0", next_ver="0.2.1", dry_run=True, skip_tests=True)
+        cmd = app.init()
+        self.assertIsNotNone(cmd)
+        view = app.view()
+        clean = strip_ansi(view)
+        self.assertIn("ESPRESSO RELEASE MANAGER", clean)
+        self.assertIn("0.2.0", clean)
+        self.assertIn("0.2.1", clean)
+        self.assertIn("Release Execution Pipeline", clean)
+
+
 if __name__ == "__main__":
     unittest.main()
