@@ -7,7 +7,7 @@
 
 ## Installation
 ```bash
-pip install espresso-tui
+pip install espressoTUI
 ```
 
 ## Your First Application

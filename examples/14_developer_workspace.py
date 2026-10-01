@@ -122,7 +122,7 @@ if __name__ == "__main__":
     unittest.main()
 ''',
     "pyproject.toml": '''[project]
-name = "espresso-tui"
+name = "espressoTUI"
 version = "0.2.0"
 description = "Lightweight Elm Architecture TUI framework for Python."
 readme = "README.md"

@@ -49,10 +49,26 @@ Terminal applications in Python have historically required heavy object-oriented
 ## 🚀 Quickstart
 
 ### Installation
+
+**Via PyPI**:
 ```bash
-pip install espresso-tui
+pip install espressoTUI
 ```
-*(Or clone the repository and run directly with Python 3.10+)*
+
+**Universal Standalone Executable (Zero Installation)**:
+Download the standalone `espresso.pyz` from [GitHub Releases](https://github.com/kimusan/espresso/releases):
+```bash
+curl -LO https://github.com/kimusan/espresso/releases/latest/download/espresso.pyz
+chmod +x espresso.pyz
+./espresso.pyz gallery
+```
+
+**Native Binaries (No Python Runtime Required)**:
+Pre-compiled self-contained native binaries are available on every release for:
+- **Linux x86_64**: `espresso-linux-x86_64`
+- **macOS Apple Silicon**: `espresso-macos-arm64`
+- **macOS Intel**: `espresso-macos-x86_64`
+- **Windows x86_64**: `espresso-windows-x86_64.exe`
 
 ### 1. Minimal Interactive Counter
 ```python
@@ -249,6 +265,7 @@ Explore the interactive demos in `examples/`:
 * [Architecture & The Elm Pattern](docs/architecture.md)
 * [Crema Styling & Layout Guide](docs/crema_styling.md)
 * [Beans Component Catalog](docs/beans_components.md)
+* [Release & Packaging Guide](docs/releasing.md)
 * [GitHub Wiki Staging Files](docs/wiki_staging/)
 
 ---

@@ -1,0 +1,215 @@
+name: Release & Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (build and test packages without uploading to PyPI)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  test:
+    name: Test Suite (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run test suite
+        run: |
+          PYTHONPATH=src python -m unittest discover -s tests
+
+  build-pypi:
+    name: Build PyPI Packages (sdist & wheel)
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build twine flit-core
+
+      - name: Build sdist and wheel
+        run: |
+          python -m build
+
+      - name: Validate distribution packages
+        run: |
+          twine check --strict dist/*
+
+      - name: Upload PyPI distribution artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pypi-dist
+          path: dist/
+          retention-days: 1
+
+  build-zipapp:
+    name: Build Universal Executable (.pyz)
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Package zipapp
+        run: |
+          mkdir -p dist
+          python -m zipapp src -m "espresso.cli:main" -o dist/espresso.pyz -p "/usr/bin/env python3"
+          chmod +x dist/espresso.pyz
+
+      - name: Test standalone zipapp
+        run: |
+          ./dist/espresso.pyz --version
+          ./dist/espresso.pyz list
+
+      - name: Upload zipapp artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zipapp-dist
+          path: dist/espresso.pyz
+          retention-days: 1
+
+  build-binaries:
+    name: Build Native Binary (${{ matrix.artifact_name }})
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: espresso-linux-x86_64
+            binary_src: dist/espresso
+          - os: macos-14
+            artifact_name: espresso-macos-arm64
+            binary_src: dist/espresso
+          - os: macos-13
+            artifact_name: espresso-macos-x86_64
+            binary_src: dist/espresso
+          - os: windows-latest
+            artifact_name: espresso-windows-x86_64.exe
+            binary_src: dist/espresso.exe
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyinstaller
+
+      - name: Compile standalone binary
+        run: |
+          pyinstaller --onefile --clean --name espresso --paths src --collect-submodules espresso src/espresso/cli.py
+
+      - name: Stage executable
+        shell: bash
+        run: |
+          mkdir -p release-bin
+          mv ${{ matrix.binary_src }} release-bin/${{ matrix.artifact_name }}
+          chmod +x release-bin/${{ matrix.artifact_name }} || true
+
+      - name: Test standalone binary
+        shell: bash
+        run: |
+          ./release-bin/${{ matrix.artifact_name }} --version
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.artifact_name }}
+          path: release-bin/${{ matrix.artifact_name }}
+          retention-days: 1
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: [build-pypi]
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch') &&
+      github.event.inputs.dry_run != 'true'
+    environment:
+      name: pypi
+      url: https://pypi.org/p/espressoTUI
+    permissions:
+      id-token: write
+    steps:
+      - name: Download PyPI packages
+        uses: actions/download-artifact@v4
+        with:
+          name: pypi-dist
+          path: dist/
+
+      - name: Publish to PyPI via OIDC (Trusted Publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          skip-existing: true
+
+  publish-github-release:
+    name: Publish GitHub Release Assets
+    needs: [build-pypi, build-zipapp, build-binaries]
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'release' ||
+      startsWith(github.ref, 'refs/tags/v') ||
+      github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
+    steps:
+      - name: Download all release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets/
+          merge-multiple: true
+
+      - name: Generate cryptographic checksums (SHA256SUMS)
+        run: |
+          cd release-assets
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Attach assets to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          generate_release_notes: true

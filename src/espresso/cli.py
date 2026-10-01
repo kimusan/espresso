@@ -16,6 +16,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Ensure src is on sys.path when executed directly as a script
+_pkg_root = str(Path(__file__).resolve().parent.parent)
+if _pkg_root not in sys.path:
+    sys.path.insert(0, _pkg_root)
+
 from espresso import __version__
 
 EXAMPLES_DIR = Path(__file__).resolve().parent.parent.parent / "examples"
@@ -177,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
         prog="espresso",
         description="Espresso: Lightweight, declarative Elm Architecture (TEA) TUI framework for Python.",
     )
-    parser.add_argument("-v", "--version", action="version", version=f"espresso-tui {__version__}")
+    parser.add_argument("-v", "--version", action="version", version=f"espressoTUI {__version__}")
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 

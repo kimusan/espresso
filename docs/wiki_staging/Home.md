@@ -8,7 +8,7 @@
 2. [The Elm Architecture (TEA)](The-Elm-Architecture)
 3. [Crema: Styling & Layout Guide](Crema-Styling-Guide)
 4. [Beans: Component Catalog](Beans-Component-Catalog)
-5. [Examples & Recipes](https://github.com/kimschulz/espresso/tree/main/examples)
+5. [Examples & Recipes](https://github.com/kimusan/espresso/tree/main/examples)
 
 ## Architecture at a Glance
 
