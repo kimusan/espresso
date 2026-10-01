@@ -117,9 +117,6 @@ jobs:
           - os: macos-14
             artifact_name: espresso-macos-arm64
             binary_src: dist/espresso
-          - os: macos-13
-            artifact_name: espresso-macos-x86_64
-            binary_src: dist/espresso
           - os: windows-latest
             artifact_name: espresso-windows-x86_64.exe
             binary_src: dist/espresso.exe
