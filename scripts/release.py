@@ -137,8 +137,8 @@ def check_tag_exists(tag: str) -> bool:
     return bool(res.stdout.strip())
 
 
-def run_test_suite() -> None:
-    """Run unit test suite before release."""
+def run_test_suite() -> int:
+    """Run unit test suite before release, returning the number of passed tests."""
     env = dict(os.environ)
     env["PYTHONPATH"] = str(REPO_ROOT / "src")
     res = subprocess.run(
@@ -155,6 +155,9 @@ def run_test_suite() -> None:
         print(f"  Run and fix failing tests locally using:")
         print(f"    {C_CYAN}PYTHONPATH=src python3 -m unittest discover tests{C_RESET}\n")
         sys.exit(1)
+
+    match = re.search(r"Ran (\d+) tests", res.stderr or res.stdout)
+    return int(match.group(1)) if match else 0
 
 
 def update_init_file(new_version: str, dry_run: bool) -> None:
@@ -320,8 +323,8 @@ Examples:
     if not args.skip_tests:
         log_step(current_step, total_steps, "Running test suite")
         current_step += 1
-        run_test_suite()
-        log_success("All tests passed successfully (334/334)")
+        num_tests = run_test_suite()
+        log_success(f"All {num_tests} tests passed successfully")
 
     # Step 4: Bump version in src/espresso/__init__.py
     log_step(current_step, total_steps, f"Updating version in src/espresso/__init__.py")
