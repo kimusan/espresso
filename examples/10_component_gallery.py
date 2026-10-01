@@ -1075,7 +1075,7 @@ class ComponentGallery(Model):
                 f"{Style().foreground('#666688').render('----------------------------------------')}",
                 f"{Style().foreground('#A0FFA0').render('from espresso.beans import List, ListItem, PaginationMode')}",
                 "",
-                f"{Style().foreground('#E0E0E0').render('items = [ListItem(\"Build\", \"Compile\", badge=\"CI/CD\")]')}",
+                Style().foreground('#E0E0E0').render('items = [ListItem("Build", "Compile", badge="CI/CD")]'),
                 f"{Style().foreground('#E0E0E0').render('lst = List(items, pagination_mode=PaginationMode.SCROLL)')}",
                 f"{Style().foreground('#666688').render('----------------------------------------')}",
                 "",

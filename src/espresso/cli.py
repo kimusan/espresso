@@ -83,7 +83,7 @@ class AppModel(Model):
 
 def main() -> None:
     program = Program(AppModel(), alt_screen=True, mouse=True)
-    asyncio.run(program.run())
+    program.run()
 
 
 if __name__ == "__main__":

@@ -357,10 +357,36 @@ def update_changelog_file(
         changelog_path.write_text(updated, encoding="utf-8")
 
 
+def get_existing_changelog_hashes(changelog_path: Path, current_version: str) -> set[str]:
+    """Extract commit hashes already documented in older release sections of CHANGELOG.md."""
+    if not changelog_path.exists():
+        return set()
+    content = changelog_path.read_text(encoding="utf-8")
+
+    # Strip current version's section if present so re-runs aren't excluded
+    version_section_re = re.compile(
+        rf"^## \[{re.escape(current_version)}\].*?(?=(?:\n## \[|\Z))",
+        re.MULTILINE | re.DOTALL,
+    )
+    older_content = version_section_re.sub("", content)
+
+    # Matches commit hashes in links: /commit/<hash>
+    return set(re.findall(r"/commit/([0-9a-fA-F]{7,40})", older_content))
+
+
 def run_changelog_update(new_version: str, dry_run: bool) -> str:
     """Orchestrate changelog generation and update. Returns human-readable summary."""
     last_tag = get_last_tag()
     commits = get_commits_since_tag(last_tag)
+
+    # Deduplicate against commits already recorded in previous CHANGELOG.md releases
+    existing_hashes = get_existing_changelog_hashes(CHANGELOG_FILE, new_version)
+    if existing_hashes:
+        commits = [
+            c for c in commits
+            if c.hash not in existing_hashes and not any(c.hash.startswith(h) or h.startswith(c.hash) for h in existing_hashes)
+        ]
+
     entry = generate_changelog_entry(new_version, last_tag, REPO_URL, commits)
     update_changelog_file(CHANGELOG_FILE, entry, new_version, dry_run)
     num_commits = len(commits)
