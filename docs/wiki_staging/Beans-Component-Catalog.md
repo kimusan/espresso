@@ -101,4 +101,17 @@ Fixed-width smoothly scrolling animated text ticker with loop and bounce modes, 
 ## `SortableList`
 Reorderable item list supporting mouse drag-and-drop reordering with visual drop indicators (`▼ `, `[HOLDING]`) and keyboard `Space`+`Arrows` reordering.
 
+## `Spring`
+Physical damped harmonic oscillator simulation solving $m x'' + c x' + k (x - \text{target}) = 0$ with closed-form mathematical stability, overshoot rendering, and adjustable damping/stiffness presets.
+
+## `Confetti`
+2D celebratory particle physics emitter featuring radial bursts, corner cannons, and falling rain, complete with air drag, gravity, and non-destructive Crema overlaying (`place_overlay`).
+
+## `DiffViewer`
+High-fidelity Git diff visualizer with single-column Unified and dual-column Split views, line-number gutters, hunk headers, and intra-line word-level difference highlighting.
+
+## `Form`
+Composite multi-field data entry container with built-in field validation, inline error badges, Tab / Shift+Tab keyboard focus cycling, Up/Down arrow navigation, and `FormSubmitMsg` event dispatch.
+
+
 

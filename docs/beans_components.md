@@ -1266,5 +1266,184 @@ def view(self):
   - `↑` / `↓` (or `k` / `j`): Move the grabbed item up or down.
   - `Space` / `Enter`: Drop item at current position.
   - `Esc`: Cancel grab and return item to original position.
+  - `Shift+Up` / `Shift+Down` (or `Alt+Up` / `Alt+Down` or `K` / `J`): Instantly swap the highlighted item directly without entering holding mode.
+
+---
+
+## 33. Spring (Damped Harmonic Oscillator)
+
+The `Spring` component brings physics-driven motion and natural tactile feel to terminal interfaces. It solves the exact analytical differential equation for damped harmonic oscillators:
+$$m \cdot x''(t) + c \cdot x'(t) + k \cdot (x(t) - \text{target}) = 0$$
+This closed-form formulation is unconditionally stable and jitter-proof regardless of framerate or `sleep()` scheduling variances.
+
+### Usage
+```python
+from espresso.beans import Spring, SpringValue, SpringTickMsg
+
+spring = Spring(
+    value=0.0,
+    target=100.0,
+    min_val=0.0,
+    max_val=100.0,
+    stiffness=120.0,  # Spring tension (k)
+    damping=0.5,      # Damping ratio (zeta: < 1.0 underdamped/bouncy, = 1.0 critical, > 1.0 overdamped)
+    mass=1.0,
+    fps=60.0,
+    width=50,
+    label="Volume Level:",
+)
+
+def init(self):
+    return self.spring.init()
+
+def update(self, msg):
+    if isinstance(msg, SpringTickMsg):
+        self.spring, cmd = self.spring.update(msg)
+        return self, cmd
+
+    # User changes destination:
+    if msg.key == "right":
+        cmd = self.spring.set_target(self.spring.target + 10.0)
+        return self, cmd
+
+    return self, None
+
+def view(self):
+    return self.spring.view()
+```
+
+### Features & Capabilities
+- **Analytical Solver (`SpringValue`)**: Implements closed-form solutions for underdamped ($\zeta < 1.0$), critically damped ($\zeta = 1.0$), and overdamped ($\zeta > 1.0$) states. Never explodes or drifts numerically.
+- **Overshoot & Oscillation Rendering**: Track visuals render overshoot markers (`◀`, `▶`) when momentum carries values outside nominal boundaries before settling back to equilibrium.
+- **Dynamic Telemetry**: Live position, destination target, velocity ($v(t)$), and settled status indicators.
+- **Interactive Methods**: `set_target(val)`, `snap_to(val)`, `is_settled`, `tick()`.
+
+---
+
+## 34. Confetti (2D Particle Emitter)
+
+The `Confetti` component provides celebratory visual particle effects for rewards, milestones, form completions, and release banners. Particles animate in 2D terminal coordinates under the influence of gravity, air drag, and velocity.
+
+### Usage
+```python
+from espresso.beans import Confetti, ConfettiMode, ConfettiTickMsg
+
+confetti = Confetti(
+    width=80,
+    height=24,
+    gravity=18.0,
+    drag=0.85,
+    fps=30.0,
+)
+
+def update(self, msg):
+    if isinstance(msg, ConfettiTickMsg):
+        self.confetti, cmd = self.confetti.update(msg)
+        return self, cmd
+
+    if msg.key == "c":
+        # Launch celebratory explosion!
+        cmd = self.confetti.fire(count=60, mode=ConfettiMode.BURST)
+        return self, cmd
+
+    return self, None
+
+def view(self):
+    card_text = "🎉 Build Succeeded! All 295 tests passed."
+    # Overlay particles seamlessly on top of card text without layout shift:
+    return self.confetti.overlay(card_text)
+```
+
+### Emission Patterns
+- **`ConfettiMode.BURST`**: Radial explosion expanding outward from an origin point `(x, y)` with slight upward vertical bias.
+- **`ConfettiMode.CANNON`**: Dual angled cannons firing inward and upward from the bottom left and bottom right corners.
+- **`ConfettiMode.RAIN`**: Gentle cascade drifting from the top of the terminal canvas with random lateral air flutter.
+
+### Crema Integration
+- **`overlay(background_text)`**: Uses Crema's `place_overlay` to insert particle glyphs into the rendered background string line-by-line, allowing particles to rain over tables, cards, dialogs, or text without modifying or shifting underlying layouts.
+
+---
+
+## 35. DiffViewer (Git Diff Visualizer)
+
+The `DiffViewer` component renders unified and side-by-side split Git diffs with line-number gutters and intra-line word-level difference highlighting.
+
+### Usage
+```python
+from espresso.beans import DiffViewer, DiffMode
+
+diff_viewer = DiffViewer(
+    old_text=old_source_code,
+    new_text=new_source_code,
+    fromfile="a/src/server.py",
+    tofile="b/src/server.py",
+    mode=DiffMode.UNIFIED,
+    width=80,
+    height=20,
+)
+
+def update(self, msg):
+    # DiffViewer handles arrows, PageUp/Down, Home/End, mouse wheel, and 'm' to toggle mode
+    self.diff_viewer, cmd = self.diff_viewer.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.diff_viewer.view()
+```
+
+### Modes & Intra-Line Highlighting
+- **Unified Diff (`DiffMode.UNIFIED`)**: Standard single-column diff format with old and new line numbers, hunk header badges (`@@ -1,5 +1,8 @@`), and addition/deletion lines.
+- **Split Diff (`DiffMode.SPLIT`)**: Dual-pane side-by-side comparison with synchronized vertical scrolling.
+- **Intra-Line Word Highlighting**: Pairings of adjacent deletion (`-`) and addition (`+`) lines are processed via `difflib.SequenceMatcher` to highlight exact modified word tokens with high-contrast background highlights.
+- **Direct Unified Text Input**: Supports loading raw diff patches directly via `diff_viewer.set_diff(diff_patch)`.
+
+---
+
+## 36. Form & FormBuilder
+
+The `Form` component manages multi-field data entry forms with field-level and form-level validation, error badges, automatic keyboard focus cycling, and submission handling.
+
+### Usage
+```python
+from espresso.beans import Form, FormField, FormSubmitMsg, TextInput, Slider
+
+def validate_email(val: str) -> str | None:
+    if "@" not in val or "." not in val:
+        return "Must be a valid email address"
+    return None
+
+form = Form(
+    fields=[
+        FormField(id="name", label="Full Name", bean=TextInput(placeholder="Ada"), required=True),
+        FormField(id="email", label="Email", bean=TextInput(placeholder="ada@example.org"), validator=validate_email, required=True),
+        FormField(id="exp", label="Experience", bean=Slider(min_val=0, max_val=20, value=5), hint="Years in Python"),
+    ],
+    title="User Registration",
+    submit_label="Save Profile",
+    width=60,
+    offset_y=3,
+)
+
+def update(self, msg):
+    if isinstance(msg, FormSubmitMsg):
+        print("Received valid submission:", msg.values)
+        return self, None
+
+    self.form, cmd = self.form.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.form.view()
+```
+
+### Navigation & Validation
+- **Keyboard Navigation**:
+  - `Tab` / `Shift+Tab` cycles focus forward and backward across all fields and the submit button.
+  - `↑` / `↓` arrow keys quickly navigate between fields.
+  - `Enter` on the submit button, or `Ctrl+S` from any field, validates and submits the form.
+- **Mouse Selection**: Click on any field to focus it directly, or click the `[ Submit ]` button to trigger validation and submission.
+- **Live Validation & Error Badges**: If required fields are omitted or custom validators return an error string, high-visibility red error badges (`⚠ <error message>`) appear inline below the offending field, and focus jumps to the first invalid field.
+- **Composite Bean Support**: Any Espresso `Model` or widget (`TextInput`, `Slider`, `RangeSlider`, `DatePicker`, `TextArea`) can serve as a `FormField.bean`.
+
 
 

@@ -30,9 +30,10 @@ class TextInput(Model):
         style: Style | None = None,
         placeholder_style: Style | None = None,
         prompt_style: Style | None = None,
+        value: str = "",
     ) -> None:
-        self.value = ""
-        self.cursor_pos = 0
+        self.value = value[:char_limit]
+        self.cursor_pos = len(self.value)
         self.placeholder = placeholder
         self.prompt = prompt
         self.char_limit = char_limit

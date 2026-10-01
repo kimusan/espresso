@@ -63,6 +63,19 @@ from espresso.beans.spinner import (
     Spinner,
     SpinnerTickMsg,
 )
+from espresso.beans.confetti import (
+    Confetti,
+    ConfettiMode,
+    ConfettiTickMsg,
+    Particle,
+)
+from espresso.beans.diff_viewer import (
+    DiffHunk,
+    DiffLine,
+    DiffMode,
+    DiffViewer,
+)
+from espresso.beans.form import Form, FormField, FormSubmitMsg
 from espresso.beans.marquee import Marquee, MarqueeMode, MarqueeTickMsg
 from espresso.beans.slider import (
     RangeSlider,
@@ -72,6 +85,7 @@ from espresso.beans.slider import (
 )
 from espresso.beans.sortable_list import ItemReorderedMsg, SortableItem, SortableList
 from espresso.beans.sparkline import Sparkline, SparklineMode, SparklineTickMsg
+from espresso.beans.spring import Spring, SpringTickMsg, SpringValue
 from espresso.beans.splitter import (
     Splitter,
     SplitterOrientation,
@@ -233,5 +247,23 @@ __all__ = [
     "SortableList",
     "SortableItem",
     "ItemReorderedMsg",
+    # Spring
+    "Spring",
+    "SpringValue",
+    "SpringTickMsg",
+    # Confetti
+    "Confetti",
+    "ConfettiMode",
+    "ConfettiTickMsg",
+    "Particle",
+    # DiffViewer
+    "DiffViewer",
+    "DiffMode",
+    "DiffHunk",
+    "DiffLine",
+    # Form
+    "Form",
+    "FormField",
+    "FormSubmitMsg",
 ]
 
