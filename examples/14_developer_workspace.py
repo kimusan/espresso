@@ -168,6 +168,7 @@ class WorkspaceModel(Model):
     def __init__(self) -> None:
         self.width = 110
         self.height = 30
+        self.show_tree = True
         self.active_file = "src/main.py"
         self.active_pane = "editor"  # "tree", "editor", "metrics"
         self.status_message = "Ready. Press Ctrl+P for Command Palette, Tab to switch panes, q to quit."
@@ -268,7 +269,9 @@ class WorkspaceModel(Model):
                 # Execute command palette callback
                 produced_msg = cp_cmd() if callable(cp_cmd) else None
                 if isinstance(produced_msg, CommandPaletteSelectMsg):
-                    self._handle_palette_selection(produced_msg.item)
+                    action_cmd = self._handle_palette_selection(produced_msg.item)
+                    if action_cmd is not None:
+                        return self, action_cmd
             return self, None
 
         # 4. Handle Global Keypresses
@@ -279,18 +282,18 @@ class WorkspaceModel(Model):
                 return self, quit_app()
 
             elif key == "tab":
-                panes = ["tree", "editor", "metrics"]
-                curr_idx = panes.index(self.active_pane)
+                panes = ["tree", "editor", "metrics"] if self.show_tree else ["editor", "metrics"]
+                curr_idx = panes.index(self.active_pane) if self.active_pane in panes else 0
                 self.active_pane = panes[(curr_idx + 1) % len(panes)]
                 self.status_message = f"Focused pane: {self.active_pane.upper()}"
                 return self, None
 
             elif key == "ctrl+b":
-                self.status_message = "Explorer toggled"
+                self._toggle_tree()
                 return self, None
 
             elif key == "ctrl+t":
-                self.status_message = "Ran 333 tests: 100% OK (0.17s)"
+                self.status_message = "Ran 334 tests: 100% OK (0.17s)"
                 return self, None
 
         # 5. Route to Active Component or Mouse Hit Testing
@@ -302,8 +305,8 @@ class WorkspaceModel(Model):
 
             tree_w, _, metrics_w = self._compute_pane_widths()
 
-            # Route to tree
-            if msg.x < tree_w:
+            # Route to tree (if visible)
+            if self.show_tree and msg.x < tree_w:
                 self.active_pane = "tree"
                 new_tree, cmd = self.tree.update(msg)
                 self.tree = new_tree  # type: ignore[assignment]
@@ -367,7 +370,7 @@ class WorkspaceModel(Model):
         else:
             self.status_message = f"Selected: {cleaned_path}"
 
-    def _handle_palette_selection(self, item: PaletteItem) -> None:
+    def _handle_palette_selection(self, item: PaletteItem) -> Cmd | None:
         """Execute selected palette action."""
         if item.id == "theme_espresso":
             self.code_viewer.theme = THEME_ESPRESSO
@@ -381,25 +384,41 @@ class WorkspaceModel(Model):
             self.code_viewer.theme = THEME_MONOKAI
             self.code_viewer._rebuild_content()
             self.status_message = "Theme changed to Monokai"
+        elif item.id == "toggle_tree":
+            self._toggle_tree()
         elif item.id == "run_tests":
-            self.status_message = "Ran 333 tests: 100% OK (0.17s)"
+            self.status_message = "Ran 334 tests: 100% OK (0.17s)"
         elif item.id == "quit_app":
-            sys.exit(0)
+            from espresso import quit_app
+            return quit_app()
         elif item.id.startswith("open_"):
             fname = item.title.replace("Open: ", "").strip()
             self._load_file(fname)
+        return None
+
+    def _toggle_tree(self) -> None:
+        """Toggle Explorer sidebar visibility."""
+        self.show_tree = not self.show_tree
+        if not self.show_tree and self.active_pane == "tree":
+            self.active_pane = "editor"
+        self.status_message = "Explorer: Shown [Ctrl+B]" if self.show_tree else "Explorer: Hidden [Ctrl+B]"
 
     def _compute_pane_widths(self) -> tuple[int, int, int]:
         """Compute responsive widths for (tree, editor, metrics)."""
-        if self.width < 90:
-            tree_w = 22
-            metrics_w = 26
-        elif self.width < 105:
-            tree_w = 25
-            metrics_w = 28
+        if self.show_tree:
+            if self.width < 90:
+                tree_w = 22
+                metrics_w = 26
+            elif self.width < 105:
+                tree_w = 25
+                metrics_w = 28
+            else:
+                tree_w = 28
+                metrics_w = 32
         else:
-            tree_w = 28
-            metrics_w = 32
+            tree_w = 0
+            metrics_w = 26 if self.width < 90 else (28 if self.width < 105 else 32)
+
         editor_w = max(20, self.width - tree_w - metrics_w)
         return tree_w, editor_w, metrics_w
 
@@ -442,10 +461,10 @@ class WorkspaceModel(Model):
         top_bar = f"{left_trunc}{' ' * gap}{right_hdr}"
         top_bar = truncate_ansi(top_bar, inner_w, tail="")
 
-        # 2. Main 3-Pane Body
-        # Left Pane: GitTree
-        self.tree.set_offset(0, 1)
-        tree_view = self.tree.view()
+        # 2. Main Body
+        if self.show_tree:
+            self.tree.set_offset(0, 1)
+            tree_view = self.tree.view()
 
         # Center Pane: CodeViewer
         editor_x = tree_w
@@ -469,7 +488,7 @@ class WorkspaceModel(Model):
         # Quick notes card underneath chart
         notes_content = (
             "• Pure Python standard library\n"
-            "• 333 tests passing with 100% precision\n"
+            "• 334 tests passing with 100% precision\n"
             "• Mouse double-click & gestures\n"
             "• Built-in CLI tool: espresso\n"
             "• Full TrueColor gradient styling"
@@ -484,8 +503,11 @@ class WorkspaceModel(Model):
         )
         right_pane = join_vertical(chart_view, notes_panel)
 
-        # Combine 3 panes horizontally
-        main_body = join_horizontal(tree_view, editor_framed, right_pane)
+        # Combine panes horizontally
+        if self.show_tree:
+            main_body = join_horizontal(tree_view, editor_framed, right_pane)
+        else:
+            main_body = join_horizontal(editor_framed, right_pane)
 
         # 3. Bottom Status Bar
         focus_badge = Style().bold(True).background("#2A2A3D").foreground("#00E5FF").padding(0, 1).render(f" PANE: {self.active_pane.upper()} ")
@@ -515,7 +537,7 @@ def main() -> None:
     """Launch Developer Workspace demo."""
     model = WorkspaceModel()
     program = Program(model, alt_screen=True, mouse=True)
-    asyncio.run(program.run())
+    program.run()
 
 
 if __name__ == "__main__":
