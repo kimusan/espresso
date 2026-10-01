@@ -107,10 +107,11 @@ class TerminalDriver:
 
 
         # Output escape sequences
-        out = [HIDE_CURSOR]
+        out = []
         if self.alt_screen:
             out.append(ENTER_ALT_SCREEN)
             out.append(CLEAR_SCREEN)
+        out.append(HIDE_CURSOR)
         if self.mouse:
             out.append(ENABLE_MOUSE_SGR)
 

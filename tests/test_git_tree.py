@@ -62,13 +62,13 @@ class TestGitTree(unittest.TestCase):
 
     def test_mouse_interactions(self) -> None:
         self.tree.set_offset(0, 0)
-        # Header is 2 rows (y=0, 1), so row 0 in tree is at y=2, row 1 at y=3
-        click_msg = MouseMsg(x=5, y=3, button=MouseButton.LEFT, action=MouseAction.PRESS)
+        # Header is 3 rows (border=0, branch=1, sep=2), so row 0 in tree is at y=3, row 1 at y=4
+        click_msg = MouseMsg(x=5, y=4, button=MouseButton.LEFT, action=MouseAction.PRESS)
         self.tree.update(click_msg)
         self.assertEqual(self.tree.cursor, 1)
 
         # Double click to toggle folder
-        dbl_msg = MouseMsg(x=5, y=3, button=MouseButton.LEFT, action=MouseAction.DOUBLE_CLICK)
+        dbl_msg = MouseMsg(x=5, y=4, button=MouseButton.LEFT, action=MouseAction.DOUBLE_CLICK)
         node, _ = self.tree.get_selected_node()
         self.assertTrue(node.is_expanded)
         self.tree.update(dbl_msg)
@@ -79,3 +79,27 @@ class TestGitTree(unittest.TestCase):
         self.assertIn("feature/beans", view_str)
         self.assertIn("src", view_str)
         self.assertIn("[M]", view_str)
+
+    def test_config_file_icon_and_border_alignment(self) -> None:
+        from espresso.crema.width import string_width, strip_ansi
+
+        paths = {
+            "pyproject.toml": GitFileStatus.MODIFIED,
+            "config.yaml": GitFileStatus.CLEAN,
+            "settings.json": GitFileStatus.CLEAN,
+        }
+        tree = GitTree.from_paths(paths, branch="main", width=28, height=12)
+        view_str = tree.view()
+        lines = view_str.splitlines()
+
+        # Verify wrench icon is present and no ⚙️ gear icon with spacing defect
+        self.assertIn("🔧", view_str)
+        self.assertNotIn("⚙️", view_str)
+
+        # Verify every line has exact visual width equal to tree.width
+        for idx, line in enumerate(lines):
+            self.assertEqual(
+                string_width(line),
+                28,
+                f"Line {idx} visual width is {string_width(line)} instead of 28: {repr(strip_ansi(line))}",
+            )

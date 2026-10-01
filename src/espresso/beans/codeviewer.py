@@ -263,10 +263,10 @@ class CodeViewer(Model):
 
     def set_size(self, width: int, height: int) -> None:
         """Resize the code viewer and adjust viewport."""
-        self.width = max(20, width)
-        self.height = max(4, height)
+        self.width = max(10, width)
+        self.height = max(2, height)
         self.viewport.width = self.width
-        self.viewport.height = max(2, self.height - (1 if self.show_footer else 0))
+        self.viewport.height = max(1, self.height - (1 if self.show_footer else 0))
         self._rebuild_content()
 
     def set_cursor_line(self, line: int) -> None:
@@ -332,7 +332,18 @@ class CodeViewer(Model):
         status_right = Style().foreground("#8888AA").render(f"Ln {self.cursor_line}/{total_lines} ({pct}%) ")
 
         left_side = f"{status_left}{status_mid}"
-        pad = max(1, self.width - string_width(left_side) - string_width(status_right))
-        footer = f"{left_side}{' ' * pad}{status_right}"
+        avail_left = max(1, self.width - string_width(status_right))
+        if string_width(left_side) > avail_left:
+            left_side = truncate_ansi(left_side, avail_left, tail="")
+
+        ls_w = string_width(left_side)
+        sr_w = string_width(status_right)
+        gap = max(0, self.width - ls_w - sr_w)
+        footer = f"{left_side}{' ' * gap}{status_right}"
+        if string_width(footer) > self.width:
+            footer = truncate_ansi(footer, self.width, tail="")
+        fw = string_width(footer)
+        if fw < self.width:
+            footer += " " * (self.width - fw)
 
         return f"{body}\n{footer}"

@@ -157,11 +157,18 @@ class Grid:
         w = max(10, width)
         inner_w = max(4, w - 2)
 
+        # Truncate content lines if they exceed inner_w to preserve outer panel width
+        lines = content.split("\n")
+        truncated_lines = [
+            truncate_ansi(line, inner_w) if string_width(line) > inner_w else line
+            for line in lines
+        ]
+
         st = Style().border(border).border_foreground(border_foreground).width(inner_w)
         if title:
             st = st.border_title(f" {title} ")
         if height is not None:
             st = st.height(height)
 
-        return st.render(content)
+        return st.render("\n".join(truncated_lines))
 

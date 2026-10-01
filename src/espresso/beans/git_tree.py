@@ -228,8 +228,8 @@ class GitTree(Model):
                     self._adjust_scroll(max_visible)
                 return self, None
 
-            # Start of rows: y=2 if header, y=1 if no header
-            start_y = 2 if self.show_branch_header else 1
+            # Start of rows: y=3 if header (border + branch + sep), y=1 if no header (border only)
+            start_y = 3 if self.show_branch_header else 1
             row_idx = rel_y - start_y
             if 0 <= row_idx < max_visible:
                 target_idx = self.scroll_offset + row_idx
@@ -329,7 +329,7 @@ class GitTree(Model):
                 elif ext in ("md", "txt"):
                     f_icon = "📝 "
                 elif ext in ("json", "yaml", "toml"):
-                    f_icon = "⚙️  "
+                    f_icon = "🔧 "
                 else:
                     f_icon = "📄 "
                 name_st = Style().foreground("#C0CAF5")

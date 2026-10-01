@@ -32,6 +32,7 @@ from espresso.core.terminal import (
     CURSOR_UP,
     TerminalDriver,
 )
+from espresso.crema.width import string_width, truncate_ansi
 
 
 class Program:
@@ -314,10 +315,15 @@ class Program:
         buf = []
 
         if self.alt_screen:
-            # Clamp rendered lines to terminal height to prevent terminal scrolling
+            # Clamp rendered lines to terminal size to prevent terminal scrolling and auto-wrap spillover
             term_w, term_h = self._terminal.get_size()
             if term_h > 0 and len(new_lines) > term_h:
                 new_lines = new_lines[:term_h]
+            if term_w > 0:
+                new_lines = [
+                    truncate_ansi(l, term_w, tail="") if string_width(l) > term_w else l
+                    for l in new_lines
+                ]
 
             # Line-diffing alt-screen renderer
             if not self._last_rendered_lines:

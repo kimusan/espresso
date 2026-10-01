@@ -31,13 +31,13 @@ def char_width(char: str) -> int:
         return 0
 
     # Combining marks, non-spacing marks, enclosing marks, format chars (like ZWJ)
-    cat = unicodedata.category(char)
+    cat = unicodedata.category(char[0])
     if cat in ("Mn", "Me", "Cf"):
         return 0
 
     # East Asian Width properties
     # W = Wide, F = Fullwidth
-    eaw = unicodedata.east_asian_width(char)
+    eaw = unicodedata.east_asian_width(char[0])
     if eaw in ("W", "F"):
         return 2
 
@@ -52,7 +52,18 @@ def char_width(char: str) -> int:
 def string_width(text: str) -> int:
     """Calculate total visual cell width of a string, ignoring ANSI escape sequences."""
     clean = strip_ansi(text)
-    return sum(char_width(ch) for ch in clean)
+    total = 0
+    prev_w = 0
+    for ch in clean:
+        if ch == "\ufe0f":
+            if prev_w == 1:
+                total += 1
+                prev_w = 2
+            continue
+        w = char_width(ch)
+        total += w
+        prev_w = w
+    return total
 
 
 def truncate_ansi(text: str, max_width: int, tail: str = "…") -> str:
@@ -73,6 +84,7 @@ def truncate_ansi(text: str, max_width: int, tail: str = "…") -> str:
     tokens = ANSI_REGEX.split(text)
     codes = ANSI_REGEX.findall(text)
 
+    prev_w = 0
     # Reconstruct tokens with their corresponding codes
     for idx, token in enumerate(tokens):
         if idx > 0 and idx - 1 < len(codes):
@@ -84,7 +96,13 @@ def truncate_ansi(text: str, max_width: int, tail: str = "…") -> str:
                 ansi_open.append(code)
 
         for ch in token:
-            cw = char_width(ch)
+            if ch == "\ufe0f" and prev_w == 1:
+                cw = 1
+                prev_w = 2
+            else:
+                cw = char_width(ch)
+                prev_w = cw
+
             if current_w + cw > target_w:
                 # Add tail and close any open ANSI styles
                 buf.append(tail)

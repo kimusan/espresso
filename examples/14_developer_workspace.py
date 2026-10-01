@@ -296,12 +296,14 @@ class WorkspaceModel(Model):
         # 5. Route to Active Component or Mouse Hit Testing
         if isinstance(msg, MouseMsg):
             # Check if clicked in top header search bar to open command palette
-            if msg.action == MouseAction.PRESS and msg.y == 1 and 20 <= msg.x <= 55:
+            if msg.action == MouseAction.PRESS and msg.y == 0 and 16 <= msg.x <= 45:
                 self.command_palette.open()
                 return self, None
 
+            tree_w, _, metrics_w = self._compute_pane_widths()
+
             # Route to tree
-            if msg.x < 30:
+            if msg.x < tree_w:
                 self.active_pane = "tree"
                 new_tree, cmd = self.tree.update(msg)
                 self.tree = new_tree  # type: ignore[assignment]
@@ -312,7 +314,7 @@ class WorkspaceModel(Model):
                 return self, None
 
             # Route to metrics
-            elif msg.x >= self.width - 32:
+            elif msg.x >= self.width - metrics_w:
                 self.active_pane = "metrics"
                 new_chart, cmd = self.metrics_chart.update(msg)
                 self.metrics_chart = new_chart  # type: ignore[assignment]
@@ -387,60 +389,81 @@ class WorkspaceModel(Model):
             fname = item.title.replace("Open: ", "").strip()
             self._load_file(fname)
 
+    def _compute_pane_widths(self) -> tuple[int, int, int]:
+        """Compute responsive widths for (tree, editor, metrics)."""
+        if self.width < 90:
+            tree_w = 22
+            metrics_w = 26
+        elif self.width < 105:
+            tree_w = 25
+            metrics_w = 28
+        else:
+            tree_w = 28
+            metrics_w = 32
+        editor_w = max(20, self.width - tree_w - metrics_w)
+        return tree_w, editor_w, metrics_w
+
     def _recalculate_dimensions(self) -> None:
         """Adjust component dimensions based on terminal width and height."""
-        avail_h = max(15, self.height - 5)
-        tree_w = 28
-        metrics_w = 32
-        editor_w = max(35, self.width - tree_w - metrics_w - 2)
+        # Top header is 1 row, bottom status is 1 row. Total body height:
+        body_h = max(10, self.height - 2)
+        tree_w, editor_w, metrics_w = self._compute_pane_widths()
 
         self.tree.width = tree_w
-        self.tree.height = avail_h
+        self.tree.height = body_h
 
-        self.code_viewer.set_size(editor_w, avail_h)
+        # editor_w and body_h are outer dimensions; editor_border adds 2 to width and 2 to height
+        self.code_viewer.set_size(max(10, editor_w - 2), max(2, body_h - 2))
 
         self.metrics_chart.width = metrics_w
-        self.metrics_chart.height = (avail_h // 2)
+        chart_h = body_h // 2
+        self.metrics_chart.height = chart_h
 
     def view(self) -> str:
         """Render the complete developer workspace."""
         self._recalculate_dimensions()
         inner_w = self.width
+        body_h = max(10, self.height - 2)
+        tree_w, editor_w, metrics_w = self._compute_pane_widths()
 
         # 1. Top Header Bar
         logo = Style().bold(True).foreground("#FFFFFF").background("#7D56F4").padding(0, 1).render("☕ ESPRESSO IDE")
-        search_btn = Style().foreground("#BB9AF7").render(" 🔍 Search files / actions [Ctrl+P] ")
+        search_btn = Style().foreground("#BB9AF7").render(" 🔍 Search [Ctrl+P] ")
         file_tab = Style().bold(True).foreground("#00E5FF").render(f"  📄 {self.active_file}")
         branch_badge = Style().foreground("#9ECE6A").bold(True).render("  ⎇ feature/beans-v0.2.0")
 
         left_hdr = f"{logo}{search_btn}{file_tab}{branch_badge}"
-        lh_w = string_width(left_hdr)
-        right_hdr = Style().foreground("#888888").render("Pure Python 3.10+ • Zero Wheels ")
+        right_hdr = Style().foreground("#888888").render("Pure Python • Zero Wheels ")
         rh_w = string_width(right_hdr)
-        gap = max(1, inner_w - lh_w - rh_w)
-        top_bar = f"{left_hdr}{' ' * gap}{right_hdr}"
+        avail_lh = max(0, inner_w - rh_w)
+        left_trunc = truncate_ansi(left_hdr, avail_lh, tail="")
+        lh_w = string_width(left_trunc)
+        gap = max(0, inner_w - lh_w - rh_w)
+        top_bar = f"{left_trunc}{' ' * gap}{right_hdr}"
+        top_bar = truncate_ansi(top_bar, inner_w, tail="")
 
         # 2. Main 3-Pane Body
         # Left Pane: GitTree
-        self.tree.set_offset(0, 2)
+        self.tree.set_offset(0, 1)
         tree_view = self.tree.view()
 
         # Center Pane: CodeViewer
-        editor_x = self.tree.width + 1
-        # Apply border and border title to editor view
-        editor_title = f" Editor: {self.active_file} "
+        editor_x = tree_w
+        max_title_w = max(4, editor_w - 4)
+        editor_title = truncate_ansi(f" Editor: {self.active_file} ", max_title_w, tail="")
         editor_border = (
             Style()
             .border(ROUNDED_BORDER)
             .border_foreground("#00E5FF" if self.active_pane == "editor" else "#555555")
             .border_title(editor_title)
-            .width(self.code_viewer.width - 2)
+            .width(editor_w - 2)
+            .height(body_h)
         )
         editor_framed = editor_border.render(self.code_viewer.view())
 
         # Right Pane: Metrics + Quick Notes Panel
-        metrics_x = editor_x + self.code_viewer.width + 1
-        self.metrics_chart.set_offset(metrics_x, 2)
+        metrics_x = editor_x + editor_w
+        self.metrics_chart.set_offset(metrics_x, 1)
         chart_view = self.metrics_chart.view()
 
         # Quick notes card underneath chart
@@ -451,11 +474,11 @@ class WorkspaceModel(Model):
             "• Built-in CLI tool: espresso\n"
             "• Full TrueColor gradient styling"
         )
-        notes_h = max(5, self.tree.height - (self.tree.height // 2) - 1)
+        notes_h = body_h - (body_h // 2)
         notes_panel = Grid.panel(
             "Release Notes v0.2.0",
             notes_content,
-            width=self.metrics_chart.width,
+            width=metrics_w,
             height=notes_h,
             border_foreground="#7AA2F7",
         )
@@ -466,14 +489,17 @@ class WorkspaceModel(Model):
 
         # 3. Bottom Status Bar
         focus_badge = Style().bold(True).background("#2A2A3D").foreground("#00E5FF").padding(0, 1).render(f" PANE: {self.active_pane.upper()} ")
-        status_text = Style().foreground("#C0CAF5").render(f"  {self.status_message}")
-        left_status = f"{focus_badge}{status_text}"
-        ls_w = string_width(left_status)
-
+        fb_w = string_width(focus_badge)
         shortcuts = Style().foreground("#888888").render("Tab: Switch Pane • Ctrl+P: Palette • q: Quit ")
         sc_w = string_width(shortcuts)
-        st_gap = max(1, inner_w - ls_w - sc_w)
+        avail_st = max(0, inner_w - fb_w - sc_w - 2)
+        status_text = Style().foreground("#C0CAF5").render(f"  {self.status_message}")
+        status_trunc = truncate_ansi(status_text, avail_st, tail="…") if string_width(status_text) > avail_st else status_text
+        left_status = f"{focus_badge}{status_trunc}"
+        ls_w = string_width(left_status)
+        st_gap = max(0, inner_w - ls_w - sc_w)
         bottom_bar = f"{left_status}{' ' * st_gap}{shortcuts}"
+        bottom_bar = truncate_ansi(bottom_bar, inner_w, tail="")
 
         # Combine screen
         full_screen = "\n".join([top_bar, main_body, bottom_bar])
