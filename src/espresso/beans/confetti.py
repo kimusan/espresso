@@ -10,7 +10,7 @@ from enum import Enum
 from typing import Sequence
 
 from espresso.core.tea import Cmd, Model, Msg
-from espresso.crema.overlay import place_overlay
+from espresso.crema.overlay import place_overlay, slice_ansi
 from espresso.crema.style import Style
 from espresso.crema.width import string_width
 
@@ -48,7 +48,10 @@ class Particle:
     max_life: int
 
 
-DEFAULT_CONFETTI_CHARS: list[str] = ["✦", "★", "•", "✨", "🎉", "☕", "▲", "◆", "■", "♦"]
+# Guaranteed 1-column single-cell glyphs (no double-width emojis that displace box borders)
+DEFAULT_CONFETTI_CHARS: list[str] = [
+    "✦", "★", "•", "▲", "▼", "◆", "■", "♦", "●", "▪", "*", "+", "x"
+]
 DEFAULT_PALETTE: list[str] = [
     "#FF007F",  # Neon Pink
     "#00E5FF",  # Cyan
@@ -67,8 +70,8 @@ class Confetti(Model):
         self,
         width: int = 80,
         height: int = 24,
-        gravity: float = 18.0,
-        drag: float = 0.85,
+        gravity: float = 14.0,
+        drag: float = 0.45,
         fps: float = 30.0,
         characters: Sequence[str] | None = None,
         colors: Sequence[str] | None = None,
@@ -101,27 +104,32 @@ class Confetti(Model):
         count: int = 50,
         mode: ConfettiMode = ConfettiMode.BURST,
         origin: tuple[int, int] | None = None,
-    ) -> Cmd:
-        """Spawn particles and return animation tick command."""
+    ) -> Cmd | None:
+        """Spawn particles and return animation tick command if not already running."""
         w, h = self.width, self.height
+        was_active = self.is_active
 
         if mode == ConfettiMode.BURST:
-            cx = origin[0] if origin else w / 2.0
-            cy = origin[1] if origin else h / 2.0
+            cx = float(origin[0]) if origin is not None else w / 2.0
+            cy = float(origin[1]) if origin is not None else h / 2.0
 
             for _ in range(count):
                 angle = random.uniform(0, 2 * math.pi)
-                # Aspect ratio compensation for taller terminal cells
-                speed = random.uniform(8.0, 26.0)
-                vx = math.cos(angle) * speed
-                vy = math.sin(angle) * speed * 0.55 - 4.0  # slight upward bias
-                life = random.randint(18, 35)
+                # Aspect ratio compensation for taller terminal cells (2:1 ratio)
+                speed = random.uniform(16.0, 42.0)
+                vx = math.cos(angle) * speed * 1.6
+                vy = math.sin(angle) * speed * 0.8 - 3.0  # slight upward bias
+                life = random.randint(55, 105)
                 char = random.choice(self.characters)
                 color = random.choice(self.colors)
-                self.particles.append(Particle(cx, cy, vx, vy, char, color, life, life))
+                # Disperse initial coordinates slightly when origin is automatic
+                r0 = 0.0 if origin is not None else random.uniform(0.5, 3.5)
+                px = cx + math.cos(angle) * r0 * 1.5
+                py = cy + math.sin(angle) * r0 * 0.7
+                self.particles.append(Particle(px, py, vx, vy, char, color, life, life))
 
         elif mode == ConfettiMode.CANNON:
-            # Left and right corner cannons
+            # Left and right corner cannons firing high inward arcs across canvas
             for i in range(count):
                 from_left = (i % 2 == 0)
                 cx = 2.0 if from_left else float(w - 3)
@@ -129,30 +137,34 @@ class Confetti(Model):
 
                 # Angle pointed inward and upward
                 if from_left:
-                    angle = random.uniform(math.radians(20), math.radians(70))
-                    vx = math.cos(angle) * random.uniform(18.0, 38.0)
+                    angle = random.uniform(math.radians(25), math.radians(65))
+                    speed = random.uniform(32.0, 56.0)
                 else:
-                    angle = random.uniform(math.radians(110), math.radians(160))
-                    vx = math.cos(angle) * random.uniform(18.0, 38.0)
+                    angle = random.uniform(math.radians(115), math.radians(155))
+                    speed = random.uniform(32.0, 56.0)
 
-                vy = -math.sin(angle) * random.uniform(14.0, 28.0) * 0.55
-                life = random.randint(22, 45)
+                vx = math.cos(angle) * speed
+                vy = -math.sin(angle) * speed * 0.88
+                life = random.randint(60, 110)
                 char = random.choice(self.characters)
                 color = random.choice(self.colors)
                 self.particles.append(Particle(cx, cy, vx, vy, char, color, life, life))
 
         elif mode == ConfettiMode.RAIN:
             for _ in range(count):
-                cx = random.uniform(1.0, float(w - 2))
+                cx = random.uniform(2.0, float(w - 3))
                 cy = random.uniform(0.0, 3.0)
                 vx = random.uniform(-4.0, 4.0)
-                vy = random.uniform(2.0, 8.0)
-                life = random.randint(25, 50)
+                vy = random.uniform(3.0, 9.0)
+                life = random.randint(60, 110)
                 char = random.choice(self.characters)
                 color = random.choice(self.colors)
                 self.particles.append(Particle(cx, cy, vx, vy, char, color, life, life))
 
-        return self.tick()
+        # Only schedule a new ticker if one was not already running
+        if not was_active:
+            return self.tick()
+        return None
 
     def clear(self) -> None:
         """Remove all active particles immediately."""
@@ -199,7 +211,7 @@ class Confetti(Model):
             p.life -= 1
 
             # Keep if inside reasonable bounds and alive
-            if p.life > 0 and -5 <= p.x <= self.width + 5 and -5 <= p.y <= self.height + 2:
+            if p.life > 0 and -2 <= p.x <= self.width + 2 and -2 <= p.y <= self.height + 2:
                 alive.append(p)
 
         self.particles = alive
@@ -210,7 +222,7 @@ class Confetti(Model):
             return background
 
         bg_lines = background.split("\n")
-        # Generate particle layer
+        # Build particle grid: (col, row) -> styled_char
         particle_grid: dict[tuple[int, int], str] = {}
         for p in self.particles:
             col = int(round(p.x))
@@ -222,19 +234,26 @@ class Confetti(Model):
         if not particle_grid:
             return background
 
-        # Place particle overlay onto background lines
         out_lines: list[str] = []
         for row_idx, line in enumerate(bg_lines):
-            # Check if any particles on this row
             row_particles = {col: s for (col, r), s in particle_grid.items() if r == row_idx}
             if not row_particles:
                 out_lines.append(line)
                 continue
 
-            # Overlay particles on this line using Crema's place_overlay
             current_line = line
-            for col, char_str in row_particles.items():
-                current_line = place_overlay(current_line, char_str, col, 0)
+            # Sort columns descending to slice from right to left
+            for col in sorted(row_particles.keys(), reverse=True):
+                char_str = row_particles[col]
+                cw = string_width(current_line)
+                if col >= cw:
+                    pad_spaces = " " * (col - cw)
+                    current_line = f"{current_line}{pad_spaces}{char_str}"
+                else:
+                    left_part = slice_ansi(current_line, 0, col, pad=True)
+                    right_part = slice_ansi(current_line, col + 1)
+                    current_line = f"{left_part}{char_str}{right_part}"
+
             out_lines.append(current_line)
 
         return "\n".join(out_lines)

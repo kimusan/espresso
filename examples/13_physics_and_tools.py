@@ -212,9 +212,10 @@ class PhysicsAndToolsApp(Model):
         self.form.width = inner_w - 2
         self.form_confetti.set_size(inner_w - 2, inner_h)
 
-        # Set screen offsets for mouse click detection
-        self.diff_viewer.set_offset(1, 3)
-        self.form.set_offset(2, 4)
+        # Set screen offsets for mouse click detection:
+        # Header is row 0, card top border is row 1 -> content begins at row 2, col 1
+        self.diff_viewer.set_offset(1, 2)
+        self.form.set_offset(1, 2)
 
     def _apply_spring_preset(self, name: str, damping: float, stiffness: float) -> Cmd:
         self.spring_preset_name = name
@@ -284,8 +285,8 @@ class PhysicsAndToolsApp(Model):
                     self.tabs.set_active(3)
                     return self, None
 
-            # Number keys when not in text input (Tabs 0, 1, 2)
-            if self.active_tab in (0, 1, 2) and msg.key in ("1", "2", "3", "4"):
+            # Number keys when not in text input and not in Confetti tab (Tab 0: Spring, Tab 2: Diff)
+            if self.active_tab in (0, 2) and msg.key in ("1", "2", "3", "4"):
                 idx = int(msg.key) - 1
                 self.active_tab = idx
                 self.tabs.set_active(idx)
@@ -354,9 +355,9 @@ class PhysicsAndToolsApp(Model):
 
             elif isinstance(msg, MouseMsg) and msg.button == MouseButton.LEFT:
                 # Click along Spring gauge row to set target
-                gauge_y = 6
-                if msg.y == gauge_y:
-                    gauge_x_start = 14
+                gauge_y = 7
+                if msg.y in (6, 7):
+                    gauge_x_start = 13
                     gauge_w = 40
                     if gauge_x_start <= msg.x <= gauge_x_start + gauge_w:
                         pct = (msg.x - gauge_x_start) / float(gauge_w)
@@ -367,20 +368,31 @@ class PhysicsAndToolsApp(Model):
             # Confetti Controls
             if isinstance(msg, KeyMsg):
                 match msg.key:
-                    case "b" | "space":
-                        cmds.append(self.confetti.fire(count=60, mode=ConfettiMode.BURST))
-                    case "c":
-                        cmds.append(self.confetti.fire(count=70, mode=ConfettiMode.CANNON))
-                    case "r":
-                        cmds.append(self.confetti.fire(count=60, mode=ConfettiMode.RAIN))
-                    case "x":
+                    case "b" | "space" | "1" | "enter":
+                        cmds.append(self.confetti.fire(count=65, mode=ConfettiMode.BURST))
+                    case "c" | "2":
+                        cmds.append(self.confetti.fire(count=75, mode=ConfettiMode.CANNON))
+                    case "r" | "3":
+                        cmds.append(self.confetti.fire(count=65, mode=ConfettiMode.RAIN))
+                    case "x" | "4":
                         self.confetti.clear()
 
-            elif isinstance(msg, MouseMsg) and msg.button == MouseButton.LEFT and msg.y >= 3:
-                # Spawn burst centered exactly at click coordinate
-                cx = msg.x - 2
-                cy = msg.y - 3
-                cmds.append(self.confetti.fire(count=55, mode=ConfettiMode.BURST, origin=(cx, cy)))
+            elif isinstance(msg, MouseMsg) and msg.button == MouseButton.LEFT:
+                # Click on the button row at screen y == 4
+                if msg.y == 4:
+                    if 3 <= msg.x < 20:
+                        cmds.append(self.confetti.fire(count=65, mode=ConfettiMode.BURST))
+                    elif 22 <= msg.x < 42:
+                        cmds.append(self.confetti.fire(count=75, mode=ConfettiMode.CANNON))
+                    elif 44 <= msg.x < 60:
+                        cmds.append(self.confetti.fire(count=65, mode=ConfettiMode.RAIN))
+                    elif 62 <= msg.x < 78:
+                        self.confetti.clear()
+                elif msg.y >= 3:
+                    # Spawn localized burst centered at click coordinate inside card
+                    cx = max(2.0, min(float(self.width - 6), float(msg.x - 1)))
+                    cy = max(1.0, min(float(self.height - 8), float(msg.y - 2)))
+                    cmds.append(self.confetti.fire(count=55, mode=ConfettiMode.BURST, origin=(cx, cy)))
 
         elif self.active_tab == 2:
             # DiffViewer Controls
@@ -390,14 +402,34 @@ class PhysicsAndToolsApp(Model):
 
         elif self.active_tab == 3:
             # Form Controls
-            if isinstance(msg, KeyMsg) and msg.key == "r" and self.submitted_profile is not None:
-                # Reset submitted profile to allow filling again
-                self.submitted_profile = None
-                return self, None
+            if self.submitted_profile is not None:
+                if isinstance(msg, KeyMsg):
+                    if msg.key in ("c", "space", "enter"):
+                        # Re-trigger celebration!
+                        cmds.append(self.form_confetti.fire(count=65, mode=ConfettiMode.BURST))
+                    elif msg.key == "r":
+                        self.submitted_profile = None
+                        return self, None
 
-            self.form, c = self.form.update(msg)
-            if c:
-                cmds.append(c)
+                elif isinstance(msg, MouseMsg) and msg.button == MouseButton.LEFT:
+                    # If clicked on buttons row (around screen y in 11, 12)
+                    if msg.y in (11, 12):
+                        if 3 <= msg.x < 36:
+                            # Celebrate Again!
+                            cmds.append(self.form_confetti.fire(count=65, mode=ConfettiMode.BURST))
+                        elif 38 <= msg.x < 62:
+                            # Reset Form
+                            self.submitted_profile = None
+                            return self, None
+                    elif msg.y >= 3:
+                        # Click to trigger burst over results card
+                        cx = max(2.0, min(float(self.width - 6), float(msg.x - 1)))
+                        cy = max(1.0, min(float(self.height - 8), float(msg.y - 2)))
+                        cmds.append(self.form_confetti.fire(count=55, mode=ConfettiMode.BURST, origin=(cx, cy)))
+            else:
+                self.form, c = self.form.update(msg)
+                if c:
+                    cmds.append(c)
 
         return self, batch(*cmds) if cmds else None
 
@@ -475,10 +507,11 @@ class PhysicsAndToolsApp(Model):
         elif self.active_tab == 1:
             # ---------------- TAB 2: Confetti Celebration ----------------
             title = Style().bold(True).foreground("#FF007F").render("🎉 2D Terminal Particle Physics & Celebratory Emitter:")
-            controls = Style().faint(True).render(
-                "• Keys: [b] or [Space] Radial Burst • [c] Twin Cannons • [r] Rain Shower • [x] Clear Particles\n"
-                "• Mouse: Click anywhere in the card below to launch an instant localized particle explosion!"
-            )
+            btn_burst = Style().bold(True).foreground("#FFFFFF").background("#FF007F").padding(0, 1).render("💥 Burst (B/1)")
+            btn_cannon = Style().bold(True).foreground("#FFFFFF").background("#7D56F4").padding(0, 1).render("🚀 Cannons (C/2)")
+            btn_rain = Style().bold(True).foreground("#000000").background("#00E5FF").padding(0, 1).render("🌧️ Rain (R/3)")
+            btn_clear = Style().foreground("#AAAAAA").background("#333344").padding(0, 1).render("🧹 Clear (X/4)")
+            buttons_row = f"  {btn_burst}   {btn_cannon}   {btn_rain}   {btn_clear}"
 
             banner_box = (
                 "┌────────────────────────────────────────────────────────────────────────┐\n"
@@ -497,12 +530,17 @@ class PhysicsAndToolsApp(Model):
                 f"Active Particles: {len(self.confetti.particles):3d}  │  "
                 f"Gravity: {self.confetti.gravity:.1f} cells/s²  │  "
                 f"Air Drag: {self.confetti.drag:.2f}  │  FPS: {self.confetti.fps:.0f}\n"
-                f"Glyphs: ✦ ★ • ✨ 🎉 ☕ ▲ ◆ ■ ♦  │  Palette: 7 Vivid 24-bit TrueColor Hues"
+                f"Glyphs: ✦ ★ • ▲ ▼ ◆ ■ ♦ ● ▪ * + x  │  Palette: 7 Vivid 24-bit TrueColor Hues\n"
+                f"• Interactive: Click any button above or click canvas to spawn a burst! Keys: [1-4], [b/c/r/x]"
             )
 
-            underlying = f"{title}\n{controls}\n\n{banner_styled}\n\n{telemetry}"
-            # Overlay active particles directly on top of the text without layout deformation!
-            content_view = self.confetti.overlay(underlying)
+            underlying = f"{title}\n\n{buttons_row}\n\n{banner_styled}\n\n{telemetry}"
+            lines = underlying.split("\n")
+            inner_h = max(10, self.height - 6)
+            if len(lines) < inner_h:
+                lines.extend([""] * (inner_h - len(lines)))
+            underlying_padded = "\n".join(lines)
+            content_view = self.confetti.overlay(underlying_padded)
 
         elif self.active_tab == 2:
             # ---------------- TAB 3: Git DiffViewer ----------------
@@ -524,9 +562,19 @@ class PhysicsAndToolsApp(Model):
                     "└────────────────────────────────────────────────────────────┘",
                 ]
                 card_str = "\n".join(card_lines)
-                reset_hint = Style().faint(True).render("Press 'r' to reset form and submit another response.")
-                underlying = f"{res_title}\n\n{card_str}\n\n{reset_hint}"
-                content_view = self.form_confetti.overlay(underlying)
+
+                btn_again = Style().bold(True).foreground("#FFFFFF").background("#FF007F").padding(0, 1).render("🎆 Celebrate Again (C/Space)")
+                btn_reset = Style().bold(True).foreground("#FFFFFF").background("#333344").padding(0, 1).render("🔄 Reset Form (R)")
+                buttons_row = f"  {btn_again}     {btn_reset}"
+
+                hint = Style().faint(True).render("Click a button above or press 'c' / 'r' to retrigger celebration or reset form.")
+                underlying = f"{res_title}\n\n{card_str}\n\n{buttons_row}\n\n{hint}"
+                lines = underlying.split("\n")
+                inner_h = max(10, self.height - 6)
+                if len(lines) < inner_h:
+                    lines.extend([""] * (inner_h - len(lines)))
+                underlying_padded = "\n".join(lines)
+                content_view = self.form_confetti.overlay(underlying_padded)
             else:
                 form_view = self.form.view()
                 shortcuts = Style().faint(True).render(
