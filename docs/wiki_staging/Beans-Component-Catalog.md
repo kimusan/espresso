@@ -113,5 +113,15 @@ High-fidelity Git diff visualizer with single-column Unified and dual-column Spl
 ## `Form`
 Composite multi-field data entry container with built-in field validation, inline error badges, Tab / Shift+Tab keyboard focus cycling, Up/Down arrow navigation, and `FormSubmitMsg` event dispatch.
 
+## `CommandPalette`
+Fuzzy spotlight search and action runner inspired by VS Code (`Ctrl+P` / `Cmd+P`) and Neovim Telescope, with recents tracking, category badges, keyboard shortcuts, and non-destructive centered overlay rendering.
+
+## `GitTree`
+Collapsible multi-column Git file tree with status indicators (`[M]`, `[A]`, `[D]`, `[?]`, `[U]`, `[R]`), branch status header, directory folding via keyboard and mouse double-click, and automated nested path parsing.
+
+## `BarChart`
+Interactive horizontal and vertical bar charts featuring sub-character Unicode block precision (`▏`..`█`), TrueColor continuous multi-gradients, auto-scaling, custom value formatters, and cursor/mouse selection.
+
+
 
 

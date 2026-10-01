@@ -3,6 +3,12 @@
 Inspired by Bubbles.
 """
 
+from espresso.beans.bar_chart import (
+    BarChart,
+    BarChartSelectMsg,
+    BarItem,
+    BarOrientation,
+)
 from espresso.beans.codeviewer import (
     CodeViewer,
     SyntaxTheme,
@@ -10,6 +16,19 @@ from espresso.beans.codeviewer import (
     THEME_ESPRESSO,
     THEME_MONOKAI,
     highlight_code,
+)
+from espresso.beans.command_palette import (
+    CommandPalette,
+    CommandPaletteCloseMsg,
+    CommandPaletteSelectMsg,
+    PaletteItem,
+)
+from espresso.beans.git_tree import (
+    GitFileNode,
+    GitFileStatus,
+    GitTree,
+    GitTreeSelectMsg,
+    GitTreeToggleMsg,
 )
 from espresso.beans.datepicker import (
     DateChangeMsg,
@@ -265,5 +284,21 @@ __all__ = [
     "Form",
     "FormField",
     "FormSubmitMsg",
+    # BarChart
+    "BarChart",
+    "BarItem",
+    "BarOrientation",
+    "BarChartSelectMsg",
+    # CommandPalette
+    "CommandPalette",
+    "PaletteItem",
+    "CommandPaletteSelectMsg",
+    "CommandPaletteCloseMsg",
+    # GitTree
+    "GitTree",
+    "GitFileNode",
+    "GitFileStatus",
+    "GitTreeSelectMsg",
+    "GitTreeToggleMsg",
 ]
 

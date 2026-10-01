@@ -1445,5 +1445,129 @@ def view(self):
 - **Live Validation & Error Badges**: If required fields are omitted or custom validators return an error string, high-visibility red error badges (`⚠ <error message>`) appear inline below the offending field, and focus jumps to the first invalid field.
 - **Composite Bean Support**: Any Espresso `Model` or widget (`TextInput`, `Slider`, `RangeSlider`, `DatePicker`, `TextArea`) can serve as a `FormField.bean`.
 
+---
+
+## 37. CommandPalette
+
+The `CommandPalette` component provides a fuzzy spotlight search and action runner inspired by VS Code (`Ctrl+P` / `Cmd+P`) and Neovim Telescope.
+
+### Usage
+```python
+from espresso.beans import CommandPalette, PaletteItem, CommandPaletteSelectMsg
+
+palette = CommandPalette(
+    items=[
+        PaletteItem(id="git_status", title="Git: View Status", category="Git", shortcut="Ctrl+G"),
+        PaletteItem(id="file_open", title="File: Open File", category="File", shortcut="Ctrl+O"),
+        PaletteItem(id="theme_toggle", title="View: Toggle Dark Theme", category="View"),
+    ],
+    placeholder="Type a command or search...",
+    width=60,
+    toggle_key="ctrl+p",
+)
+
+def update(self, msg):
+    if isinstance(msg, CommandPaletteSelectMsg):
+        print(f"Selected action: {msg.item.id}")
+        return self, None
+
+    self.palette, cmd = self.palette.update(msg)
+    return self, cmd
+
+def view(self):
+    base_view = self.render_workspace()
+    # Centered spotlight modal overlay
+    return self.palette.overlay(base_view)
+```
+
+### Features
+- **Subsequence Fuzzy Matching**: Scores items by consecutive matches, word boundaries, and title weighting.
+- **Recents Priority**: Automatically tracks recently selected items and bubbles them to the top when query is empty.
+- **Category & Shortcut Badges**: Displays color-coded category labels and right-aligned keyboard shortcut hints.
+- **Non-Destructive Overlay**: `palette.overlay(base_screen)` seamlessly centers the modal on top of any active background view without disturbing underlying layout.
+
+---
+
+## 38. GitTree
+
+The `GitTree` component displays a collapsible project file tree with Git status badges, branch headers, and directory folding, inspired by Neovim Neo-tree and Lazygit.
+
+### Usage
+```python
+from espresso.beans import GitTree, GitFileStatus, GitTreeSelectMsg
+
+tree = GitTree.from_paths(
+    {
+        "src/main.py": GitFileStatus.MODIFIED,
+        "src/app.py": GitFileStatus.ADDED,
+        "tests/test_app.py": GitFileStatus.UNTRACKED,
+        "README.md": GitFileStatus.CLEAN,
+    },
+    branch="main",
+    width=30,
+    height=18,
+)
+
+def update(self, msg):
+    if isinstance(msg, GitTreeSelectMsg):
+        print(f"Opening file: {msg.path}")
+        return self, None
+
+    self.tree, cmd = self.tree.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.tree.view()
+```
+
+### Features
+- **Git Status Badges**: Displays colored indicators: `[M]` (Modified - Yellow), `[A]` (Added - Green), `[D]` (Deleted - Red), `[?]` (Untracked - Blue), `[U]` (Unmerged - Magenta), `[R]` (Renamed - Cyan).
+- **Branch Header**: Top status bar displaying active branch name `⎇ main` and aggregate change counts `(~1 +1)`.
+- **Keyboard & Mouse Folding**: Press `Space`, `Left`/`Right`, or double-click any directory to fold or unfold children. Single click moves selection; double click selects files.
+- **Hierarchical Path Constructor**: `GitTree.from_paths(paths_dict)` builds and sorts the nested tree automatically.
+
+---
+
+## 39. BarChart
+
+The `BarChart` component renders horizontal and vertical bar charts with sub-character precision, auto-scaling, and TrueColor linear/multi-gradients.
+
+### Usage
+```python
+from espresso.beans import BarChart, BarItem, BarOrientation, BarChartSelectMsg
+
+chart = BarChart(
+    items=[
+        BarItem(label="CPU 0", value=42.0, formatter=lambda v: f"{v:.0f}%"),
+        BarItem(label="CPU 1", value=78.0, formatter=lambda v: f"{v:.0f}%"),
+        BarItem(label="RAM", value=64.0, formatter=lambda v: f"{v:.0f}%"),
+        BarItem(label="Disk", value=22.0, formatter=lambda v: f"{v:.0f}%"),
+    ],
+    title="Resource Telemetry",
+    orientation=BarOrientation.HORIZONTAL,  # or BarOrientation.VERTICAL
+    gradient_colors=("#00E5FF", "#7D56F4", "#F7768E"),
+    width=40,
+    height=10,
+)
+
+def update(self, msg):
+    if isinstance(msg, BarChartSelectMsg):
+        print(f"Selected metric: {msg.item.label} = {msg.item.value}")
+        return self, None
+
+    self.chart, cmd = self.chart.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.chart.view()
+```
+
+### Features
+- **Sub-Character Precision**: Utilizes Unicode fractional block glyphs (` `, `▏`, `▎`, `▍`, `▌`, `▋`, `▊`, `▉`, `█`) in horizontal mode and (` `, `▂`, `▃`, `▄`, `▅`, `▆`, `▇`, `█`) in vertical mode.
+- **TrueColor Multi-Gradients**: Dynamically evaluates linear gradients across all bars using Crema's `multi_gradient_colors`.
+- **Auto-Scaling**: Automatically calculates appropriate axis bounds and proportions from input values.
+- **Interactive Cursor**: Navigate with `↑`/`↓` (horizontal) or `←`/`→` (vertical), or click with the mouse to inspect specific bars.
+
+
 
 

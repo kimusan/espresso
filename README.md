@@ -174,6 +174,39 @@ Espresso includes 21 ready-to-use building blocks that follow the exact same TEA
 * **`Metric` & `MetricGroup`**: Dashboard KPI stat cards, tags, and summary lists with delta trend arrows and inverted metrics.
 * **`NavStack`**: Hierarchical view router with push/pop management, breadcrumb trails, and automatic message forwarding.
 * **`DatePicker`**: Interactive calendar date picker with month/year navigation, mouse selection, and date range clamping.
+* **`Splitter`**: Interactive dual-pane container (`Horizontal` / `Vertical`) with draggable divider bar and keyboard resizing.
+* **`Slider` & `RangeSlider`**: Tactile numeric sliders and dual-thumb range bars with mouse dragging.
+* **`Sparkline`**: High-resolution 2D Unicode Braille curves and 1D block charts with trend indicators.
+* **`Marquee`**: Animated horizontal scrolling text banner with loop and bounce physics.
+* **`SortableList`**: Reorderable list with drag-and-drop mouse handling and visual drop targets.
+* **`Spring`**: Physical damped harmonic oscillator simulation solving harmonic differential equations.
+* **`Confetti`**: 2D celebratory particle physics emitter (radial bursts, cannons, rain) with drag & gravity.
+* **`DiffViewer`**: Git diff visualizer with Unified and Split dual-pane views and intra-line word diffs.
+* **`Form`**: Composite multi-field container with field/form validation, error badges, and Tab cycling.
+* **`CommandPalette`**: Fuzzy spotlight search runner (Ctrl+P / Cmd+P) with recents tracking and modal overlay.
+* **`GitTree`**: Multi-column collapsible file tree with Git status badges (`[M]`, `[A]`, `[D]`, `[?]`) and branch headers.
+* **`BarChart`**: Horizontal and vertical bar charts with sub-character precision, auto-scaling, and TrueColor gradients.
+
+---
+
+## 🛠️ Built-in CLI Tool
+
+Espresso includes a powerful command-line interface for running and scaffolding applications:
+
+```bash
+# List all 14 built-in interactive examples
+espresso list
+
+# Run any example by ID or file path
+espresso run 14
+espresso run 10
+
+# Launch interactive component gallery
+espresso gallery
+
+# Scaffold a production-ready Espresso TEA app
+espresso new my_dashboard.py
+```
 
 ---
 
@@ -183,16 +216,20 @@ Explore the interactive demos in `examples/`:
 
 | Example | Command | Highlights |
 | :--- | :--- | :--- |
-| **01 Counter** | `python3 examples/01_counter.py` | Basic Model-Update-View state transitions |
-| **02 Shopping List** | `python3 examples/02_shopping_list.py` | List cursor navigation & item selection toggle |
-| **03 Styled Dashboard** | `python3 examples/03_styled_layout.py` | Crema cards, TrueColor, tabs, side-by-side layout |
-| **04 Fullscreen & Mouse** | `python3 examples/04_fullscreen_mouse.py` | Alt-screen mode, SGR mouse clicks, wheel scrolling, resize |
-| **05 Beans Wizard** | `python3 examples/05_beans_showcase.py` | Multi-component wizard (TextInput, Table, Spinner, Progress, Viewport) |
-| **06 Commit Helper** | `python3 examples/06_git_commit_helper.py` | Practical developer tool for Conventional Commits |
-| **07 Editor** | `python3 examples/07_editor.py` | Multi-line text editor with TextArea, status bar, and Help |
-| **08 RSS Reader** | `python3 examples/08_rss_reader.py` | Fullscreen 3-panel RSS reader with live feed fetching from schulz.dk |
-| **09 Colors & Gradients** | `python3 examples/09_colors_and_gradients.py` | TrueColor showcase, multi-stop gradients, box background fills, palette cycling |
-| **10 Component Gallery** | `python3 examples/10_component_gallery.py` | Full-window edge-to-edge gallery of all 20 beans, mouse support, tabs, modals, prompts |
+| **01 Counter** | `espresso run 01` | Basic Model-Update-View state transitions |
+| **02 Shopping List** | `espresso run 02` | List cursor navigation & item selection toggle |
+| **03 Styled Dashboard** | `espresso run 03` | Crema cards, TrueColor, tabs, side-by-side layout |
+| **04 Fullscreen & Mouse** | `espresso run 04` | Alt-screen mode, SGR mouse clicks, wheel scrolling, resize |
+| **05 Beans Wizard** | `espresso run 05` | Multi-component wizard (TextInput, Table, Spinner, Progress, Viewport) |
+| **06 Commit Helper** | `espresso run 06` | Practical developer tool for Conventional Commits |
+| **07 Editor** | `espresso run 07` | Multi-line text editor with TextArea, status bar, and Help |
+| **08 RSS Reader** | `espresso run 08` | Fullscreen 3-panel RSS reader with live feed fetching from schulz.dk |
+| **09 Colors & Gradients** | `espresso run 09` | TrueColor showcase, multi-stop gradients, box background fills, palette cycling |
+| **10 Component Gallery** | `espresso run 10` | Full-window edge-to-edge gallery of 20+ beans, mouse support, tabs, modals, prompts |
+| **11 Markdown Viewer** | `espresso run 11` | Streaming GitHub-flavored markdown viewer with code blocks and mouse scrolling |
+| **12 Interactive & Animated** | `espresso run 12` | Splitter, Sliders, Marquee, and SortableList with mouse drag |
+| **13 Physics & Tools** | `espresso run 13` | Confetti physics engine, forms with validation, and diff viewer |
+| **14 Developer Workspace** | `espresso run 14` | Flagship IDE integrating GitTree, BarChart, CodeViewer, and CommandPalette |
 
 ---
 

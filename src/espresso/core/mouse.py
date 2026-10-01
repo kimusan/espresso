@@ -29,6 +29,7 @@ class MouseAction(Enum):
     PRESS = "press"
     RELEASE = "release"
     MOTION = "motion"
+    DOUBLE_CLICK = "double_click"
 
 
 @dataclass(frozen=True)
@@ -136,3 +137,53 @@ def parse_sgr_mouse(seq: str) -> tuple[MouseMsg | None, int]:
         alt=alt,
         shift=shift,
     ), consumed
+
+
+class MouseGestureTracker:
+    """Tracks mouse click timing and location to detect double-click events."""
+
+    def __init__(self, timeout: float = 0.35, max_distance: int = 1) -> None:
+        self.timeout = timeout
+        self.max_distance = max_distance
+        self.last_click_time: float = 0.0
+        self.last_click_x: int = -999
+        self.last_click_y: int = -999
+        self.last_click_btn: MouseButton = MouseButton.NONE
+
+    def process(self, msg: MouseMsg, current_time: float | None = None) -> MouseMsg:
+        """Process incoming MouseMsg. If a second PRESS occurs quickly at the same position, return DOUBLE_CLICK."""
+        if msg.action != MouseAction.PRESS:
+            return msg
+
+        import time
+        now = time.monotonic() if current_time is None else current_time
+        dt = now - self.last_click_time
+        dx = abs(msg.x - self.last_click_x)
+        dy = abs(msg.y - self.last_click_y)
+
+        is_double = (
+            dt <= self.timeout
+            and dx <= self.max_distance
+            and dy <= self.max_distance
+            and msg.button == self.last_click_btn
+            and msg.button in (MouseButton.LEFT, MouseButton.RIGHT, MouseButton.MIDDLE)
+        )
+
+        if is_double:
+            self.last_click_time = 0.0
+            return MouseMsg(
+                x=msg.x,
+                y=msg.y,
+                button=msg.button,
+                action=MouseAction.DOUBLE_CLICK,
+                ctrl=msg.ctrl,
+                alt=msg.alt,
+                shift=msg.shift,
+            )
+
+        self.last_click_time = now
+        self.last_click_x = msg.x
+        self.last_click_y = msg.y
+        self.last_click_btn = msg.button
+        return msg
+

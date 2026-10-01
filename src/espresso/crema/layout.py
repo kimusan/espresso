@@ -8,9 +8,16 @@ from espresso.crema.style import Align
 from espresso.crema.width import string_width
 
 
-def join_horizontal(align: Align, *blocks: str) -> str:
+def join_horizontal(align: Align | str, *blocks: str) -> str:
     """Join multiple multi-line string blocks horizontally side-by-side."""
-    non_empty = [b for b in blocks if b]
+    if isinstance(align, str):
+        all_blocks = (align,) + blocks
+        actual_align = Align.TOP
+    else:
+        all_blocks = blocks
+        actual_align = align
+
+    non_empty = [b for b in all_blocks if b]
     if not non_empty:
         return ""
 
@@ -31,9 +38,9 @@ def join_horizontal(align: Align, *blocks: str) -> str:
             padded_blocks.append(lines)
             continue
 
-        if align == Align.BOTTOM:
+        if actual_align == Align.BOTTOM:
             padded = [empty] * diff + lines
-        elif align == Align.CENTER:
+        elif actual_align == Align.CENTER:
             top_pad = diff // 2
             bot_pad = diff - top_pad
             padded = [empty] * top_pad + lines + [empty] * bot_pad
@@ -51,9 +58,16 @@ def join_horizontal(align: Align, *blocks: str) -> str:
     return "\n".join(result_rows)
 
 
-def join_vertical(align: Align, *blocks: str) -> str:
+def join_vertical(align: Align | str, *blocks: str) -> str:
     """Stack multiple string blocks vertically, aligning them horizontally."""
-    non_empty = [b for b in blocks if b]
+    if isinstance(align, str):
+        all_blocks = (align,) + blocks
+        actual_align = Align.LEFT
+    else:
+        all_blocks = blocks
+        actual_align = align
+
+    non_empty = [b for b in all_blocks if b]
     if not non_empty:
         return ""
 
@@ -69,11 +83,11 @@ def join_vertical(align: Align, *blocks: str) -> str:
         diff = max_width - w
         if diff <= 0:
             aligned_lines.append(line)
-        elif align == Align.CENTER:
+        elif actual_align == Align.CENTER:
             left = diff // 2
             right = diff - left
             aligned_lines.append(f"{' ' * left}{line}{' ' * right}")
-        elif align == Align.RIGHT:
+        elif actual_align == Align.RIGHT:
             aligned_lines.append(f"{' ' * diff}{line}")
         else:  # LEFT
             aligned_lines.append(f"{line}{' ' * diff}")

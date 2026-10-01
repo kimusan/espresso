@@ -58,6 +58,8 @@ class Program:
         self._terminal = TerminalDriver(alt_screen=self.alt_screen, mouse=self.mouse)
         self._last_rendered_lines: list[str] = []
         self._bg_tasks: set[asyncio.Task[None]] = set()
+        from espresso.core.mouse import MouseGestureTracker
+        self._gesture_tracker = MouseGestureTracker()
 
     def with_mouse(self, mouse: bool = True) -> Program:
         """Set mouse tracking mode fluently on Program."""
@@ -169,6 +171,9 @@ class Program:
 
         if not self.mouse and isinstance(msg, MouseMsg):
             return False
+
+        if isinstance(msg, MouseMsg):
+            msg = self._gesture_tracker.process(msg)
 
         if isinstance(msg, BatchMsg):
             for sub_msg in msg.messages:
