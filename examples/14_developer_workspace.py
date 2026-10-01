@@ -58,7 +58,7 @@ FILES_CONTENT = {
 from __future__ import annotations
 
 import asyncio
-from espresso import Program, Model, KeyMsg
+from espresso import Program, Model, KeyMsg, __version__
 from espresso.beans import GitTree, BarChart, CommandPalette
 from espresso.crema import Style, Grid
 
@@ -67,7 +67,7 @@ class Workspace(Model):
     """Next-generation terminal development workspace."""
 
     def __init__(self) -> None:
-        self.version = "0.2.0"
+        self.version = __version__
         self.theme = "espresso"
 
     def run(self) -> None:
@@ -177,7 +177,7 @@ class WorkspaceModel(Model):
         # 1. Project Explorer (GitTree)
         self.tree = GitTree.from_paths(
             WORKSPACE_TREE_PATHS,
-            branch="feature/beans-v0.2.0",
+            branch=f"feature/beans-v{__version__}",
             root_name="espresso-workspace",
             width=28,
             height=20,
@@ -449,7 +449,7 @@ class WorkspaceModel(Model):
         logo = Style().bold(True).foreground("#FFFFFF").background("#7D56F4").padding(0, 1).render("☕ ESPRESSO IDE")
         search_btn = Style().foreground("#BB9AF7").render(" 🔍 Search [Ctrl+P] ")
         file_tab = Style().bold(True).foreground("#00E5FF").render(f"  📄 {self.active_file}")
-        branch_badge = Style().foreground("#9ECE6A").bold(True).render("  ⎇ feature/beans-v0.2.0")
+        branch_badge = Style().foreground("#9ECE6A").bold(True).render(f"  ⎇ feature/beans-v{__version__}")
 
         left_hdr = f"{logo}{search_btn}{file_tab}{branch_badge}"
         right_hdr = Style().foreground("#888888").render("Pure Python • Zero Wheels ")
@@ -495,7 +495,7 @@ class WorkspaceModel(Model):
         )
         notes_h = body_h - (body_h // 2)
         notes_panel = Grid.panel(
-            "Release Notes v0.2.0",
+            f"Release Notes v{__version__}",
             notes_content,
             width=metrics_w,
             height=notes_h,

@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from espresso import __version__
 from espresso.cli import main
 
 
@@ -17,7 +18,7 @@ class TestCLI(unittest.TestCase):
             with self.assertRaises(SystemExit) as cm:
                 main(["--version"])
             self.assertEqual(cm.exception.code, 0)
-            self.assertIn("0.2.0", mock_out.getvalue())
+            self.assertIn(__version__, mock_out.getvalue())
 
     def test_list(self) -> None:
         with patch("sys.stdout", new_callable=io.StringIO) as mock_out:

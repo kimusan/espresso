@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "espressoTUI"
-version = "0.2.0"
+dynamic = ["version"]
 description = "A lightweight, declarative Elm Architecture (TEA) TUI framework for Python inspired by Bubble Tea."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -44,6 +44,9 @@ dev = [
 Homepage = "https://github.com/kimusan/espresso"
 Repository = "https://github.com/kimusan/espresso.git"
 Issues = "https://github.com/kimusan/espresso/issues"
+
+[tool.flit.module]
+name = "espresso"
 
 [tool.mypy]
 python_version = "3.10"

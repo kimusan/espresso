@@ -42,10 +42,11 @@ Espresso uses **PyPI Trusted Publishing (OIDC)**, which eliminates the need to s
 
 To release a new version:
 
-### 1. Update Version Numbers
-Ensure the version is bumped in both:
-- [`pyproject.toml`](../pyproject.toml): `version = "X.Y.Z"`
+### 1. Bump Version Number
+Espresso maintains a **single source of truth** for versioning. You only need to update the version in:
 - [`src/espresso/__init__.py`](../src/espresso/__init__.py): `__version__ = "X.Y.Z"`
+
+*(`pyproject.toml` declares `dynamic = ["version"]` and automatically inherits this version during the build process).*
 
 Commit the version bump:
 ```bash
