@@ -543,10 +543,11 @@ class ReleaseTUI(Model):
             )
         )
 
+        target_box_w = max(40, self.width - 2)
         self.pipeline = PipelineProgress(
             stages=stages,
             title="Release Execution Pipeline",
-            width=68,
+            width=target_box_w - 4,
             auto_start=True,
             show_stages=True,
             show_timer=True,
@@ -579,9 +580,10 @@ class ReleaseTUI(Model):
 
         # Handle Window Resize
         if isinstance(msg, WindowSizeMsg):
-            self.width = max(msg.width, 60)
-            self.height = max(msg.height, 20)
-            self.pipeline.width = min(self.width - 8, 72)
+            self.width = max(msg.width, 40)
+            self.height = max(msg.height, 10)
+            target_box_w = max(40, self.width - 2)
+            self.pipeline.width = target_box_w - 4
             self.confetti.width = self.width
             self.confetti.height = self.height
             return self, None
@@ -696,7 +698,12 @@ class ReleaseTUI(Model):
         return self, batch(*cmds) if cmds else None
 
     def view(self) -> str:
-        inner_w = max(40, self.width - 2)
+        target_box_w = max(40, self.width - 2)
+        inner_w_header = target_box_w - 2
+        inner_w_cards = target_box_w - 4
+
+        # Synchronize pipeline width with card content area
+        self.pipeline.width = inner_w_cards
 
         # 1. Top Header Banner with TrueColor Gradient
         banner_text = f"☕ ESPRESSO RELEASE MANAGER • v{self.curr_ver} ➔ v{self.next_ver}"
@@ -705,18 +712,20 @@ class ReleaseTUI(Model):
             Style()
             .border(ROUNDED_BORDER)
             .border_foreground("#7D56F4")
-            .width(inner_w)
+            .width(inner_w_header)
             .align(Align.CENTER)
-            .render(gradient_banner)
+            .render(truncate_ansi(gradient_banner, inner_w_header))
         )
 
         # 2. Pipeline Container
-        pipeline_view = self.pipeline.view()
+        pipeline_view = "\n".join(
+            truncate_ansi(l, inner_w_cards) for l in self.pipeline.view().splitlines()
+        )
         pipeline_card = (
             Style()
             .border(ROUNDED_BORDER)
             .border_foreground("#00E5FF" if self.pipeline.is_running else ("#9ECE6A" if self.pipeline.is_finished and not self.pipeline.is_failed else "#555577"))
-            .width(inner_w)
+            .width(inner_w_cards)
             .padding(0, 1)
             .render(pipeline_view)
         )
@@ -739,12 +748,13 @@ class ReleaseTUI(Model):
             status_lines.append(f"{C_RED}✗ Pipeline failed. Review the failed stage error above.{C_RESET}")
             status_lines.append("Discard any uncommitted changes with: git restore src/espresso/__init__.py")
 
-        status_content = "\n".join(status_lines) if status_lines else f"Status: {self.status_line}"
+        raw_status = status_lines if status_lines else [f"Status: {self.status_line}"]
+        status_content = "\n".join(truncate_ansi(l, inner_w_cards, tail="…") for l in raw_status)
         status_card = (
             Style()
             .border(ROUNDED_BORDER)
             .border_foreground("#414868")
-            .width(inner_w)
+            .width(inner_w_cards)
             .padding(0, 1)
             .render(status_content)
         )
