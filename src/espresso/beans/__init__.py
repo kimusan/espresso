@@ -112,6 +112,15 @@ from espresso.beans.splitter import (
 )
 from espresso.beans.statusbar import StatusBar, StatusSection
 from espresso.beans.table import Column, Table
+from espresso.beans.switch import Switch, SwitchToggledMsg
+from espresso.beans.select import Select, SelectChangeMsg
+from espresso.beans.choice import Checkbox, CheckboxToggledMsg, RadioChangeMsg, RadioSet
+from espresso.beans.modal_stack import ModalCloseMsg, ModalResultMsg, ModalStack
+from espresso.beans.virtual_list import (
+    VirtualList,
+    VirtualListChangeMsg,
+    VirtualListSelectMsg,
+)
 from espresso.beans.tabs import TabChangeMsg, TabStyle, Tabs
 from espresso.beans.textarea import TextArea
 from espresso.beans.textinput import EchoMode, TextInput
@@ -300,5 +309,24 @@ __all__ = [
     "GitFileStatus",
     "GitTreeSelectMsg",
     "GitTreeToggleMsg",
+    # Switch
+    "Switch",
+    "SwitchToggledMsg",
+    # Select
+    "Select",
+    "SelectChangeMsg",
+    # Choice (RadioSet & Checkbox)
+    "RadioSet",
+    "RadioChangeMsg",
+    "Checkbox",
+    "CheckboxToggledMsg",
+    # ModalStack
+    "ModalStack",
+    "ModalCloseMsg",
+    "ModalResultMsg",
+    # VirtualList
+    "VirtualList",
+    "VirtualListSelectMsg",
+    "VirtualListChangeMsg",
 ]
 
