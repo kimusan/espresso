@@ -117,6 +117,12 @@ class VirtualList(Model, Generic[T]):
     def blur(self) -> None:
         self.focused = False
 
+    def set_size(self, width: int, height: int) -> None:
+        """Update dimensions and adjust visible viewport."""
+        self.width = max(1, width)
+        self.height = max(1, height)
+        self._adjust_scroll()
+
     def update(self, msg: Msg) -> tuple[VirtualList[T], Cmd | None]:
         if not self.items or not self.focused:
             return self, None

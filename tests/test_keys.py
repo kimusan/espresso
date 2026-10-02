@@ -19,6 +19,20 @@ class TestKeys(unittest.TestCase):
         self.assertEqual(enter_msg.key, "enter")
         self.assertIsNone(enter_msg.key.char)
 
+    def test_key_int_conversion(self) -> None:
+        k = KeyMsg("2")
+        self.assertEqual(int(k), 2)
+        self.assertEqual(int(k.key), 2)
+        self.assertEqual(k, 2)
+        self.assertEqual(k.key, 2)
+        self.assertEqual(k, "2")
+        self.assertEqual(k.key, "2")
+
+        with self.assertRaises(ValueError):
+            int(KeyMsg("q"))
+        with self.assertRaises(ValueError):
+            int(KeyMsg("enter").key)
+
     def test_parse_printable_ascii(self) -> None:
         keys = list(parse_keys("hello"))
         self.assertEqual(len(keys), 5)
