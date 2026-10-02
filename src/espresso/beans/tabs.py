@@ -7,9 +7,11 @@ from enum import Enum
 from typing import Sequence
 
 from espresso.core.keys import KeyMsg
+from espresso.core.mouse import MouseAction, MouseButton, MouseMsg
 from espresso.core.tea import Cmd, Model, Msg
 from espresso.crema.border import ROUNDED_BORDER
 from espresso.crema.style import Style
+from espresso.crema.width import string_width
 
 
 class TabStyle(Enum):
@@ -92,6 +94,23 @@ class Tabs(Model):
                     if target_idx < len(self.titles):
                         cmd = self.set_active(target_idx)
                         return self, cmd
+
+        if isinstance(msg, MouseMsg):
+            if msg.button == MouseButton.LEFT and msg.action == MouseAction.PRESS and msg.y == 0:
+                cur_x = 0
+                sep_w = 3 if self.tab_style == TabStyle.LINE else 2
+                extra_w = 0 if self.tab_style == TabStyle.LINE else 2
+                for idx, title in enumerate(self.titles):
+                    label = f"{idx + 1} {title}" if self.show_numbers else title
+                    tab_w = string_width(label) + extra_w
+                    if cur_x <= msg.x < cur_x + tab_w:
+                        cmd = self.set_active(idx)
+                        return self, cmd
+                    cur_x += tab_w + sep_w
+            elif msg.button == MouseButton.WHEEL_UP:
+                return self, self.prev_tab()
+            elif msg.button == MouseButton.WHEEL_DOWN:
+                return self, self.next_tab()
 
         return self, None
 

@@ -335,6 +335,23 @@ class TestTabs(unittest.TestCase):
         self.assertIn("[", view)
         self.assertIn("Tab A", view)
 
+    def test_tabs_mouse_interaction(self) -> None:
+        from espresso.core.mouse import MouseAction, MouseButton, MouseMsg
+        tabs = Tabs(["Overview", "Logs", "Settings"])
+        self.assertEqual(tabs.active_tab, 0)
+
+        # Click on Tab 1 ("2 Logs" which starts around col 14)
+        tabs, cmd = tabs.update(MouseMsg(x=15, y=0, button=MouseButton.LEFT, action=MouseAction.PRESS))
+        self.assertEqual(tabs.active_tab, 1)
+
+        # Mouse wheel down -> next tab
+        tabs, cmd = tabs.update(MouseMsg(x=0, y=0, button=MouseButton.WHEEL_DOWN, action=MouseAction.PRESS))
+        self.assertEqual(tabs.active_tab, 2)
+
+        # Mouse wheel up -> prev tab
+        tabs, cmd = tabs.update(MouseMsg(x=0, y=0, button=MouseButton.WHEEL_UP, action=MouseAction.PRESS))
+        self.assertEqual(tabs.active_tab, 1)
+
 
 class TestTree(unittest.TestCase):
     def test_tree_expansion_and_selection(self) -> None:

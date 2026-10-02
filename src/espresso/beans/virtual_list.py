@@ -201,6 +201,10 @@ class VirtualList(Model, Generic[T]):
             elif msg.button == MouseButton.WHEEL_DOWN:
                 return self.select(min(len(self.items) - 1, self.selected_index + 1))
             elif msg.button == MouseButton.LEFT and msg.action == MouseAction.PRESS:
+                if self.show_scrollbar and msg.x >= self.width - 1 and self.items:
+                    ratio = max(0.0, min(1.0, msg.y / max(1, self.height - 1)))
+                    target = int(round(ratio * (len(self.items) - 1)))
+                    return self.select(target)
                 cur_y = 0
                 for idx in range(self.item_offset, len(self.items)):
                     h = self._item_height(idx)
