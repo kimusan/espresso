@@ -78,6 +78,59 @@ class TestVirtualList(unittest.TestCase):
         self.assertEqual(vl.selected_index, 5)
         self.assertEqual(vl.selected_item["id"], "p_3")
 
+    def test_multiline_items_scrolling(self):
+        # 10 items, each 6 lines tall, in a 15-line viewport
+        items = list(range(10))
+        def render_block(it, sel, w):
+            return "\n".join([f"Item {it} Line {l}" for l in range(6)])
+
+        vl = VirtualList(items=items, render_item=render_block, width=40, height=15)
+        self.assertEqual(vl.item_offset, 0)
+        self.assertEqual(vl.selected_index, 0)
+
+        # Move down to item 1 (total lines = 6 + 6 = 12 <= 15) -> still fits
+        vl, _ = vl.update(KeyMsg(key="j"))
+        self.assertEqual(vl.selected_index, 1)
+        self.assertEqual(vl.item_offset, 0)
+
+        # Move down to item 2 (total lines = 6*3 = 18 > 15) -> must scroll down to offset 1
+        vl, _ = vl.update(KeyMsg(key="j"))
+        self.assertEqual(vl.selected_index, 2)
+        self.assertEqual(vl.item_offset, 1)
+
+        # Move down to item 3 -> must scroll down to offset 2
+        vl, _ = vl.update(KeyMsg(key="j"))
+        self.assertEqual(vl.selected_index, 3)
+        self.assertEqual(vl.item_offset, 2)
+
+        # Move back up to item 2 (above item 3, but >= offset 2) -> offset stays 2
+        vl, _ = vl.update(KeyMsg(key="k"))
+        self.assertEqual(vl.selected_index, 2)
+        self.assertEqual(vl.item_offset, 2)
+
+        # Move back up to item 1 (< offset 2) -> must scroll up to offset 1
+        vl, _ = vl.update(KeyMsg(key="k"))
+        self.assertEqual(vl.selected_index, 1)
+        self.assertEqual(vl.item_offset, 1)
+
+        # Jump to end G (item 9)
+        vl, _ = vl.update(KeyMsg(key="G"))
+        self.assertEqual(vl.selected_index, 9)
+        # In a 15-line viewport, 2 items of height 6 fit (12 lines), so offset must be 8
+        self.assertEqual(vl.item_offset, 8)
+
+    def test_multiline_mouse_hit_testing(self):
+        # Items of 5 lines each
+        items = ["A", "B", "C"]
+        def render_block(it, sel, w):
+            return "\n".join([f"{it}_{l}" for l in range(5)])
+
+        vl = VirtualList(items=items, render_item=render_block, width=30, height=15)
+        # Click at y=7 (which falls in item B: y=0..4 is A, y=5..9 is B)
+        vl, _ = vl.update(MouseMsg(x=5, y=7, button=MouseButton.LEFT, action=MouseAction.PRESS))
+        self.assertEqual(vl.selected_index, 1)
+        self.assertEqual(vl.selected_item, "B")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -52,6 +52,7 @@ class VirtualList(Model, Generic[T]):
 
         self.selected_index = max(0, min(selected_index, max(0, len(self.items) - 1)))
         self.item_offset = 0
+        self._height_cache: dict[tuple[int, int], int] = {}
 
         # Styles
         self.scrollbar_track_style = Style().foreground("#333344")
@@ -65,8 +66,27 @@ class VirtualList(Model, Generic[T]):
             return self.items[self.selected_index]
         return None
 
+    def invalidate_cache(self) -> None:
+        """Clear cached item heights and readjust scroll."""
+        self._height_cache.clear()
+        self._adjust_scroll()
+
+    def _item_height(self, index: int) -> int:
+        """Calculate and cache the rendered height in rows for item at index."""
+        if 0 <= index < len(self.items):
+            content_w = self.width - (1 if self.show_scrollbar else 0)
+            cache_key = (index, content_w)
+            if cache_key in self._height_cache:
+                return self._height_cache[cache_key]
+            rendered = self.render_item(self.items[index], index == self.selected_index, content_w)
+            h = max(1, len(rendered.splitlines()))
+            self._height_cache[cache_key] = h
+            return h
+        return 1
+
     def set_items(self, items: Sequence[T], keep_anchor: bool = False, anchor_id_fn: Callable[[T], Any] | None = None) -> None:
         """Update items with optional anchor key preservation."""
+        self._height_cache.clear()
         old_anchor = None
         if keep_anchor and anchor_id_fn and self.selected_item is not None:
             old_anchor = anchor_id_fn(self.selected_item)
@@ -102,11 +122,30 @@ class VirtualList(Model, Generic[T]):
         return self, _cmd
 
     def _adjust_scroll(self) -> None:
-        """Keep selected item within visible window."""
+        """Keep selected item within visible window, properly accounting for variable-height items."""
+        if not self.items:
+            self.item_offset = 0
+            return
+
+        self.selected_index = max(0, min(self.selected_index, len(self.items) - 1))
+
+        # Case 1: Selected item is scrolled above the visible window
         if self.selected_index < self.item_offset:
             self.item_offset = self.selected_index
-        elif self.selected_index >= self.item_offset + self.height:
-            self.item_offset = self.selected_index - self.height + 1
+            return
+
+        # Case 2: Selected item is at or below item_offset.
+        # Fast-forward if selected_index is far below item_offset to avoid O(N) scans
+        if self.selected_index - self.item_offset > self.height:
+            self.item_offset = self.selected_index - self.height
+
+        # Calculate total lines from item_offset through selected_index
+        total_lines = sum(self._item_height(i) for i in range(self.item_offset, self.selected_index + 1))
+
+        # Advance item_offset until selected item fits within self.height
+        while self.item_offset < self.selected_index and total_lines > self.height:
+            total_lines -= self._item_height(self.item_offset)
+            self.item_offset += 1
 
     def init(self) -> Cmd | None:
         return None
@@ -119,8 +158,12 @@ class VirtualList(Model, Generic[T]):
 
     def set_size(self, width: int, height: int) -> None:
         """Update dimensions and adjust visible viewport."""
-        self.width = max(1, width)
-        self.height = max(1, height)
+        w = max(1, width)
+        h = max(1, height)
+        if w != self.width:
+            self._height_cache.clear()
+        self.width = w
+        self.height = h
         self._adjust_scroll()
 
     def update(self, msg: Msg) -> tuple[VirtualList[T], Cmd | None]:
@@ -138,9 +181,13 @@ class VirtualList(Model, Generic[T]):
                 case "G" | "end":
                     return self.select(len(self.items) - 1)
                 case "pageup" | "ctrl+u":
-                    return self.select(max(0, self.selected_index - max(1, self.height // 2)))
+                    avg_h = self._item_height(self.selected_index)
+                    jump = max(1, self.height // avg_h)
+                    return self.select(max(0, self.selected_index - jump))
                 case "pagedown" | "ctrl+d":
-                    return self.select(min(len(self.items) - 1, self.selected_index + max(1, self.height // 2)))
+                    avg_h = self._item_height(self.selected_index)
+                    jump = max(1, self.height // avg_h)
+                    return self.select(min(len(self.items) - 1, self.selected_index + jump))
                 case "enter" | " ":
                     sel_idx = self.selected_index
                     sel_it = self.items[sel_idx]
@@ -154,9 +201,14 @@ class VirtualList(Model, Generic[T]):
             elif msg.button == MouseButton.WHEEL_DOWN:
                 return self.select(min(len(self.items) - 1, self.selected_index + 1))
             elif msg.button == MouseButton.LEFT and msg.action == MouseAction.PRESS:
-                target_idx = self.item_offset + msg.y
-                if 0 <= target_idx < len(self.items):
-                    return self.select(target_idx)
+                cur_y = 0
+                for idx in range(self.item_offset, len(self.items)):
+                    h = self._item_height(idx)
+                    if cur_y <= msg.y < cur_y + h:
+                        return self.select(idx)
+                    cur_y += h
+                    if cur_y >= self.height:
+                        break
 
         return self, None
 
