@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-from espresso.crema.width import char_width, string_width
+from espresso.crema.width import char_width, iter_graphemes, string_width
 
 TOKEN_REGEX = re.compile(r"(\x1b\[[0-9;]*[a-zA-Z])|([^\x1b]+)|(\x1b)")
 
@@ -45,8 +45,7 @@ def slice_ansi(line: str, start_col: int, end_col: Optional[int] = None, pad: bo
             continue
 
         if text:
-            for ch in text:
-                cw = char_width(ch)
+            for cluster, cw in iter_graphemes(text):
                 if cur_col + cw <= start_col:
                     cur_col += cw
                     continue
@@ -60,7 +59,7 @@ def slice_ansi(line: str, start_col: int, end_col: Optional[int] = None, pad: bo
                 if end_col is not None and cur_col >= end_col:
                     break
 
-                out.append(ch)
+                out.append(cluster)
                 cur_col += cw
 
                 if end_col is not None and cur_col >= end_col:

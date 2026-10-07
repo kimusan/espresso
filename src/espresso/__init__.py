@@ -7,7 +7,7 @@ Inspired by Bubble Tea, Lip Gloss, and Bubbles.
 - espresso.beans: Reusable UI components.
 """
 
-from espresso.core.keys import Key, KeyMsg
+from espresso.core.keys import Key, KeyMsg, PasteMsg
 from espresso.core.mouse import MouseAction, MouseButton, MouseMsg
 from espresso.core.program import Program
 from espresso.core.tea import (
@@ -38,6 +38,7 @@ __all__ = [
     "Program",
     "Key",
     "KeyMsg",
+    "PasteMsg",
     "MouseMsg",
     "MouseButton",
     "MouseAction",

@@ -66,6 +66,56 @@ class TestCremaColorsAndWidth(unittest.TestCase):
         self.assertEqual(string_width(trunc), 6)
         self.assertTrue(trunc.endswith("\x1b[0m"))
 
+    def test_emoji_zwj_and_ligature_widths(self) -> None:
+        # Pirate flag: with explicit ZWJ (🏴 2 + ☠️ 2 = 4 cells in terminal)
+        self.assertEqual(string_width("🏴‍☠️"), 4)
+        self.assertEqual(string_width("🏴☠️"), 4)
+        self.assertEqual(string_width("Captain Jack 🏴☠️"), 17)
+        self.assertEqual(string_width("Captain Jack 🏴‍☠️"), 17)
+
+        # Rainbow flag (🏳️ 2 + 🌈 2 = 4 cells in terminal)
+        self.assertEqual(string_width("🏳️‍🌈"), 4)
+        self.assertEqual(string_width("stephaniepixie 🏳️‍🌈 @stephaniepixie@fandom.garden"), 49)
+        self.assertEqual(string_width("stephaniepixie   🌈 @stephaniepixie@fandom.garden"), 49)
+
+        # Other ZWJ sequences: cursor advances per visible emoji component in terminals
+        self.assertEqual(string_width("👨‍👩‍👧‍👦"), 8)
+        self.assertEqual(string_width("🧑‍💻"), 4)
+        self.assertEqual(string_width("❤️‍🔥"), 4)
+
+        # Modifiers and composite symbols that combine into 2 cells
+        self.assertEqual(string_width("👍🏽"), 2)
+        self.assertEqual(string_width("👩🏾‍🦱"), 2)
+        self.assertEqual(string_width("💁🏻‍♂️"), 2)
+        self.assertEqual(string_width("🇩🇰"), 2)
+        self.assertEqual(string_width("1️⃣"), 2)
+
+        # Unicode 17.0 / unassigned fallback characters (e.g. 🫯 U+1FAEF Fight Cloud)
+        self.assertEqual(char_width("🫯"), 1)
+        self.assertEqual(string_width("Thomas Fuchs 🫯 @thomasfuchs@hachyderm.io"), 40)
+
+        # Base symbols with vs without emoji presentation selector (VS16)
+        self.assertEqual(char_width("❤"), 1)
+        self.assertEqual(string_width("❤️"), 2)
+        self.assertEqual(char_width("✔"), 1)
+        self.assertEqual(char_width("✈"), 1)
+        self.assertEqual(char_width("☕"), 2)
+        self.assertEqual(char_width("✨"), 2)
+
+    def test_truncate_ansi_with_graphemes(self) -> None:
+        text = "Ahoy 🏴‍☠️ Matey"
+        # Total width: 5 + 4 + 1 + 5 = 15
+        self.assertEqual(string_width(text), 15)
+        # Limit 7: "Ahoy " (5) + "…" (1) = 6 (emoji cluster of 4 cells cannot fit in remaining 2 cells)
+        t7 = truncate_ansi(text, 7, tail="…")
+        self.assertEqual(string_width(t7), 6)
+        self.assertEqual(t7, "Ahoy …")
+
+        # Limit 10: "Ahoy " (5) + "🏴‍☠️" (4) + "…" (1) = 10
+        t10 = truncate_ansi(text, 10, tail="…")
+        self.assertEqual(string_width(t10), 10)
+        self.assertEqual(t10, "Ahoy 🏴‍☠️…")
+
 
 class TestCremaStyleAndBox(unittest.TestCase):
     def test_style_rendering_simple(self) -> None:

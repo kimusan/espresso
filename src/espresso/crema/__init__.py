@@ -26,7 +26,14 @@ from espresso.crema.grid import Grid
 from espresso.crema.layout import join_horizontal, join_vertical, place
 from espresso.crema.overlay import place_overlay, slice_ansi
 from espresso.crema.style import Align, Style
-from espresso.crema.width import char_width, string_width, strip_ansi, truncate_ansi
+from espresso.crema.width import (
+    char_width,
+    codepoint_width,
+    iter_graphemes,
+    string_width,
+    strip_ansi,
+    truncate_ansi,
+)
 from espresso.crema.wrap import wrap_ansi
 
 __all__ = [
@@ -67,6 +74,8 @@ __all__ = [
     "slice_ansi",
     # Width, Wrapping, and ANSI
     "char_width",
+    "codepoint_width",
+    "iter_graphemes",
     "string_width",
     "strip_ansi",
     "truncate_ansi",

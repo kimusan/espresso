@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Sequence
 
-from espresso.crema.width import ANSI_REGEX, char_width, string_width
+from espresso.crema.width import ANSI_REGEX, char_width, iter_graphemes, string_width
 
 
 class AnsiState:
@@ -164,10 +164,9 @@ def _parse_paragraph(paragraph: str) -> list[tuple[str, list[tuple[bool, str, in
         start, end = match.span()
         if start > last_end:
             text_chunk = paragraph[last_end:start]
-            for ch in text_chunk:
-                is_space = ch.isspace()
+            for cluster, cw in iter_graphemes(text_chunk):
+                is_space = cluster.isspace()
                 elem_type = "space" if is_space else "word"
-                cw = char_width(ch)
                 if current_type is None:
                     current_type = elem_type
                 elif current_type != elem_type:
@@ -175,7 +174,7 @@ def _parse_paragraph(paragraph: str) -> list[tuple[str, list[tuple[bool, str, in
                     current_items = []
                     current_w = 0
                     current_type = elem_type
-                current_items.append((False, ch, cw))
+                current_items.append((False, cluster, cw))
                 current_w += cw
         ansi_code = match.group(0)
         current_items.append((True, ansi_code, 0))
@@ -183,10 +182,9 @@ def _parse_paragraph(paragraph: str) -> list[tuple[str, list[tuple[bool, str, in
 
     if last_end < len(paragraph):
         text_chunk = paragraph[last_end:]
-        for ch in text_chunk:
-            is_space = ch.isspace()
+        for cluster, cw in iter_graphemes(text_chunk):
+            is_space = cluster.isspace()
             elem_type = "space" if is_space else "word"
-            cw = char_width(ch)
             if current_type is None:
                 current_type = elem_type
             elif current_type != elem_type:
@@ -194,7 +192,7 @@ def _parse_paragraph(paragraph: str) -> list[tuple[str, list[tuple[bool, str, in
                 current_items = []
                 current_w = 0
                 current_type = elem_type
-            current_items.append((False, ch, cw))
+            current_items.append((False, cluster, cw))
             current_w += cw
 
     if current_items:
