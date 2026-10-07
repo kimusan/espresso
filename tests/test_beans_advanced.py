@@ -228,6 +228,34 @@ class TestTextAreaComponent(unittest.TestCase):
                 b_lines = b.split("\n")
                 self.assertEqual(len(b_lines), 6, f"Border height changed at offset {offset}")
 
+    def test_word_wrap_visual_rendering_and_cursor(self) -> None:
+        """Verify word wrap visually wraps long text without inserting newlines into self.lines."""
+        long_text = "The quick brown fox jumps over the lazy dog."
+        # Width 20 with line numbers (3 chars: '1 │') -> content_w = 17
+        ta = TextArea(width=20, show_line_numbers=True, word_wrap=True)
+        ta.set_value(long_text)
+
+        # Logical lines must still be exactly 1 line
+        self.assertEqual(ta.lines, [long_text])
+        self.assertEqual(ta.line_count, 1)
+        self.assertEqual(ta.value, long_text)
+
+        # Check visual rendering
+        view_text = strip_ansi(ta.view())
+        rendered_lines = view_text.split("\n")
+        # Should be multiple lines rendered
+        self.assertGreater(len(rendered_lines), 1)
+        # First visual line should have line number '1 │'
+        self.assertIn("1 │", rendered_lines[0])
+        # Continuation visual line should have continuation indent '  │'
+        self.assertIn("  │", rendered_lines[1])
+
+        # Arrow down from line 0 visual segment moves cursor forward within the same logical line
+        ta.set_cursor(0, 0)
+        ta.update(KeyMsg("down"))
+        self.assertEqual(ta.cursor[0], 0)  # Still logical row 0
+        self.assertGreater(ta.cursor[1], 0)  # Moved to next visual line start offset
+
 
 class TestHelpComponent(unittest.TestCase):
     def test_keybinding_matching(self) -> None:

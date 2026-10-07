@@ -31,18 +31,18 @@ class StepModel:
 class TestProgramRuntime(unittest.TestCase):
     def test_program_runs_and_quits_cleanly(self) -> None:
         out = io.StringIO()
-        p = Program(StepModel(), output_stream=out)
+        p = Program(StepModel(), input_stream=io.StringIO(""), output_stream=out)
 
         # Directly send messages to the program queue
         async def run_test() -> Model:
             import asyncio
 
             async def send_events() -> None:
-                await asyncio.sleep(0.02)
-                if p._queue is not None:
-                    await p._queue.put(KeyMsg("n"))
-                    await p._queue.put(KeyMsg("n"))
-                    await p._queue.put(KeyMsg("q"))
+                while p._queue is None:
+                    await asyncio.sleep(0.005)
+                await p._queue.put(KeyMsg("n"))
+                await p._queue.put(KeyMsg("n"))
+                await p._queue.put(KeyMsg("q"))
 
             asyncio.create_task(send_events())
             return await p.run_async()
@@ -70,13 +70,13 @@ class TestProgramRuntime(unittest.TestCase):
         import asyncio
 
         out = io.StringIO()
-        p = Program(QuitCallModel(), output_stream=out)
+        p = Program(QuitCallModel(), input_stream=io.StringIO(""), output_stream=out)
 
         async def run_test() -> Model:
             async def send_q() -> None:
-                await asyncio.sleep(0.02)
-                if p._queue is not None:
-                    await p._queue.put(KeyMsg("q"))
+                while p._queue is None:
+                    await asyncio.sleep(0.005)
+                await p._queue.put(KeyMsg("q"))
 
             asyncio.create_task(send_q())
             return await p.run_async()
@@ -97,13 +97,13 @@ class TestProgramRuntime(unittest.TestCase):
         import asyncio
 
         out = io.StringIO()
-        p = Program(NoExitModel(), output_stream=out)
+        p = Program(NoExitModel(), input_stream=io.StringIO(""), output_stream=out)
 
         async def run_test() -> Model:
             async def send_ctrl_c() -> None:
-                await asyncio.sleep(0.02)
-                if p._queue is not None:
-                    await p._queue.put(KeyMsg("ctrl+c"))
+                while p._queue is None:
+                    await asyncio.sleep(0.005)
+                await p._queue.put(KeyMsg("ctrl+c"))
 
             asyncio.create_task(send_ctrl_c())
             return await p.run_async()

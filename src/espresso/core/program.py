@@ -139,6 +139,7 @@ class Program:
                 msg = await self._queue.get()
                 should_quit = await self._handle_msg(msg, render=False)
                 if should_quit:
+                    self._render(self.model.view())
                     break
 
                 # Coalesce / batch render: process all immediately queued messages before rendering next frame
@@ -147,6 +148,10 @@ class Program:
                     should_quit = await self._handle_msg(next_msg, render=False)
                     if should_quit:
                         break
+
+                if should_quit:
+                    self._render(self.model.view())
+                    break
 
                 if self._running:
                     self._render(self.model.view())

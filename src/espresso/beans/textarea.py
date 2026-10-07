@@ -2,13 +2,25 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Sequence
 
 from espresso.core.keys import Key, KeyMsg
 from espresso.core.mouse import MouseButton, MouseMsg
 from espresso.core.tea import Cmd, Model, Msg
 from espresso.crema.style import Style
-from espresso.crema.width import string_width
+from espresso.crema.width import char_width, string_width
+
+
+@dataclass
+class _VisualRow:
+    logical_row: int
+    seg_idx: int
+    is_first_segment: bool
+    is_last_segment: bool
+    start_col: int
+    end_col: int
+    text: str
 
 
 class TextArea(Model):
@@ -23,6 +35,7 @@ class TextArea(Model):
         tab_size: int = 4,
         char_limit: int | None = None,
         max_lines: int | None = None,
+        word_wrap: bool = False,
         style: Style | None = None,
         line_number_style: Style | None = None,
         cursor_line_number_style: Style | None = None,
@@ -41,6 +54,7 @@ class TextArea(Model):
         self.tab_size = tab_size
         self.char_limit = char_limit
         self.max_lines = max_lines
+        self.word_wrap = word_wrap
         self.focused: bool = True
 
         self.style = style or Style().foreground("#FAFAFA")
@@ -158,12 +172,138 @@ class TextArea(Model):
 
         self._adjust_scroll()
 
+    def _get_content_width(self) -> int | None:
+        """Calculate available text content width inside the textarea."""
+        if self.width is None:
+            return None
+        total_lines = len(self.lines)
+        gutter_w = max(2, len(str(total_lines)))
+        sep = " │ "
+        gutter_total_w = gutter_w + len(sep) if self.show_line_numbers else 0
+        return max(1, self.width - gutter_total_w)
+
+    def _get_visual_rows(self, content_w: int) -> list[_VisualRow]:
+        """Split logical lines into wrapped visual rows for display without adding newlines."""
+        vis_rows: list[_VisualRow] = []
+        for r_idx, line in enumerate(self.lines):
+            if not line:
+                vis_rows.append(
+                    _VisualRow(
+                        logical_row=r_idx,
+                        seg_idx=0,
+                        is_first_segment=True,
+                        is_last_segment=True,
+                        start_col=0,
+                        end_col=0,
+                        text="",
+                    )
+                )
+                continue
+
+            segs = self._get_visual_segments(line, content_w)
+            for seg_idx, (s, e, t) in enumerate(segs):
+                vis_rows.append(
+                    _VisualRow(
+                        logical_row=r_idx,
+                        seg_idx=seg_idx,
+                        is_first_segment=(seg_idx == 0),
+                        is_last_segment=(seg_idx == len(segs) - 1),
+                        start_col=s,
+                        end_col=e,
+                        text=t,
+                    )
+                )
+        return vis_rows
+
+    def _get_visual_segments(self, line: str, max_w: int) -> list[tuple[int, int, str]]:
+        """Wrap a single string into (start_col, end_col, text) slices based on cell width."""
+        if not line:
+            return [(0, 0, "")]
+        if string_width(line) <= max_w:
+            return [(0, len(line), line)]
+
+        segs: list[tuple[int, int, str]] = []
+        cur = 0
+        n = len(line)
+        while cur < n:
+            fit_len = 0
+            w = 0
+            while cur + fit_len < n:
+                ch_w = char_width(line[cur + fit_len])
+                if w + ch_w > max_w and fit_len > 0:
+                    break
+                w += ch_w
+                fit_len += 1
+
+            if cur + fit_len >= n:
+                segs.append((cur, n, line[cur:]))
+                break
+
+            chunk = line[cur : cur + fit_len]
+            last_space = chunk.rfind(" ")
+            if last_space != -1 and last_space > 0:
+                break_len = last_space + 1
+            else:
+                break_len = max(1, fit_len)
+
+            end = cur + break_len
+            segs.append((cur, end, line[cur:end]))
+            cur = end
+
+        return segs
+
+    def _find_cursor_visual_pos(self, vis_rows: list[_VisualRow]) -> tuple[int, int]:
+        """Find the visual row index and visual column for (self.cursor_row, self.cursor_col)."""
+        target_v_row = 0
+        target_v_col = 0
+        found = False
+
+        for v_idx, v in enumerate(vis_rows):
+            if v.logical_row == self.cursor_row:
+                if v.start_col <= self.cursor_col < v.end_col:
+                    target_v_row = v_idx
+                    target_v_col = self.cursor_col - v.start_col
+                    found = True
+                    break
+                elif self.cursor_col == v.end_col:
+                    if v.is_last_segment:
+                        target_v_row = v_idx
+                        target_v_col = v.end_col - v.start_col
+                        found = True
+                        break
+
+        if not found:
+            for v_idx in reversed(range(len(vis_rows))):
+                if vis_rows[v_idx].logical_row == self.cursor_row:
+                    target_v_row = v_idx
+                    target_v_col = max(0, self.cursor_col - vis_rows[v_idx].start_col)
+                    break
+
+        return target_v_row, target_v_col
+
     def _adjust_scroll(self) -> None:
         """Keep the cursor within the visible viewport bounds."""
         self.cursor_row = max(0, min(self.cursor_row, len(self.lines) - 1))
         self.cursor_col = max(0, min(self.cursor_col, len(self.lines[self.cursor_row])))
 
-        # Vertical scrolling
+        content_w = self._get_content_width()
+
+        if self.word_wrap and content_w is not None:
+            self.col_offset = 0
+            vis_rows = self._get_visual_rows(content_w)
+            v_row_idx, _ = self._find_cursor_visual_pos(vis_rows)
+            if self.height is not None:
+                if v_row_idx < self.row_offset:
+                    self.row_offset = v_row_idx
+                elif v_row_idx >= self.row_offset + self.height:
+                    self.row_offset = v_row_idx - self.height + 1
+                max_offset = max(0, len(vis_rows) - self.height)
+                self.row_offset = max(0, min(self.row_offset, max_offset))
+            else:
+                self.row_offset = 0
+            return
+
+        # Default unwrapped vertical scrolling
         if self.height is not None:
             if self.cursor_row < self.row_offset:
                 self.row_offset = self.cursor_row
@@ -175,11 +315,7 @@ class TextArea(Model):
             self.row_offset = 0
 
         # Horizontal scrolling
-        if self.width is not None:
-            gutter_w = 0
-            if self.show_line_numbers:
-                gutter_w = max(2, len(str(len(self.lines)))) + 3  # " N │ "
-            content_w = max(1, self.width - gutter_w)
+        if content_w is not None:
             if self.cursor_col < self.col_offset:
                 self.col_offset = self.cursor_col
             elif self.cursor_col >= self.col_offset + content_w:
@@ -193,8 +329,20 @@ class TextArea(Model):
         if not self.focused:
             return self, None
 
+        content_w = self._get_content_width()
+
         match msg:
             case KeyMsg(key="up"):
+                if self.word_wrap and content_w is not None:
+                    vis_rows = self._get_visual_rows(content_w)
+                    v_row, v_col = self._find_cursor_visual_pos(vis_rows)
+                    if v_row > 0:
+                        prev_v = vis_rows[v_row - 1]
+                        self.cursor_row = prev_v.logical_row
+                        self.cursor_col = min(prev_v.end_col, prev_v.start_col + v_col)
+                        self._adjust_scroll()
+                    return self, None
+
                 if self.cursor_row > 0:
                     self.cursor_row -= 1
                     self.cursor_col = min(self.cursor_col, len(self.lines[self.cursor_row]))
@@ -202,6 +350,16 @@ class TextArea(Model):
                 return self, None
 
             case KeyMsg(key="down"):
+                if self.word_wrap and content_w is not None:
+                    vis_rows = self._get_visual_rows(content_w)
+                    v_row, v_col = self._find_cursor_visual_pos(vis_rows)
+                    if v_row < len(vis_rows) - 1:
+                        next_v = vis_rows[v_row + 1]
+                        self.cursor_row = next_v.logical_row
+                        self.cursor_col = min(next_v.end_col, next_v.start_col + v_col)
+                        self._adjust_scroll()
+                    return self, None
+
                 if self.cursor_row < len(self.lines) - 1:
                     self.cursor_row += 1
                     self.cursor_col = min(self.cursor_col, len(self.lines[self.cursor_row]))
@@ -229,17 +387,40 @@ class TextArea(Model):
                 return self, None
 
             case KeyMsg(key="home" | "ctrl+a"):
+                if self.word_wrap and content_w is not None:
+                    vis_rows = self._get_visual_rows(content_w)
+                    v_row, _ = self._find_cursor_visual_pos(vis_rows)
+                    self.cursor_col = vis_rows[v_row].start_col
+                    self._adjust_scroll()
+                    return self, None
                 self.cursor_col = 0
                 self._adjust_scroll()
                 return self, None
 
             case KeyMsg(key="end" | "ctrl+e"):
+                if self.word_wrap and content_w is not None:
+                    vis_rows = self._get_visual_rows(content_w)
+                    v_row, _ = self._find_cursor_visual_pos(vis_rows)
+                    v = vis_rows[v_row]
+                    self.cursor_col = v.end_col if v.is_last_segment else max(v.start_col, v.end_col - 1)
+                    self._adjust_scroll()
+                    return self, None
                 self.cursor_col = len(self.lines[self.cursor_row])
                 self._adjust_scroll()
                 return self, None
 
             case KeyMsg(key="pageup"):
                 jump = self.height if self.height is not None else 10
+                if self.word_wrap and content_w is not None:
+                    vis_rows = self._get_visual_rows(content_w)
+                    v_row, v_col = self._find_cursor_visual_pos(vis_rows)
+                    target_v_row = max(0, v_row - jump)
+                    target = vis_rows[target_v_row]
+                    self.cursor_row = target.logical_row
+                    self.cursor_col = min(target.end_col, target.start_col + v_col)
+                    self._adjust_scroll()
+                    return self, None
+
                 self.cursor_row = max(0, self.cursor_row - jump)
                 self.cursor_col = min(self.cursor_col, len(self.lines[self.cursor_row]))
                 self._adjust_scroll()
@@ -247,6 +428,16 @@ class TextArea(Model):
 
             case KeyMsg(key="pagedown"):
                 jump = self.height if self.height is not None else 10
+                if self.word_wrap and content_w is not None:
+                    vis_rows = self._get_visual_rows(content_w)
+                    v_row, v_col = self._find_cursor_visual_pos(vis_rows)
+                    target_v_row = min(len(vis_rows) - 1, v_row + jump)
+                    target = vis_rows[target_v_row]
+                    self.cursor_row = target.logical_row
+                    self.cursor_col = min(target.end_col, target.start_col + v_col)
+                    self._adjust_scroll()
+                    return self, None
+
                 self.cursor_row = min(len(self.lines) - 1, self.cursor_row + jump)
                 self.cursor_col = min(self.cursor_col, len(self.lines[self.cursor_row]))
                 self._adjust_scroll()
@@ -305,7 +496,11 @@ class TextArea(Model):
 
             case MouseMsg(button=MouseButton.WHEEL_DOWN):
                 if self.height is not None:
-                    max_offset = max(0, len(self.lines) - self.height)
+                    if self.word_wrap and content_w is not None:
+                        total_rows = len(self._get_visual_rows(content_w))
+                    else:
+                        total_rows = len(self.lines)
+                    max_offset = max(0, total_rows - self.height)
                     if self.row_offset < max_offset:
                         self.row_offset += 1
                 return self, None
@@ -327,10 +522,7 @@ class TextArea(Model):
         gutter_w = max(2, len(str(total_lines)))
         sep = " │ "
         gutter_total_w = gutter_w + len(sep) if self.show_line_numbers else 0
-
-        content_w: int | None = None
-        if self.width is not None:
-            content_w = max(1, self.width - gutter_total_w)
+        content_w = self._get_content_width()
 
         # Empty content with placeholder
         if self.value == "" and self.placeholder:
@@ -371,14 +563,66 @@ class TextArea(Model):
 
             return "\n".join(output)
 
-        # Render visible rows
+        # Word-wrapped rendering
+        if self.word_wrap and content_w is not None:
+            vis_rows = self._get_visual_rows(content_w)
+            v_cursor_idx, v_cursor_col = self._find_cursor_visual_pos(vis_rows)
+
+            if self.height is not None:
+                end_idx = min(len(vis_rows), self.row_offset + self.height)
+                visible_rows = vis_rows[self.row_offset : end_idx]
+            else:
+                visible_rows = vis_rows
+
+            output_lines: list[str] = []
+            for v_idx_rel, v in enumerate(visible_rows):
+                actual_v_idx = self.row_offset + v_idx_rel
+                num_prefix = ""
+                if self.show_line_numbers:
+                    if v.is_first_segment:
+                        num_str = f"{v.logical_row + 1:>{gutter_w}}{sep}"
+                        num_prefix = (
+                            self.cursor_line_number_style.render(num_str)
+                            if self.focused and v.logical_row == self.cursor_row
+                            else self.line_number_style.render(num_str)
+                        )
+                    else:
+                        num_str = f"{' ':>{gutter_w}}{sep}"
+                        num_prefix = self.line_number_style.render(num_str)
+
+                text = v.text
+                if self.focused and actual_v_idx == v_cursor_idx:
+                    c_col = v_cursor_col
+                    left = text[:c_col]
+                    c_char = text[c_col] if c_col < len(text) else " "
+                    right = text[c_col + 1 :] if c_col < len(text) else ""
+                    c_rendered = f"\033[7m{c_char}\033[0m"
+                    text_rendered = f"{self.style.render(left)}{c_rendered}{self.style.render(right)}"
+                else:
+                    text_rendered = self.style.render(text)
+
+                line_str = f"{num_prefix}{text_rendered}"
+                if self.width is not None:
+                    diff = self.width - string_width(line_str)
+                    if diff > 0:
+                        line_str = f"{line_str}{' ' * diff}"
+                output_lines.append(line_str)
+
+            if self.height is not None:
+                pad_w = self.width if self.width is not None else (gutter_total_w if self.show_line_numbers else 0)
+                while len(output_lines) < self.height:
+                    output_lines.append(" " * pad_w)
+
+            return "\n".join(output_lines)
+
+        # Standard non-wrapped row rendering
         if self.height is not None:
             end_row = min(total_lines, self.row_offset + self.height)
             visible_indices = range(self.row_offset, end_row)
         else:
             visible_indices = range(0, total_lines)
 
-        output_lines: list[str] = []
+        output_lines = []
         for r in visible_indices:
             line = self.lines[r]
 
