@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Optional
 
-from espresso.core.keys import KeyMsg
+from espresso.core.keys import KeyMsg, PasteMsg
 from espresso.core.tea import Cmd, Model, Msg
 from espresso.crema.style import Style
 
@@ -61,12 +61,27 @@ class TextInput(Model):
         self.value = val[: self.char_limit]
         self.cursor_pos = len(self.value)
 
+    def insert_text(self, text: str) -> None:
+        """Insert arbitrary text at the current cursor position."""
+        if not text:
+            return
+        clean = text.replace("\r\n", " ").replace("\n", " ").replace("\r", " ")
+        avail = self.char_limit - len(self.value)
+        if avail > 0:
+            to_insert = clean[:avail]
+            self.value = self.value[: self.cursor_pos] + to_insert + self.value[self.cursor_pos :]
+            self.cursor_pos += len(to_insert)
+
     def update(self, msg: Msg) -> tuple[TextInput, Cmd | None]:
         """Process keyboard navigation and character insertion messages."""
         if not self.focused:
             return self, None
 
         match msg:
+            case PasteMsg(text=t):
+                self.insert_text(t)
+                return self, None
+
             case KeyMsg(key="left"):
                 if self.cursor_pos > 0:
                     self.cursor_pos -= 1

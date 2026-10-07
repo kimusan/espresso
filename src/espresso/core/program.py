@@ -134,12 +134,22 @@ class Program:
             # Start stdin input listener thread (runs in blocking mode, no O_NONBLOCK side-effects)
             self._start_stdin_reader(loop)
 
-            # Main event loop
+            # Main event loop with render batching / coalescing
             while self._running:
                 msg = await self._queue.get()
-                should_quit = await self._handle_msg(msg)
+                should_quit = await self._handle_msg(msg, render=False)
                 if should_quit:
                     break
+
+                # Coalesce / batch render: process all immediately queued messages before rendering next frame
+                while not self._queue.empty():
+                    next_msg = self._queue.get_nowait()
+                    should_quit = await self._handle_msg(next_msg, render=False)
+                    if should_quit:
+                        break
+
+                if self._running:
+                    self._render(self.model.view())
 
         finally:
             self._running = False
@@ -159,7 +169,7 @@ class Program:
         return self.model
 
 
-    async def _handle_msg(self, msg: Msg) -> bool:
+    async def _handle_msg(self, msg: Msg, render: bool = True) -> bool:
         """Process a single message. Return True if the application should quit."""
         if isinstance(msg, QuitMsg):
             return True
@@ -178,9 +188,11 @@ class Program:
 
         if isinstance(msg, BatchMsg):
             for sub_msg in msg.messages:
-                quit_req = await self._handle_msg(sub_msg)
+                quit_req = await self._handle_msg(sub_msg, render=False)
                 if quit_req:
                     return True
+            if render:
+                self._render(self.model.view())
             return False
 
         # Dispatch message to model
@@ -224,8 +236,9 @@ class Program:
             except Exception:
                 pass
 
-        # Re-render view
-        self._render(self.model.view())
+        # Re-render view if render requested
+        if render:
+            self._render(self.model.view())
         return False
 
     def _suspend(self) -> None:

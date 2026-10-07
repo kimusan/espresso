@@ -131,6 +131,21 @@ class TestVirtualList(unittest.TestCase):
         self.assertEqual(vl.selected_index, 1)
         self.assertEqual(vl.selected_item, "B")
 
+    def test_cursor_and_scroll_offset_properties(self):
+        vl = VirtualList(items=self.items, selected_index=4)
+        self.assertEqual(vl.cursor, 4)
+        self.assertEqual(vl.scroll_offset, 0)
+
+        # Set cursor property
+        vl.cursor = 10
+        self.assertEqual(vl.cursor, 10)
+        self.assertEqual(vl.selected_index, 10)
+
+        # Set scroll_offset property
+        vl.scroll_offset = 3
+        self.assertEqual(vl.scroll_offset, 3)
+        self.assertEqual(vl.item_offset, 3)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -24,6 +24,8 @@ CURSOR_DOWN = lambda n=1: f"{CSI}{n}B"
 CURSOR_TO_COL = lambda col=1: f"{CSI}{col}G"
 ENABLE_MOUSE_SGR = f"{CSI}?1000h{CSI}?1002h{CSI}?1006h"
 DISABLE_MOUSE_SGR = f"{CSI}?1000l{CSI}?1002l{CSI}?1006l"
+ENABLE_BRACKETED_PASTE = f"{CSI}?2004h"
+DISABLE_BRACKETED_PASTE = f"{CSI}?2004l"
 
 
 
@@ -114,6 +116,7 @@ class TerminalDriver:
         out.append(HIDE_CURSOR)
         if self.mouse:
             out.append(ENABLE_MOUSE_SGR)
+        out.append(ENABLE_BRACKETED_PASTE)
 
         sys.stdout.write("".join(out))
         sys.stdout.flush()
@@ -137,7 +140,7 @@ class TerminalDriver:
         if not self._is_tty:
             return
 
-        out = [SHOW_CURSOR, DISABLE_MOUSE_SGR]
+        out = [SHOW_CURSOR, DISABLE_MOUSE_SGR, DISABLE_BRACKETED_PASTE]
         if self.alt_screen:
             out.append(EXIT_ALT_SCREEN)
 

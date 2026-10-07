@@ -116,10 +116,10 @@ class Confetti(Model):
             for _ in range(count):
                 angle = random.uniform(0, 2 * math.pi)
                 # Aspect ratio compensation for taller terminal cells (2:1 ratio)
-                speed = random.uniform(16.0, 42.0)
+                speed = random.uniform(24.0, 56.0)
                 vx = math.cos(angle) * speed * 1.6
-                vy = math.sin(angle) * speed * 0.8 - 3.0  # slight upward bias
-                life = random.randint(55, 105)
+                vy = math.sin(angle) * speed * 0.8 - 4.0  # slight upward bias
+                life = random.randint(14, 26)
                 char = random.choice(self.characters)
                 color = random.choice(self.colors)
                 # Disperse initial coordinates slightly when origin is automatic
@@ -145,7 +145,7 @@ class Confetti(Model):
 
                 vx = math.cos(angle) * speed
                 vy = -math.sin(angle) * speed * 0.88
-                life = random.randint(60, 110)
+                life = random.randint(28, 48)
                 char = random.choice(self.characters)
                 color = random.choice(self.colors)
                 self.particles.append(Particle(cx, cy, vx, vy, char, color, life, life))
@@ -156,7 +156,7 @@ class Confetti(Model):
                 cy = random.uniform(0.0, 3.0)
                 vx = random.uniform(-4.0, 4.0)
                 vy = random.uniform(3.0, 9.0)
-                life = random.randint(60, 110)
+                life = random.randint(25, 45)
                 char = random.choice(self.characters)
                 color = random.choice(self.colors)
                 self.particles.append(Particle(cx, cy, vx, vy, char, color, life, life))

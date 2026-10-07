@@ -65,6 +65,18 @@ class Select(Model):
         return 0
 
     @property
+    def value(self) -> str:
+        return self.selected_value
+
+    @value.setter
+    def value(self, val: str) -> None:
+        self.set_value(val)
+
+    def set_value(self, val: str) -> None:
+        self.selected_value = val
+        self.cursor = self._find_index_by_value(val)
+
+    @property
     def selected_label(self) -> str:
         for v, l in self.options:
             if v == self.selected_value:

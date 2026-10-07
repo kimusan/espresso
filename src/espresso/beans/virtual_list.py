@@ -42,6 +42,8 @@ class VirtualList(Model, Generic[T]):
         height: int = 20,
         show_scrollbar: bool = True,
         focused: bool = True,
+        scrollbar_thumb_style: Style | None = None,
+        scrollbar_track_style: Style | None = None,
     ) -> None:
         self.items: list[T] = list(items) if items is not None else []
         self.render_item = render_item or (lambda it, sel, w: f"{'▶ ' if sel else '  '}{str(it)}")
@@ -55,8 +57,8 @@ class VirtualList(Model, Generic[T]):
         self._height_cache: dict[tuple[int, int], int] = {}
 
         # Styles
-        self.scrollbar_track_style = Style().foreground("#333344")
-        self.scrollbar_thumb_style = Style().foreground("#7D56F4").bold(True)
+        self.scrollbar_track_style = scrollbar_track_style or Style().foreground("#333344")
+        self.scrollbar_thumb_style = scrollbar_thumb_style or Style().foreground("#7D56F4").bold(True)
         self.empty_style = Style().faint(True)
 
     @property
@@ -65,6 +67,25 @@ class VirtualList(Model, Generic[T]):
         if 0 <= self.selected_index < len(self.items):
             return self.items[self.selected_index]
         return None
+
+    @property
+    def cursor(self) -> int:
+        """Alias for selected_index for cursor-style navigation."""
+        return self.selected_index
+
+    @cursor.setter
+    def cursor(self, val: int) -> None:
+        self.selected_index = max(0, min(val, max(0, len(self.items) - 1)))
+        self._adjust_scroll()
+
+    @property
+    def scroll_offset(self) -> int:
+        """Alias for item_offset."""
+        return self.item_offset
+
+    @scroll_offset.setter
+    def scroll_offset(self, val: int) -> None:
+        self.item_offset = max(0, min(val, max(0, len(self.items) - 1)))
 
     def invalidate_cache(self) -> None:
         """Clear cached item heights and readjust scroll."""

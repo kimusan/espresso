@@ -73,10 +73,27 @@ class KeyMsg(Msg):
             return str(self.key) == other or (self.key.char is not None and self.key.char == other)
         if isinstance(other, int):
             return self.key == other
-        if isinstance(other, Key):
-            return self.key == other
         if isinstance(other, KeyMsg):
             return self.key == other.key
+        if isinstance(other, Key):
+            return self.key == other
+        return False
+
+
+@dataclass(frozen=True)
+class PasteMsg(Msg):
+    """Message emitted when text is pasted via terminal bracketed paste."""
+
+    text: str
+
+    def __str__(self) -> str:
+        return self.text
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, str):
+            return self.text == other
+        if isinstance(other, PasteMsg):
+            return self.text == other.text
         return False
 
 
@@ -175,6 +192,16 @@ def parse_keys(raw: str) -> Iterator[KeyMsg]:
 
         # Check for escape sequence
         if char == "\x1b":
+            # Check for bracketed paste: \x1b[200~ ... \x1b[201~
+            if raw[i : i + 6] == "\x1b[200~":
+                end_marker = "\x1b[201~"
+                end_idx = raw.find(end_marker, i + 6)
+                if end_idx != -1:
+                    pasted_text = raw[i + 6 : end_idx]
+                    yield PasteMsg(pasted_text)
+                    i = end_idx + len(end_marker)
+                    continue
+
             # If escape is the last character or next isn't [ or O
             if i + 1 >= n:
                 yield KeyMsg(Key("esc"))
