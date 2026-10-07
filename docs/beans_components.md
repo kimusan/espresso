@@ -1568,6 +1568,144 @@ def view(self):
 - **Auto-Scaling**: Automatically calculates appropriate axis bounds and proportions from input values.
 - **Interactive Cursor**: Navigate with `↑`/`↓` (horizontal) or `←`/`→` (vertical), or click with the mouse to inspect specific bars.
 
+---
+
+## 40. ScrollView
+
+The `ScrollView` component is a high-level container bean that wraps any child `Model` (or raw text string) inside a scrollable rectangular viewport.
+
+### Usage
+```python
+from espresso.beans import ScrollView, Table
+
+# Wrap any Model bean or long text string
+scroll_view = ScrollView(
+    child=my_table,
+    width=60,
+    height=12,
+    show_scrollbar=True,
+    scroll_step=1,
+)
+
+def update(self, msg):
+    self.scroll_view, cmd = self.scroll_view.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.scroll_view.view()
+```
+
+### Features
+- **Wrap Any Bean or Text**: Accepts any TEA `Model` component or string content, dynamically computing height and clamping scroll offsets.
+- **Lifecycle & Event Forwarding**: Forwards `init()` and non-scroll `update(msg)` calls to the child `Model`.
+- **Integrated Scrollbar**: Renders a vertical scrollbar with customizable thumb and track Crema styling.
+- **Mouse Coordinate Translation**: Translates mouse event coordinates relative to the current scroll offset so the child receives local coordinates.
+- **Navigation Controls**:
+  - `↑` / `↓` / `k` / `j`: Scroll by line (when child is not consuming navigation).
+  - `PageUp` / `PageDown` (`Ctrl+u` / `Ctrl+d`): Scroll by page height.
+  - `Home` / `End`: Jump to top or bottom.
+  - Mouse Wheel (`WHEEL_UP` / `WHEEL_DOWN`): Smooth mouse scrolling.
+  - Scrollbar click: Directly jump to position.
+
+---
+
+## 41. Accordion
+
+The `Accordion` component provides collapsible multi-level panel containers that can wrap any child `Model` bean or text inside each accordion section.
+
+### Usage
+```python
+from espresso.beans import Accordion, AccordionItem, TextInput, Table, ScrollView
+
+accordion = Accordion(
+    items=[
+        AccordionItem(
+            id="profile",
+            title="User Profile",
+            content=my_form_or_input,
+            expanded=True,
+            badge="Required",
+        ),
+        AccordionItem(
+            id="metrics",
+            title="Cluster Metrics",
+            content=my_table,
+            badge="4 nodes",
+        ),
+        AccordionItem(
+            id="logs",
+            title="Service Logs",
+            content=ScrollView(child=long_log_text, width=58, height=8),
+        ),
+    ],
+    width=64,
+    allow_multiple=False,  # Set True for multi-expand mode
+)
+
+def update(self, msg):
+    self.accordion, cmd = self.accordion.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.accordion.view()
+```
+
+### Features
+- **Wrap Any Bean**: Every level can wrap any `Model` (e.g. `TextInput`, `Table`, `Form`, `ScrollView`) or plain text.
+- **Expansion Modes**:
+  - `allow_multiple=False`: Classic accordion where expanding one section collapses previously open sections.
+  - `allow_multiple=True`: Independent collapsible panels where multiple sections can stay open simultaneously.
+- **Two-Tier Keyboard Focus**:
+  - **Header Navigation**: `↑`/`↓` or `k`/`j` navigate headers; `Enter` or `Space` toggles expand/collapse; `Right`/`Left` expands or collapses.
+  - **Child Bean Focus**: Pressing `Tab` on an expanded section focuses into the child bean; pressing `Esc` or `Shift+Tab` returns focus to the accordion headers.
+- **Mouse Support**: Clicking section headers toggles expansion; clicking into expanded content areas routes mouse events to the child bean.
+- **Customizable Appearance**: Expand/collapse icons (`▼`/`▶`), status badges, borders, and active header highlight styles.
+
+---
+
+## 42. VirtualList
+
+The `VirtualList` component is a high-performance virtualized list feed that only renders items visible within the terminal viewport window, achieving sub-millisecond updates even with thousands of items.
+
+### Usage
+```python
+from espresso.beans import VirtualList, VirtualListChangeMsg, VirtualListSelectMsg
+
+def render_post_card(item: dict, is_selected: bool, width: int) -> str:
+    prefix = "▶ " if is_selected else "  "
+    return f"{prefix}{item['author']}: {item['content']}"
+
+vlist = VirtualList(
+    items=my_posts,
+    render_item=render_post_card,
+    width=70,
+    height=20,
+    show_scrollbar=True,
+    focused=True,
+)
+
+def update(self, msg):
+    if isinstance(msg, VirtualListSelectMsg):
+        print(f"Selected item: {msg.item}")
+    elif isinstance(msg, VirtualListChangeMsg):
+        print(f"Active cursor moved to index: {msg.index}")
+
+    self.vlist, cmd = self.vlist.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.vlist.view()
+```
+
+### Features
+- **$O(\text{visible})$ Virtualization**: Only invokes `render_item` for items currently inside the visible height slice, making it suitable for massive timelines and feeds.
+- **Variable-Height Item Support**: Handles multi-line items with dynamic height calculation and internal caching (`_height_cache`).
+- **Reading Anchor Preservation**: When prepending new items (e.g. streaming or timeline refreshes), `keep_anchor=True` preserves the current reading position so the viewport doesn't jump.
+- **Item-Centric Navigation**: Tracks discrete item indices with `selected_index`, `selected_item`, and selection messages (`VirtualListSelectMsg`, `VirtualListChangeMsg`).
+- **Integrated Scrollbar & Mouse**: Mouse wheel navigation, scrollbar clicking, and keyboard navigation (`j`/`k`, `↑`/`↓`, `PageUp`/`PageDown`, `Home`/`End`, `Enter`/`Space`).
+
+
+
 
 
 

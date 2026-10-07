@@ -134,6 +134,13 @@ from espresso.beans.timer import (
 from espresso.beans.toast import ToastDismissMsg, ToastItem, ToastLevel, ToastManager
 from espresso.beans.tree import Tree, TreeNode, TreeNodeSelectMsg
 from espresso.beans.viewport import Viewport
+from espresso.beans.scroll_view import ScrollChangeMsg, ScrollView
+from espresso.beans.accordion import (
+    Accordion,
+    AccordionItem,
+    AccordionSelectMsg,
+    AccordionToggleMsg,
+)
 
 __all__ = [
     # Spinner
@@ -328,5 +335,13 @@ __all__ = [
     "VirtualList",
     "VirtualListSelectMsg",
     "VirtualListChangeMsg",
+    # ScrollView
+    "ScrollView",
+    "ScrollChangeMsg",
+    # Accordion
+    "Accordion",
+    "AccordionItem",
+    "AccordionToggleMsg",
+    "AccordionSelectMsg",
 ]
 
