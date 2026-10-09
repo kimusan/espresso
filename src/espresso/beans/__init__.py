@@ -141,6 +141,16 @@ from espresso.beans.accordion import (
     AccordionSelectMsg,
     AccordionToggleMsg,
 )
+from espresso.beans.art_player import (
+    AnimationDoneMsg,
+    AnimationLoopMsg,
+    ArtAnimation,
+    ArtFrame,
+    ArtPlayer,
+    ArtPlayerTickMsg,
+    parse_3a,
+    parse_ans,
+)
 
 __all__ = [
     # Spinner
@@ -343,5 +353,14 @@ __all__ = [
     "AccordionItem",
     "AccordionToggleMsg",
     "AccordionSelectMsg",
+    # ArtPlayer
+    "ArtPlayer",
+    "ArtAnimation",
+    "ArtFrame",
+    "ArtPlayerTickMsg",
+    "AnimationDoneMsg",
+    "AnimationLoopMsg",
+    "parse_3a",
+    "parse_ans",
 ]
 

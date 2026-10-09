@@ -42,7 +42,7 @@ Terminal applications in Python have historically required heavy object-oriented
 | :--- | :--- | :--- |
 | **`espresso`** | `bubbletea` | **The Strong Base**: Core TEA framework, runtime event loop, raw terminal driver, command primitives, line-diffing alt-screen renderer, SGR mouse tracking, and gesture engine. |
 | **`espresso.crema`** | `lipgloss` | **The Smooth Crema**: Declarative styling, box model, TrueColor (24-bit RGB), ANSI 256, borders, border titles, TrueColor linear gradients, ANSI word-wrapping, 2D layout alignment, FlexBox, and responsive Grid. |
-| **`espresso.beans`** | `bubbles` | **The Flavorful Beans**: 42 reusable UI components including VirtualList, Accordion, ScrollView, TextArea, GitTree, CommandPalette, BarChart, Splitter, Sliders, Form, DiffViewer, SortableList, Confetti, CodeViewer, MarkdownViewer, Tables, Viewports, and more. |
+| **`espresso.beans`** | `bubbles` | **The Flavorful Beans**: 43 reusable UI components including ArtPlayer, VirtualList, Accordion, ScrollView, TextArea, GitTree, CommandPalette, BarChart, Splitter, Sliders, Form, DiffViewer, SortableList, Confetti, CodeViewer, MarkdownViewer, Tables, Viewports, and more. |
 
 ---
 
@@ -172,8 +172,9 @@ Espresso provides built-in mouse tracking (SGR 1006) with advanced gesture synth
 
 ## 🧩 Beans: Standard Component Library
 
-Espresso includes **42 ready-to-use building blocks** that follow the exact same TEA model:
+Espresso includes **43 ready-to-use building blocks** that follow the exact same TEA model:
 
+* **`ArtPlayer`**: Terminal art and animation player supporting modern `.3a` Animated ASCII Art and classic BBS `.ans` formats with frame playback controls, border framing, and lifecycle events (`AnimationDoneMsg`, `AnimationLoopMsg`).
 * **`VirtualList`**: High-performance virtualized list feed with variable-height items, reading anchor preservation, and lazy viewport slicing.
 * **`Accordion`**: Collapsible multi-panel container wrapping child beans with single-expand or multi-expand modes, Tab child focus cycling, and badges.
 * **`ScrollView`**: Scrollable container bean wrapping any child Model or text with interactive scrolling, vertical scrollbar rendering, and coordinate translation.
@@ -261,6 +262,7 @@ Explore the interactive demos in `examples/`:
 | **13 Physics & Tools** | `espresso run 13` | Confetti physics engine, forms with validation, and diff viewer |
 | **14 Developer Workspace** | `espresso run 14` | Flagship IDE integrating GitTree, BarChart, CodeViewer, and CommandPalette |
 | **15 Accordion & ScrollView** | `espresso run 15` | Multi-panel collapsible accordion wrapping forms, tables, and scrollable logs |
+| **16 Art & Animation Player** | `espresso run 16` | Retro .3a and .ans player with CP437, progressive reveal, and confetti |
 
 ---
 

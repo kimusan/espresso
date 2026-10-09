@@ -1704,6 +1704,93 @@ def view(self):
 - **Item-Centric Navigation**: Tracks discrete item indices with `selected_index`, `selected_item`, and selection messages (`VirtualListSelectMsg`, `VirtualListChangeMsg`).
 - **Integrated Scrollbar & Mouse**: Mouse wheel navigation, scrollbar clicking, and keyboard navigation (`j`/`k`, `↑`/`↓`, `PageUp`/`PageDown`, `Home`/`End`, `Enter`/`Space`).
 
+---
+
+## 43. ArtPlayer
+
+The `ArtPlayer` component is an interactive terminal art and animation engine supporting modern **`.3a` Animated ASCII Art** and classic **BBS `.ans` ANSI Art** formats with frame playback controls, border framing, and TEA lifecycle messages.
+
+### Formats Supported
+1. **`.3a` Animated ASCII Art** (modern standard by `asciimoth/3a`):
+   - `@3a` header parsing: `title`, `author`, `orig-author`, `tags`, `delay` (per-frame overrides e.g. `delay: 50, 0:100`), `loop: yes|no`, `colors: yes|no`.
+   - Palette mapping with `col <char> fg:<color> bg:<color>`: supports 4-bit standard/bright ANSI (`0`-`f`), 256-color palette (`0`-`255`), and 24-bit TrueColor hex (`#RRGGBB`).
+   - Pinned sections: `@color-pin` (matrix of colors applied to all body text frames) and `@text-pin` (matrix of glyphs colored by body frames).
+   - Multi-frame `@body` chunking with whitespace frame separators.
+2. **`.ans` ANSI Art & BBS ANSImations**:
+   - IBM-PC **Code Page 437** (`cp437`) character decoding (`█`, `▀`, `▄`, `░`, `▒`, `▓`, `─`, `│`, `╔`, `║`).
+   - 128-byte **SAUCE** metadata parsing (Title, Author, Group/Date) and COMNT stripping.
+   - Screen-clearing (`\x1b[2J`) and cursor home (`\x1b[H`) frame splitting for multi-frame ANSImations.
+   - **Progressive Reveal**: Simulates retro 14.4k/28.8k baud modem download line-by-line, ideal for splash screens and logo intros.
+
+### Usage
+
+```python
+from espresso.beans import (
+    ArtPlayer,
+    AnimationDoneMsg,
+    AnimationLoopMsg,
+    parse_3a,
+    parse_ans,
+)
+from espresso.crema import ROUNDED_BORDER, DOUBLE_BORDER
+
+# Option A: From a .3a format string
+player = ArtPlayer.from_3a(
+    my_3a_text,
+    border=ROUNDED_BORDER,
+    border_fg="#FF8800",
+    show_controls=True,
+    show_title=True,
+    center_horizontally=True,
+)
+
+# Option B: From an ANSI file (.ans) with progressive splash reveal
+player = ArtPlayer.from_ans(
+    my_ans_bytes,
+    progressive_lines=True,
+    lines_per_frame=1,
+    default_delay_ms=40,
+    border=DOUBLE_BORDER,
+    border_fg="#00E5FF",
+    title="BBS Terminal Gateway",
+)
+
+# Option C: From arbitrary text frames
+player = ArtPlayer.from_frames(["Frame 1", "Frame 2", "Frame 3"], default_delay_ms=80)
+
+# In Parent Model:
+def init(self):
+    return self.player.init()
+
+def update(self, msg):
+    # React when a non-looping splash animation completes
+    if isinstance(msg, AnimationDoneMsg):
+        print(f"Splash animation '{msg.title}' completed!")
+        self.transition_to_main_screen()
+
+    self.player, cmd = self.player.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.player.view()
+```
+
+### Controls & Features
+- **Interactive Keyboard Controls**:
+  - `Space` / `k`: Toggle Play / Pause.
+  - `r` / `R`: Restart animation from frame 0.
+  - `←` / `h`: Step backward one frame.
+  - `→` / `l`: Step forward one frame.
+  - `+` / `]` / `=`: Increase playback speed.
+  - `-` / `[`: Decrease playback speed.
+- **Crema Framing & Centering**:
+  - Border customization (`ROUNDED_BORDER`, `DOUBLE_BORDER`, `THICK_BORDER`, `BLOCK_BORDER`, `None`).
+  - Auto-embedding titles in top borders (`border_title`).
+  - Horizontal centering (`center_horizontally=True`) and vertical centering within fixed container bounds.
+- **Lifecycle Events**:
+  - `AnimationDoneMsg(tag, title)`: Emitted when non-looping animations finish.
+  - `AnimationLoopMsg(tag, loop_count)`: Emitted on each cycle completion in looping mode.
+
 
 
 

@@ -40,6 +40,8 @@ EXAMPLES = [
     ("12", "12_interactive_and_animated.py", "Splitters, sliders, marquees, and sortable lists"),
     ("13", "13_physics_and_tools.py", "Confetti physics engine, forms, and diff viewer"),
     ("14", "14_developer_workspace.py", "Flagship IDE with GitTree, BarChart, and CommandPalette"),
+    ("15", "15_accordion_and_scrollview.py", "Accordion panel containers and scrollable ScrollView panes"),
+    ("16", "16_ansi_and_3a_player.py", "Terminal art & animation player for .3a and classic .ans formats"),
 ]
 
 NEW_APP_TEMPLATE = '''"""Espresso TUI Application."""
