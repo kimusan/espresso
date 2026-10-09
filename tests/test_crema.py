@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import unicodedata
 import unittest
 
 from espresso.crema import (
@@ -90,9 +91,17 @@ class TestCremaColorsAndWidth(unittest.TestCase):
         self.assertEqual(string_width("🇩🇰"), 2)
         self.assertEqual(string_width("1️⃣"), 2)
 
-        # Unicode 17.0 / unassigned fallback characters (e.g. 🫯 U+1FAEF Fight Cloud)
-        self.assertEqual(char_width("🫯"), 1)
-        self.assertEqual(string_width("Thomas Fuchs 🫯 @thomasfuchs@hachyderm.io"), 40)
+        # In Unicode 16.0+ (Python 3.13+), 🫯 (U+1FAEF Fingerprint) is an assigned Wide emoji (2 cells);
+        # in Unicode <=15.0 (Python <=3.12), it was unassigned and falls back to 1 cell.
+        if unicodedata.unidata_version >= "16.0.0":
+            self.assertEqual(char_width("🫯"), 2)
+            self.assertEqual(string_width("Thomas Fuchs 🫯 @thomasfuchs@hachyderm.io"), 41)
+        else:
+            self.assertEqual(char_width("🫯"), 1)
+            self.assertEqual(string_width("Thomas Fuchs 🫯 @thomasfuchs@hachyderm.io"), 40)
+
+        # Unassigned Plane 1 codepoint fallback (guaranteed 1 cell across all Unicode versions)
+        self.assertEqual(char_width("\U0001FFFD"), 1)
 
         # Base symbols with vs without emoji presentation selector (VS16)
         self.assertEqual(char_width("❤"), 1)
