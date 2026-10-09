@@ -259,17 +259,17 @@ class ArtPlayerDemo(Model):
                     return self, quit_app()
 
                 case "tab":
-                    self.active_tab_index = (self.active_tab_index + 1) % 3
-                    self.tabs.select(self.active_tab_index)
+                    cmd = self.tabs.next_tab()
+                    self.active_tab_index = self.tabs.active_tab
                     self.status_msg = f"Switched to tab {self.active_tab_index + 1}"
-                    return self, None
+                    return self, cmd
 
                 case "1" | "2" | "3":
-                    idx = int(msg.key) - 1
-                    self.active_tab_index = idx
-                    self.tabs.select(idx)
-                    self.status_msg = f"Switched to tab {idx + 1}"
-                    return self, None
+                    idx = int(str(msg.key)) - 1
+                    cmd = self.tabs.set_active(idx)
+                    self.active_tab_index = self.tabs.active_tab
+                    self.status_msg = f"Switched to tab {self.active_tab_index + 1}"
+                    return self, cmd
 
                 case "b" | "B":
                     self.border_index = (self.border_index + 1) % len(BORDER_PRESETS)
