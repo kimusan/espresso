@@ -76,6 +76,11 @@ def codepoint_width(code: int) -> int:
         if start <= code <= end:
             return 0 if w < 0 else w
 
+    # Unassigned codepoints in Plane 0 and Plane 1 default to Neutral (1 cell) per UAX #11.
+    # Python <=3.11 had bug gh-96172 where east_asian_width returned 'W' for unassigned Plane 1.
+    if cat == "Cn" and code < 0x20000:
+        return 1
+
     # East Asian Width properties (W = Wide, F = Fullwidth)
     eaw = unicodedata.east_asian_width(ch)
     if eaw in ("W", "F"):

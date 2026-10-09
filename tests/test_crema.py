@@ -91,9 +91,11 @@ class TestCremaColorsAndWidth(unittest.TestCase):
         self.assertEqual(string_width("🇩🇰"), 2)
         self.assertEqual(string_width("1️⃣"), 2)
 
-        # In Unicode 16.0+ (Python 3.13+), 🫯 (U+1FAEF Fingerprint) is an assigned Wide emoji (2 cells);
-        # in Unicode <=15.0 (Python <=3.12), it was unassigned and falls back to 1 cell.
-        if unicodedata.unidata_version >= "16.0.0":
+        # Unicode 17.0 / unassigned fallback characters (e.g. 🫯 U+1FAEF Fight Cloud)
+        # Note: In Unicode <17.0 (Python <=3.13), U+1FAEF is unassigned (1 cell).
+        # Python <=3.11 had bug gh-96172 where east_asian_width returned 'W' for unassigned Plane 1,
+        # which Espresso normalizes to 1 cell per UAX #11.
+        if unicodedata.category("🫯") != "Cn":
             self.assertEqual(char_width("🫯"), 2)
             self.assertEqual(string_width("Thomas Fuchs 🫯 @thomasfuchs@hachyderm.io"), 41)
         else:
