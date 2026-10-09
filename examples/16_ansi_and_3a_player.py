@@ -115,7 +115,15 @@ col _ fg:_
 
 # --- Sample 2: Multi-frame Classic BBS ANSImation with CP437 Characters & ANSI Colors ---
 def _generate_bbs_ansimation() -> str:
-    """Generate an 8-frame classic BBS ANSImation with CP437 blocks and shifting raster bars."""
+    """Generate an 8-frame classic BBS ANSImation with clear ESPRESSO block font and shifting raster bars."""
+    logo_rows = [
+        "███████   ▄█████  ██████▄  ██████▄  ███████   ▄█████   ▄█████   ▄█████▄ ",
+        "███       ███▄    ███  ███ ███  ███ ███       ███▄     ███▄    ███   ███",
+        "██████     ▀███▄  ██████▀  ██████▀  ██████     ▀███▄    ▀███▄  ███   ███",
+        "███          ███  ███      ███  ███ ███          ███      ███  ███   ███",
+        "███████   █████▀  ███      ███   ██ ███████   █████▀   █████▀   ▀█████▀ ",
+    ]
+
     palettes = [
         ("\x1b[36m", "\x1b[96m", "\x1b[94m", "\x1b[95m", "\x1b[35m"),
         ("\x1b[96m", "\x1b[94m", "\x1b[95m", "\x1b[35m", "\x1b[31m"),
@@ -126,7 +134,7 @@ def _generate_bbs_ansimation() -> str:
         ("\x1b[33m", "\x1b[92m", "\x1b[96m", "\x1b[94m", "\x1b[95m"),
         ("\x1b[92m", "\x1b[36m", "\x1b[96m", "\x1b[94m", "\x1b[35m"),
     ]
-    scanner_pos = [0, 6, 14, 22, 28, 22, 14, 6]
+    scanner_pos = [0, 8, 18, 30, 40, 30, 18, 8]
     signals = ["[●○○○]", "[○●○○]", "[○○●○]", "[○○○●]", "[○○●○]", "[○●○○]", "[●○○○]", "[○●○○]"]
     leds = [
         "RX: ●  TX: ○",
@@ -139,25 +147,27 @@ def _generate_bbs_ansimation() -> str:
         "RX: ○  TX: ○",
     ]
 
+    divider = "─" * 71
+
     frames: list[str] = []
     for i in range(8):
-        c1, c2, c3, c4, c5 = palettes[i]
+        c = palettes[i]
         pos = scanner_pos[i]
         sig = signals[i]
         led = leds[i]
 
-        scan = (" " * pos + "░░▒▒▓▓████▓▓▒▒░░").ljust(53)
+        scan = (" " * pos + "░░▒▒▓▓██████▓▓▒▒░░").ljust(71)
         frame = (
-            f"{c1}    ▄█████████▄   ▄████████    ▄████████    ▄████████ \x1b[0m\n"
-            f"{c2}    ███     ███  ███    ███   ███    ███   ███    ███ \x1b[0m\n"
-            f"{c3}    ███     ███  ███    █▀    ███    █▀    ███    █▀  \x1b[0m\n"
-            f"{c4}    ███     ███ ▄███▄▄▄      ▄███▄▄▄      ▄███▄▄▄     \x1b[0m\n"
-            f"{c5}  ▀█████████▀  ▀▀███▀▀▀     ▀▀███▀▀▀     ▀▀███▀▀▀     \x1b[0m\n"
-            "\x1b[90m  ─────────────────────────────────────────────────────\x1b[0m\n"
-            "\x1b[93m  ★  E S P R E S S O   B B S   S Y S T E M   2 0 2 6  ★\x1b[0m\n"
-            "\x1b[90m  ─────────────────────────────────────────────────────\x1b[0m\n"
-            f"\x1b[32m  [Node 01]  Online: 28,800 Baud  {sig}  {led}\x1b[0m\n"
-            "\x1b[33m  SysOp: AcidBurn  •  Conference: #demoscene-retro    \x1b[0m\n"
+            f"{c[0]}  {logo_rows[0]}\x1b[0m\n"
+            f"{c[1]}  {logo_rows[1]}\x1b[0m\n"
+            f"{c[2]}  {logo_rows[2]}\x1b[0m\n"
+            f"{c[3]}  {logo_rows[3]}\x1b[0m\n"
+            f"{c[4]}  {logo_rows[4]}\x1b[0m\n"
+            f"\x1b[90m  {divider}\x1b[0m\n"
+            f"\x1b[93m  ★  E S P R E S S O   B B S   S Y S T E M   2 0 2 6  ★\x1b[0m\n"
+            f"\x1b[90m  {divider}\x1b[0m\n"
+            f"\x1b[32m  [Node 01]  Online: 28,800 Baud   {sig}   {led}\x1b[0m\n"
+            f"\x1b[33m  SysOp: AcidBurn   •   Conference: #demoscene-retro\x1b[0m\n"
             f"\x1b[36m  {scan}\x1b[0m"
         )
         frames.append(frame)
