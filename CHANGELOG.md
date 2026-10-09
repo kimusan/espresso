@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0](https://github.com/kimusan/espresso/compare/v1.0.0...v1.1.0) - 2026-10-09
+
+### 🚀 Features
+
+- **examples**: Add 8-frame BBS ANSImation and auto-restart splash stream on tab entry ([e282364](https://github.com/kimusan/espresso/commit/e282364))
+- **beans**: Implement ArtPlayer supporting .3a and classic .ans formats ([610d027](https://github.com/kimusan/espresso/commit/610d027))
+- **textarea, program**: Add word wrapping to TextArea and fix event loop quit handling ([de90123](https://github.com/kimusan/espresso/commit/de90123))
+- **beans**: Implement Accordion and ScrollView components ([8b30c71](https://github.com/kimusan/espresso/commit/8b30c71))
+- **crema**: Terminal-accurate ZWJ and Unicode 17.0 cell width alignment ([ea1890e](https://github.com/kimusan/espresso/commit/ea1890e))
+- **core**: Add bracketed paste support and render event batching ([2f363cd](https://github.com/kimusan/espresso/commit/2f363cd))
+- **tabs**: Add mouse click and wheel support to Tabs ([14aab18](https://github.com/kimusan/espresso/commit/14aab18))
+- **beans**: Add Switch, Select, RadioSet/Checkbox, ModalStack, and VirtualList components ([4080485](https://github.com/kimusan/espresso/commit/4080485))
+
+### 🐛 Bug Fixes
+
+- **examples**: Align color map index for letter O in ESPRESSO cup ([c830a0e](https://github.com/kimusan/espresso/commit/c830a0e))
+- **examples**: Replace corrupted block letters with clear ESPRESSO typography in Tab 2 ([c233204](https://github.com/kimusan/espresso/commit/c233204))
+- **examples**: Replace skewed cup in .3a animation with cleanly aligned ASCII espresso cup ([3df56fc](https://github.com/kimusan/espresso/commit/3df56fc))
+- **examples**: Use tabs.set_active and next_tab in Example 16 ([6f35279](https://github.com/kimusan/espresso/commit/6f35279))
+- **virtual_list**: Account for variable-height multi-line items in viewport scrolling ([f797006](https://github.com/kimusan/espresso/commit/f797006))
+- **keys**: Support int conversion and integer equality on Key and KeyMsg ([75e2a33](https://github.com/kimusan/espresso/commit/75e2a33))
+- **release**: Fix right border truncation in release execution pipeline card ([444f9af](https://github.com/kimusan/espresso/commit/444f9af))
+
 ## [1.0.0](https://github.com/kimusan/espresso/compare/v0.2.0...v1.0.0) - 2026-10-01
 
 ### 🚀 Features
