@@ -41,6 +41,44 @@ PAD_BOTTOM = 24
 FONT_REGULAR = ImageFont.truetype(FONT_REGULAR_PATH, size=FONT_SIZE)
 FONT_BOLD = ImageFont.truetype(FONT_BOLD_PATH, size=FONT_SIZE)
 
+EMOJI_FONT_PATH = "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf"
+FONT_EMOJI = (
+    ImageFont.truetype(EMOJI_FONT_PATH, size=109)
+    if os.path.exists(EMOJI_FONT_PATH)
+    else None
+)
+EMOJI_CACHE: dict[str, Image.Image | None] = {}
+
+
+def get_emoji_image(ch: str, cell_w: int, cell_h: int) -> Image.Image | None:
+    """Render a crisp color emoji glyph scaled to fit terminal cell dimensions."""
+    if not FONT_EMOJI:
+        return None
+    if ch in EMOJI_CACHE:
+        return EMOJI_CACHE[ch]
+    if ord(ch[0]) < 128:
+        EMOJI_CACHE[ch] = None
+        return None
+    try:
+        em_img = Image.new("RGBA", (140, 140), (0, 0, 0, 0))
+        d = ImageDraw.Draw(em_img)
+        d.text((0, 0), ch, font=FONT_EMOJI, embedded_color=True)
+        bbox = em_img.getbbox()
+        if bbox:
+            cropped = em_img.crop(bbox)
+            target_h = min(cell_h - 2, 16)
+            target_w = int(cropped.width * (target_h / cropped.height))
+            if target_w > cell_w:
+                target_w = cell_w
+                target_h = int(cropped.height * (target_w / cropped.width))
+            resized = cropped.resize((target_w, target_h), Image.Resampling.LANCZOS)
+            EMOJI_CACHE[ch] = resized
+            return resized
+    except Exception:
+        pass
+    EMOJI_CACHE[ch] = None
+    return None
+
 
 def render_ansi_to_image(
     view_text: str,
@@ -92,19 +130,31 @@ def render_ansi_to_image(
         t = Text.from_ansi(l)
         col_idx = 0
         y = PAD_TOP + row_idx * CHAR_H
+        plain = t.plain
+        i = 0
+        while i < len(plain):
+            ch = plain[i]
+            # Check for variation selector (e.g. \ufe0f)
+            full_ch = ch
+            if i + 1 < len(plain) and plain[i + 1] == "\ufe0f":
+                full_ch = ch + "\ufe0f"
+                skip = 2
+            else:
+                skip = 1
 
-        for char_idx, ch in enumerate(t.plain):
             cw = char_width(ch)
-            if cw == 0:
+            if cw == 0 and full_ch == ch:
+                i += 1
                 continue
 
+            eff_cw = max(cw, 1)
             x = PAD_X + col_idx * CHAR_W
-            cell_pixel_w = cw * CHAR_W
+            cell_pixel_w = eff_cw * CHAR_W
 
             # Look up style from Rich spans
             st = Style.null()
             for span in t.spans:
-                if span.start <= char_idx < span.end:
+                if span.start <= i < span.end:
                     st += span.style
 
             if st.bgcolor:
@@ -129,11 +179,17 @@ def render_ansi_to_image(
                     fill=bg_color,
                 )
 
-            # Draw glyph
-            if ch != " ":
+            # Check for color emoji glyph first
+            em_img = get_emoji_image(full_ch, cell_pixel_w, CHAR_H)
+            if em_img:
+                off_x = x + (cell_pixel_w - em_img.width) // 2
+                off_y = y + (CHAR_H - em_img.height) // 2
+                img.paste(em_img, (off_x, off_y), em_img)
+            elif ch != " ":
                 draw.text((x, y), ch, font=f, fill=fg_color)
 
-            col_idx += cw
+            col_idx += eff_cw
+            i += skip
 
     return img
 
@@ -349,6 +405,127 @@ def generate_spring_oscillator() -> None:
     save_animation(frames, durations, "demo_spring_oscillator")
 
 
+def generate_mastui_demo() -> None:
+    """Generate animation of Mastui: multi-column Fediverse client on Espresso."""
+    mastui_dir = REPO_ROOT.parent / "mastui"
+    if str(mastui_dir) not in sys.path:
+        sys.path.insert(0, str(mastui_dir))
+
+    from datetime import datetime, timezone
+    from mastui.espresso_app import MastuiEspressoApp, TootSubmitMsg, TootPostSuccessMsg
+    from espresso import WindowSizeMsg, KeyMsg
+    from espresso.beans.confetti import ConfettiTickMsg
+
+    app = MastuiEspressoApp(is_demo=True, show_splash=False)
+    app.update(WindowSizeMsg(width=104, height=28))
+
+    frames: list[Image.Image] = []
+    durations: list[int] = []
+
+    def record_frame(duration_ms: int = 300, title: str = "mastui - espresso fediverse client") -> None:
+        view = app.view()
+        img = render_ansi_to_image(view, title=title)
+        frames.append(img)
+        durations.append(duration_ms)
+
+    # 1. Initial State: Multi-column feed view
+    record_frame(650)
+
+    # 2. Feed navigation: scroll down through home posts
+    app.update(KeyMsg(key="j"))
+    record_frame(350)
+
+    app.update(KeyMsg(key="j"))
+    record_frame(350)
+
+    app.update(KeyMsg(key="k"))
+    record_frame(250)
+
+    app.update(KeyMsg(key="k"))
+    record_frame(250)
+
+    # 3. Column switching (FlexBox layout)
+    app.update(KeyMsg(key="tab"))  # Switch to [2] Local
+    record_frame(450)
+
+    app.update(KeyMsg(key="tab"))  # Switch to [3] Mentions
+    record_frame(400)
+
+    app.switch_timeline(0)  # Return to [1] Home
+    record_frame(350)
+
+    # 4. Instant Post Interaction: Like & Boost with celebratory confetti
+    app.update(KeyMsg(key="f"))  # Like
+    record_frame(400)
+
+    app.update(KeyMsg(key="b"))  # Boost triggers confetti and toast
+    record_frame(200)
+
+    for _ in range(3):
+        app.update(ConfettiTickMsg(tag=app.confetti.tag, active_particles=len(app.confetti.particles)))
+        record_frame(120)
+
+    # 5. Open Composer Modal (ModalStack with backdrop dimming)
+    app.update(KeyMsg(key="c"))
+    record_frame(450, title="mastui - compose toot")
+
+    # Typing phase 1
+    composer = app.modal_stack.top_modal
+    if composer and hasattr(composer, "text_area"):
+        composer.text_area.set_value("Brewing Mastui on top of Espresso TUI! ☕✨")
+    record_frame(350, title="mastui - compose toot")
+
+    # Typing phase 2
+    if composer and hasattr(composer, "text_area"):
+        composer.text_area.set_value(
+            "Brewing Mastui on top of Espresso TUI! ☕✨\nPure TEA architecture in Python."
+        )
+    record_frame(550, title="mastui - compose toot")
+
+    # 6. Submit Toot
+    app.update(
+        TootSubmitMsg(
+            content="Brewing Mastui on top of Espresso TUI! ☕✨\nPure TEA architecture in Python.",
+            spoiler_text="",
+            visibility="public",
+        )
+    )
+    record_frame(300)
+
+    # Success: New toot prepended to timeline, toast popped, confetti burst
+    new_post = {
+        "id": "99999999",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "account": {"display_name": "Kim Schulz", "acct": "kim@mastui.app"},
+        "content": "<p>Brewing <b>Mastui</b> on top of <b>Espresso TUI</b>! ☕✨<br>Pure TEA architecture in Python.</p>",
+        "spoiler_text": "",
+        "reblogs_count": 0,
+        "favourites_count": 0,
+        "replies_count": 0,
+        "visibility": "public",
+    }
+    app.update(TootPostSuccessMsg(post=new_post, visibility="public"))
+    record_frame(250)
+
+    # Confetti particle cascade
+    for _ in range(6):
+        app.update(ConfettiTickMsg(tag=app.confetti.tag, active_particles=len(app.confetti.particles)))
+        record_frame(120)
+
+    # Rest frame before loop
+    record_frame(1100)
+
+    save_animation(frames, durations, "demo_mastui_feed")
+
+    # Also copy to mastui/assets/
+    mastui_assets = REPO_ROOT.parent / "mastui" / "assets"
+    if mastui_assets.exists():
+        import shutil
+        shutil.copy2(OUTPUT_DIR / "demo_mastui_feed.gif", mastui_assets / "demo_mastui_feed.gif")
+        shutil.copy2(OUTPUT_DIR / "demo_mastui_feed.mp4", mastui_assets / "demo_mastui_feed.mp4")
+        print(f"Copied demo_mastui_feed to {mastui_assets}")
+
+
 def main() -> None:
     print("Generating Espresso demo animations...")
     generate_steaming_espresso()
@@ -357,6 +534,7 @@ def main() -> None:
     generate_physics_confetti()
     generate_spring_oscillator()
     generate_colors_and_gradients()
+    generate_mastui_demo()
     print("\nAll animations successfully generated in assets/demos/!")
 
 

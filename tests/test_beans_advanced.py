@@ -394,6 +394,9 @@ class TestTimerAndStopwatchComponents(unittest.TestCase):
         timer_precise = Timer(timeout=5.5, interval=0.1, auto_start=False)
         self.assertEqual(timer_precise.view(), "00:05.5")
 
+        timer_tricky = Timer(timeout=5.8, interval=0.1, auto_start=False)
+        self.assertEqual(timer_tricky.view(), "00:05.8")
+
         timer_custom = Timer(
             timeout=10.0,
             auto_start=False,
@@ -410,9 +413,9 @@ class TestTimerAndStopwatchComponents(unittest.TestCase):
         self.assertIsNotNone(cmd)
         self.assertTrue(sw.running)
 
-        # Set simulated elapsed time
+        # Set simulated elapsed time while running (allow +1 hundredth for potential CI thread jitter)
         sw.set_elapsed(125.45)
-        self.assertEqual(sw.view(), "02:05.45")
+        self.assertIn(sw.view(), ("02:05.45", "02:05.46"))
 
         # Update with tick produces next tick command
         _, next_cmd = sw.update(StopwatchTickMsg(tag="test_sw", id=sw._tick_id))
@@ -422,6 +425,14 @@ class TestTimerAndStopwatchComponents(unittest.TestCase):
         sw.stop()
         self.assertFalse(sw.running)
         self.assertAlmostEqual(sw.elapsed, 125.45, delta=0.1)
+
+        # Verify exact view formatting when stopped (including tricky float representations)
+        sw.set_elapsed(125.45)
+        self.assertEqual(sw.view(), "02:05.45")
+        sw.set_elapsed(125.57)
+        self.assertEqual(sw.view(), "02:05.57")
+        sw.set_elapsed(125.58)
+        self.assertEqual(sw.view(), "02:05.58")
 
         # Reset
         sw.reset()

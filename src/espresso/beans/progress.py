@@ -46,7 +46,7 @@ class Progress(Model):
 
     def view(self) -> str:
         """Render the styled progress bar with filled, empty, and optional percentage cells."""
-        pct_text = f" {int(self.percent * 100):3d}%" if self.show_percentage else ""
+        pct_text = f" {int(round(self.percent * 100)):3d}%" if self.show_percentage else ""
         bar_width = max(1, self.width - len(pct_text))
 
         filled_cells = int(round(bar_width * self.percent))

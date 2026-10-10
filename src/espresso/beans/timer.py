@@ -153,16 +153,26 @@ class Timer(Model):
             formatted = self.format_fn(self.remaining)
         else:
             total_sec = max(0.0, self.remaining)
-            hours = int(total_sec) // 3600
-            minutes = (int(total_sec) % 3600) // 60
-            seconds = int(total_sec) % 60
-            tenths = int((total_sec - int(total_sec)) * 10)
-            if hours > 0:
-                base = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-            else:
-                base = f"{minutes:02d}:{seconds:02d}"
             if self.interval < 1.0:
-                base = f"{base}.{tenths:1d}"
+                total_tenths = int(round(total_sec * 10))
+                tenths = total_tenths % 10
+                total_seconds = total_tenths // 10
+                seconds = total_seconds % 60
+                minutes = (total_seconds // 60) % 60
+                hours = total_seconds // 3600
+                if hours > 0:
+                    base = f"{hours:02d}:{minutes:02d}:{seconds:02d}.{tenths:1d}"
+                else:
+                    base = f"{minutes:02d}:{seconds:02d}.{tenths:1d}"
+            else:
+                total_seconds = int(round(total_sec))
+                seconds = total_seconds % 60
+                minutes = (total_seconds // 60) % 60
+                hours = total_seconds // 3600
+                if hours > 0:
+                    base = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                else:
+                    base = f"{minutes:02d}:{seconds:02d}"
             formatted = base
 
         if self.style is not None:
@@ -262,10 +272,12 @@ class Stopwatch(Model):
             formatted = self.format_fn(self.elapsed)
         else:
             total_sec = max(0.0, self.elapsed)
-            hours = int(total_sec) // 3600
-            minutes = (int(total_sec) % 3600) // 60
-            seconds = int(total_sec) % 60
-            hundredths = int((total_sec - int(total_sec)) * 100)
+            total_hundredths = int(round(total_sec * 100))
+            hundredths = total_hundredths % 100
+            total_seconds = total_hundredths // 100
+            seconds = total_seconds % 60
+            minutes = (total_seconds // 60) % 60
+            hours = total_seconds // 3600
             if hours > 0:
                 base = f"{hours:02d}:{minutes:02d}:{seconds:02d}.{hundredths:02d}"
             else:
