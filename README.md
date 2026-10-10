@@ -21,6 +21,10 @@
        \_____________/
 ```
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kimusan/espresso/main/assets/demos/demo_steaming_espresso_3a.gif" alt="Espresso Steaming Coffee Cup (.3a Animation)" width="700" />
+</p>
+
 ---
 
 ## 🌟 Why Espresso?
@@ -135,6 +139,10 @@ wrapped = wrap_ansi(long_styled_text, width=60)
 banner = linear_gradient("Espresso TrueColor Gradient", "#FF5E3A", "#FF2A68")
 ```
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kimusan/espresso/main/assets/demos/demo_colors_and_gradients.gif" alt="Crema TrueColor Gradients and Box Model" width="700" />
+</p>
+
 ### Layout Primitives, Responsive Grid & Overlays
 Stack and stitch styled blocks side-by-side, vertically, in a proportional flex layout, or in a responsive multi-column grid:
 ```python
@@ -173,6 +181,10 @@ Espresso provides built-in mouse tracking (SGR 1006) with advanced gesture synth
 ## 🧩 Beans: Standard Component Library
 
 Espresso includes **43 ready-to-use building blocks** that follow the exact same TEA model:
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kimusan/espresso/main/assets/demos/demo_bbs_demoscene_ans.gif" alt="ArtPlayer BBS ANSImation" width="700" />
+</p>
 
 * **`ArtPlayer`**: Terminal art and animation player supporting modern `.3a` Animated ASCII Art and classic BBS `.ans` formats with frame playback controls, border framing, and lifecycle events (`AnimationDoneMsg`, `AnimationLoopMsg`).
 * **`VirtualList`**: High-performance virtualized list feed with variable-height items, reading anchor preservation, and lazy viewport slicing.

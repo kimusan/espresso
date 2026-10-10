@@ -1276,6 +1276,10 @@ The `Spring` component brings physics-driven motion and natural tactile feel to 
 $$m \cdot x''(t) + c \cdot x'(t) + k \cdot (x(t) - \text{target}) = 0$$
 This closed-form formulation is unconditionally stable and jitter-proof regardless of framerate or `sleep()` scheduling variances.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kimusan/espresso/main/assets/demos/demo_spring_oscillator.gif" alt="Spring Damped Harmonic Oscillator" width="700" />
+</p>
+
 ### Usage
 ```python
 from espresso.beans import Spring, SpringValue, SpringTickMsg
@@ -1323,6 +1327,10 @@ def view(self):
 ## 34. Confetti (2D Particle Emitter)
 
 The `Confetti` component provides celebratory visual particle effects for rewards, milestones, form completions, and release banners. Particles animate in 2D terminal coordinates under the influence of gravity, air drag, and velocity.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kimusan/espresso/main/assets/demos/demo_physics_confetti.gif" alt="Confetti 2D Particle Physics" width="700" />
+</p>
 
 ### Usage
 ```python
@@ -1709,6 +1717,14 @@ def view(self):
 ## 43. ArtPlayer
 
 The `ArtPlayer` component is an interactive terminal art and animation engine supporting modern **`.3a` Animated ASCII Art** and classic **BBS `.ans` ANSI Art** formats with frame playback controls, border framing, and TEA lifecycle messages.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kimusan/espresso/main/assets/demos/demo_steaming_espresso_3a.gif" alt="ArtPlayer Steaming Coffee Cup (.3a Animated ASCII)" width="700" />
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kimusan/espresso/main/assets/demos/demo_bbs_demoscene_ans.gif" alt="ArtPlayer BBS ANSImation (.ans Format)" width="700" />
+</p>
 
 ### Formats Supported
 1. **`.3a` Animated ASCII Art** (modern standard by `asciimoth/3a`):

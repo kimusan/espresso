@@ -52,6 +52,10 @@ def build_home_page() -> str:
 
 Built purely with the **Python standard library** (zero external dependencies), Espresso brings deterministic state transitions, rich TrueColor terminal styling, and a modular component ecosystem to Python developers.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kimusan/espresso/main/assets/demos/demo_steaming_espresso_3a.gif" alt="Espresso Steaming Coffee Cup" width="700" />
+</p>
+
 ---
 
 ## 📚 Table of Contents

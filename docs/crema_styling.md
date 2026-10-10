@@ -156,6 +156,10 @@ multiline_banner = linear_gradient("WELCOME\nTO\nESPRESSO", "#00E676", "#7D56F4"
 print(multiline_banner)
 ```
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kimusan/espresso/main/assets/demos/demo_colors_and_gradients.gif" alt="Crema TrueColor Linear Gradients and Box Model" width="700" />
+</p>
+
 ### `gradient(start_color, end_color, steps)`
 Generate a sequence of `TrueColor` steps for styling tables, progress bars, or charts:
 
