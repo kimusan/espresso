@@ -429,14 +429,14 @@ def generate_mastui_demo() -> None:
         durations.append(duration_ms)
 
     # 1. Initial State: Multi-column feed view
-    record_frame(650)
+    record_frame(700)
 
     # 2. Feed navigation: scroll down through home posts
     app.update(KeyMsg(key="j"))
-    record_frame(350)
+    record_frame(300)
 
     app.update(KeyMsg(key="j"))
-    record_frame(350)
+    record_frame(300)
 
     app.update(KeyMsg(key="k"))
     record_frame(250)
@@ -444,30 +444,26 @@ def generate_mastui_demo() -> None:
     app.update(KeyMsg(key="k"))
     record_frame(250)
 
-    # 3. Column switching (FlexBox layout)
+    # 3. Column switching across all 4 rich columns (FlexBox layout)
     app.update(KeyMsg(key="tab"))  # Switch to [2] Local
-    record_frame(450)
+    record_frame(380)
 
     app.update(KeyMsg(key="tab"))  # Switch to [3] Mentions
-    record_frame(400)
+    record_frame(380)
 
-    app.switch_timeline(0)  # Return to [1] Home
+    app.update(KeyMsg(key="tab"))  # Switch to [m] Messages
+    record_frame(380)
+
+    app.update(KeyMsg(key="tab"))  # Cycle back to [1] Home
     record_frame(350)
 
-    # 4. Instant Post Interaction: Like & Boost with celebratory confetti
+    # 4. Instant Post Interaction: Favourite post with toast confirmation
     app.update(KeyMsg(key="f"))  # Like
-    record_frame(400)
+    record_frame(450)
 
-    app.update(KeyMsg(key="b"))  # Boost triggers confetti and toast
-    record_frame(200)
-
-    for _ in range(3):
-        app.update(ConfettiTickMsg(tag=app.confetti.tag, active_particles=len(app.confetti.particles)))
-        record_frame(120)
-
-    # 5. Open Composer Modal (ModalStack with backdrop dimming)
+    # 5. Open Composer Modal (ModalStack with clean backdrop dimming, no confetti obstruction)
     app.update(KeyMsg(key="c"))
-    record_frame(450, title="mastui - compose toot")
+    record_frame(500, title="mastui - compose toot")
 
     # Typing phase 1
     composer = app.modal_stack.top_modal
@@ -480,7 +476,7 @@ def generate_mastui_demo() -> None:
         composer.text_area.set_value(
             "Brewing Mastui on top of Espresso TUI! ☕✨\nPure TEA architecture in Python."
         )
-    record_frame(550, title="mastui - compose toot")
+    record_frame(600, title="mastui - compose toot")
 
     # 6. Submit Toot
     app.update(
@@ -492,7 +488,7 @@ def generate_mastui_demo() -> None:
     )
     record_frame(300)
 
-    # Success: New toot prepended to timeline, toast popped, confetti burst
+    # Success: New toot prepended to timeline, toast popped, celebratory confetti fires
     new_post = {
         "id": "99999999",
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -507,13 +503,14 @@ def generate_mastui_demo() -> None:
     app.update(TootPostSuccessMsg(post=new_post, visibility="public"))
     record_frame(250)
 
-    # Confetti particle cascade
-    for _ in range(6):
+    # Fluid celebratory confetti physics cascade across the newly updated timeline
+    for _ in range(12):
         app.update(ConfettiTickMsg(tag=app.confetti.tag, active_particles=len(app.confetti.particles)))
-        record_frame(120)
+        record_frame(100)
 
-    # Rest frame before loop
-    record_frame(1100)
+    # Clean resting state before loop
+    app.confetti.particles.clear()
+    record_frame(1200)
 
     save_animation(frames, durations, "demo_mastui_feed")
 
