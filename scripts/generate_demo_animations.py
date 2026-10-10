@@ -27,7 +27,7 @@ if str(EXAMPLES_DIR) not in sys.path:
 from PIL import Image, ImageDraw, ImageFont
 from rich.style import Style
 from rich.text import Text
-from espresso.crema.width import char_width
+from espresso.crema.width import char_width, iter_graphemes, string_width
 
 FONT_REGULAR_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"
 FONT_BOLD_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
@@ -98,8 +98,7 @@ def render_ansi_to_image(
     max_cols = fixed_cols or 0
     if not fixed_cols:
         for l in lines:
-            t = Text.from_ansi(l)
-            c = sum(char_width(ch) for ch in t.plain)
+            c = string_width(l)
             if c > max_cols:
                 max_cols = c
 
@@ -131,30 +130,20 @@ def render_ansi_to_image(
         col_idx = 0
         y = PAD_TOP + row_idx * CHAR_H
         plain = t.plain
-        i = 0
-        while i < len(plain):
-            ch = plain[i]
-            # Check for variation selector (e.g. \ufe0f)
-            full_ch = ch
-            if i + 1 < len(plain) and plain[i + 1] == "\ufe0f":
-                full_ch = ch + "\ufe0f"
-                skip = 2
-            else:
-                skip = 1
+        char_pos = 0
 
-            cw = char_width(ch)
-            if cw == 0 and full_ch == ch:
-                i += 1
+        for cluster, cw in iter_graphemes(plain):
+            if cw == 0:
+                char_pos += len(cluster)
                 continue
 
-            eff_cw = max(cw, 1)
+            cell_pixel_w = cw * CHAR_W
             x = PAD_X + col_idx * CHAR_W
-            cell_pixel_w = eff_cw * CHAR_W
 
             # Look up style from Rich spans
             st = Style.null()
             for span in t.spans:
-                if span.start <= i < span.end:
+                if span.start <= char_pos < span.end:
                     st += span.style
 
             if st.bgcolor:
@@ -180,16 +169,16 @@ def render_ansi_to_image(
                 )
 
             # Check for color emoji glyph first
-            em_img = get_emoji_image(full_ch, cell_pixel_w, CHAR_H)
+            em_img = get_emoji_image(cluster, cell_pixel_w, CHAR_H)
             if em_img:
                 off_x = x + (cell_pixel_w - em_img.width) // 2
                 off_y = y + (CHAR_H - em_img.height) // 2
                 img.paste(em_img, (off_x, off_y), em_img)
-            elif ch != " ":
-                draw.text((x, y), ch, font=f, fill=fg_color)
+            elif cluster != " ":
+                draw.text((x, y), cluster, font=f, fill=fg_color)
 
-            col_idx += eff_cw
-            i += skip
+            col_idx += cw
+            char_pos += len(cluster)
 
     return img
 
