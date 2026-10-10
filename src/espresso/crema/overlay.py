@@ -56,7 +56,22 @@ def slice_ansi(line: str, start_col: int, end_col: Optional[int] = None, pad: bo
                         out.extend(active_codes)
                         has_opened_style = True
 
-                if end_col is not None and cur_col >= end_col:
+                # Straddles start_col (e.g. multi-cell emoji started before start_col)
+                if cur_col < start_col:
+                    rem = (cur_col + cw) - start_col
+                    if end_col is not None:
+                        rem = min(rem, end_col - start_col)
+                    out.append(" " * rem)
+                    cur_col += cw
+                    if end_col is not None and cur_col >= end_col:
+                        break
+                    continue
+
+                # Straddles or exceeds end_col (e.g. multi-cell emoji cannot fit within end_col)
+                if end_col is not None and cur_col + cw > end_col:
+                    if pad and cur_col < end_col:
+                        out.append(" " * (end_col - cur_col))
+                        cur_col = end_col
                     break
 
                 out.append(cluster)

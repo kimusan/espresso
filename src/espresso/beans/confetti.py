@@ -10,9 +10,9 @@ from enum import Enum
 from typing import Sequence
 
 from espresso.core.tea import Cmd, Model, Msg
-from espresso.crema.overlay import place_overlay, slice_ansi
+from espresso.crema.overlay import TOKEN_REGEX, place_overlay, slice_ansi
 from espresso.crema.style import Style
-from espresso.crema.width import string_width
+from espresso.crema.width import iter_graphemes, string_width
 
 
 class ConfettiMode(Enum):
@@ -216,6 +216,58 @@ class Confetti(Model):
 
         self.particles = alive
 
+    @staticmethod
+    def _overlay_line(line: str, row_particles: dict[int, str]) -> str:
+        """Composite particles onto a single line while preserving multi-cell character widths."""
+        cur_col = 0
+        active_codes: list[str] = []
+        out: list[str] = []
+        used_cols: set[int] = set()
+
+        for match in TOKEN_REGEX.finditer(line):
+            code = match.group(1)
+            text = match.group(2)
+            raw_esc = match.group(3)
+
+            if code:
+                if code in ("\x1b[0m", "\x1b[m"):
+                    active_codes.clear()
+                else:
+                    active_codes.append(code)
+                out.append(code)
+                continue
+
+            if raw_esc:
+                continue
+
+            if text:
+                for cluster, cw in iter_graphemes(text):
+                    cols = [cur_col + i for i in range(cw)]
+                    has_particle = any(c in row_particles for c in cols)
+                    if not has_particle:
+                        out.append(cluster)
+                    else:
+                        for c in cols:
+                            if c in row_particles:
+                                out.append(row_particles[c])
+                                used_cols.add(c)
+                            else:
+                                out.append(" ")
+                        if active_codes:
+                            out.extend(active_codes)
+                    cur_col += cw
+
+        # Any particles positioned beyond the line's rendered content
+        remaining_cols = [c for c in sorted(row_particles.keys()) if c not in used_cols and c >= cur_col]
+        for c in remaining_cols:
+            if c > cur_col:
+                out.append(" " * (c - cur_col))
+                cur_col = c
+            out.append(row_particles[c])
+            cur_col += 1
+
+        return "".join(out)
+
     def overlay(self, background: str) -> str:
         """Overlay active particles on top of a rendered background view string."""
         if not self.particles:
@@ -241,20 +293,7 @@ class Confetti(Model):
                 out_lines.append(line)
                 continue
 
-            current_line = line
-            # Sort columns descending to slice from right to left
-            for col in sorted(row_particles.keys(), reverse=True):
-                char_str = row_particles[col]
-                cw = string_width(current_line)
-                if col >= cw:
-                    pad_spaces = " " * (col - cw)
-                    current_line = f"{current_line}{pad_spaces}{char_str}"
-                else:
-                    left_part = slice_ansi(current_line, 0, col, pad=True)
-                    right_part = slice_ansi(current_line, col + 1)
-                    current_line = f"{left_part}{char_str}{right_part}"
-
-            out_lines.append(current_line)
+            out_lines.append(self._overlay_line(line, row_particles))
 
         return "\n".join(out_lines)
 

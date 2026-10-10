@@ -74,5 +74,66 @@ class TestConfetti(unittest.TestCase):
         self.assertEqual(len(lines), 8)
 
 
+    def test_overlay_preserves_multi_cell_emoji_width(self) -> None:
+        from espresso.beans.confetti import Particle
+        from espresso.crema.width import string_width
+
+        c = Confetti(width=40, height=5)
+        line = "│ [1] 🏠 Home  │ [2] 🏙️ Local  │"
+        orig_w = string_width(line)
+
+        # 🏙️ is at visual column 21 (spanning 21 and 22)
+        # Particle on first cell of emoji
+        c.particles = [Particle(21.0, 0.0, 0.0, 0.0, "*", "#FF007F", 10, 10)]
+        res_col21 = c.overlay(line)
+        self.assertEqual(string_width(res_col21), orig_w)
+        self.assertIn("*", strip_ansi(res_col21))
+        # Ensure right border didn't shift
+        self.assertTrue(strip_ansi(res_col21).endswith("│"))
+
+        # Particle on second cell of emoji
+        c.particles = [Particle(22.0, 0.0, 0.0, 0.0, "*", "#00E5FF", 10, 10)]
+        res_col22 = c.overlay(line)
+        self.assertEqual(string_width(res_col22), orig_w)
+        self.assertIn("*", strip_ansi(res_col22))
+        self.assertTrue(strip_ansi(res_col22).endswith("│"))
+
+        # Particles on both cells of emoji
+        c.particles = [
+            Particle(21.0, 0.0, 0.0, 0.0, "*", "#FF007F", 10, 10),
+            Particle(22.0, 0.0, 0.0, 0.0, "+", "#00E5FF", 10, 10),
+        ]
+        res_both = c.overlay(line)
+        self.assertEqual(string_width(res_both), orig_w)
+        self.assertIn("*+", strip_ansi(res_both))
+        self.assertTrue(strip_ansi(res_both).endswith("│"))
+
+        # Once particles are gone, emoji is completely restored
+        c.clear()
+        self.assertEqual(c.overlay(line), line)
+
+    def test_overlay_preserves_ansi_styling(self) -> None:
+        from espresso.beans.confetti import Particle
+        c = Confetti(width=40, height=5)
+        line = "\x1b[32mGreenStart \x1b[1mBoldMid\x1b[0m \x1b[34mBlueEnd\x1b[0m"
+        # Particle in middle of BoldMid (col 13)
+        c.particles = [Particle(13.0, 0.0, 0.0, 0.0, "*", "#FF007F", 10, 10)]
+        res = c.overlay(line)
+        # Should contain particle and BlueEnd should still have blue style
+        self.assertIn("*", strip_ansi(res))
+        self.assertIn("\x1b[34m", res)
+
+    def test_overlay_beyond_line_width(self) -> None:
+        from espresso.beans.confetti import Particle
+        from espresso.crema.width import string_width
+
+        c = Confetti(width=40, height=5)
+        line = "Short"
+        c.particles = [Particle(10.0, 0.0, 0.0, 0.0, "*", "#FF007F", 10, 10)]
+        res = c.overlay(line)
+        self.assertEqual(string_width(res), 11)
+        self.assertEqual(strip_ansi(res), "Short     *")
+
+
 if __name__ == "__main__":
     unittest.main()

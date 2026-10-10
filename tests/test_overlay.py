@@ -45,6 +45,28 @@ class TestSliceAnsi(unittest.TestCase):
         # Should carry the blue style from before col 4
         self.assertTrue(res.startswith("\x1b[34m"))
 
+    def test_slice_emoji_boundary_clamping(self) -> None:
+        from espresso.crema.width import string_width
+
+        text = "[2] 🏙️ Local"
+        # Visual columns: '['(0), '2'(1), ']'(2), ' '(3), '🏙️'(4..5), ' '(6), 'Local'(7..11)
+        # Slicing 0..5 (pad=False): 🏙️ spans 4..6 so it cannot fit in 0..5. Sliced text should be '[2] ' (w=4)
+        s1 = slice_ansi(text, 0, 5, pad=False)
+        self.assertEqual(string_width(s1), 4)
+        self.assertEqual(s1, "[2] ")
+
+        # Slicing 0..5 (pad=True): pads the 1 remaining cell with space to reach 5
+        s1_pad = slice_ansi(text, 0, 5, pad=True)
+        self.assertEqual(string_width(s1_pad), 5)
+        self.assertEqual(s1_pad, "[2]  ")
+
+        # Slicing starting at col 5 (straddling 🏙️): col 5 is the second cell of 🏙️.
+        # It replaces the straddling cell with space and continues with ' Local'
+        s2 = slice_ansi(text, 5)
+        self.assertEqual(string_width(s2), 7)
+        self.assertEqual(s2, "  Local")
+
+
 
 class TestPlaceOverlay(unittest.TestCase):
     def test_basic_overlay_coordinates(self) -> None:
