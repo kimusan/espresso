@@ -352,6 +352,32 @@ class TestRasterizerAndCanvas(unittest.TestCase):
         has_braille = any(any(ord(ch) >= 0x2800 for ch in l) for l in braille_lines)
         self.assertTrue(has_braille)
 
+    def test_half_block_silhouette_rendering(self) -> None:
+        """Verify that bottom-pixel-only cells emit ▄ without default foreground white blocks."""
+        # 4 pixels width, 2 pixels height (1 terminal row)
+        # Pixel 0: top colored, bot empty -> ▀ with FG
+        # Pixel 1: top empty, bot colored -> ▄ with FG (not default FG ▀)
+        # Pixel 2: both colored -> ▀ with FG and BG
+        # Pixel 3: both empty -> space
+        red = (255, 0, 0)
+        green = (0, 255, 0)
+        color_buf: list[tuple[int, int, int] | None] = [
+            red,  None, red,   None,  # top row (y=0)
+            None, green, green, None,  # bot row (y=1)
+        ]
+        lines = emit_half_block_canvas(color_buf, pixel_width=4, pixel_height=2)
+        self.assertEqual(len(lines), 1)
+        row_str = lines[0]
+
+        # Must not contain default FG reset immediately followed by ▀ (\x1b[39m▀)
+        self.assertNotIn("\x1b[39m▀", row_str)
+        # Must contain ▀ for top-only and both-colored
+        self.assertIn("▀", row_str)
+        # Must contain ▄ for bottom-only
+        self.assertIn("▄", row_str)
+        # The green color (0, 255, 0) should be applied as foreground for ▄
+        self.assertIn("38;2;0;255;0m▄", row_str)
+
 
 class TestMeshViewerComponent(unittest.TestCase):
     def test_initial_state_and_view(self) -> None:

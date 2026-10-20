@@ -36,6 +36,18 @@ class TestImageViewer(unittest.TestCase):
         self.assertIn("48;2;0;255;0", block)
         self.assertIn("▀", block)
 
+        # Top only
+        top_only = rgb_to_ansi_half_block(top, None)
+        self.assertIn("38;2;255;0;0", top_only)
+        self.assertIn("▀", top_only)
+        self.assertNotIn("48;2", top_only)
+
+        # Bottom only should use lower half block '▄' with foreground color
+        bot_only = rgb_to_ansi_half_block(None, bot)
+        self.assertIn("38;2;0;255;0", bot_only)
+        self.assertIn("▄", bot_only)
+        self.assertNotIn("48;2", bot_only)
+
     def test_ascii_luminance_ramp(self) -> None:
         white = (255, 255, 255)
         black = (0, 0, 0)

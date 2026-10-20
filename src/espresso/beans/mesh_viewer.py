@@ -1090,7 +1090,7 @@ def emit_half_block_canvas(
     pixel_width: int,
     pixel_height: int,
 ) -> list[str]:
-    """Convert RGB color buffer into ANSI 24-bit half-block lines (▀)."""
+    """Convert RGB color buffer into ANSI 24-bit half-block lines (▀ and ▄)."""
     lines: list[str] = []
     term_rows = pixel_height // 2
 
@@ -1114,23 +1114,32 @@ def emit_half_block_canvas(
                 line_parts.append(" ")
                 continue
 
-            # Upper pixel = FG, Lower pixel = BG
-            frag = []
-            if top_c != cur_fg:
-                if top_c is not None:
-                    frag.append(f"\x1b[38;2;{top_c[0]};{top_c[1]};{top_c[2]}m")
-                else:
-                    frag.append("\x1b[39m")
-                cur_fg = top_c
+            if top_c is not None and bot_c is not None:
+                char = "▀"
+                target_fg = top_c
+                target_bg = bot_c
+            elif top_c is not None:
+                char = "▀"
+                target_fg = top_c
+                target_bg = None
+            else:
+                char = "▄"
+                target_fg = bot_c
+                target_bg = None
 
-            if bot_c != cur_bg:
-                if bot_c is not None:
-                    frag.append(f"\x1b[48;2;{bot_c[0]};{bot_c[1]};{bot_c[2]}m")
+            frag: list[str] = []
+            if target_fg != cur_fg:
+                frag.append(f"\x1b[38;2;{target_fg[0]};{target_fg[1]};{target_fg[2]}m")
+                cur_fg = target_fg
+
+            if target_bg != cur_bg:
+                if target_bg is not None:
+                    frag.append(f"\x1b[48;2;{target_bg[0]};{target_bg[1]};{target_bg[2]}m")
                 else:
                     frag.append("\x1b[49m")
-                cur_bg = bot_c
+                cur_bg = target_bg
 
-            frag.append("▀")
+            frag.append(char)
             line_parts.append("".join(frag))
 
         if cur_fg is not None or cur_bg is not None:

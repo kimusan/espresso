@@ -141,7 +141,7 @@ def rgb_to_ansi_half_block(
         return f"{fg_part}▀\x1b[0m"
     else:
         # Only bottom pixel present
-        return f"{bg_part} \x1b[0m"
+        return f"\x1b[38;2;{bot_rgb[0]};{bot_rgb[1]};{bot_rgb[2]}m▄\x1b[0m"
 
 
 def rgb_to_ascii(rgb: tuple[int, int, int]) -> str:
