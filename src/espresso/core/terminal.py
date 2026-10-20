@@ -26,6 +26,8 @@ ENABLE_MOUSE_SGR = f"{CSI}?1000h{CSI}?1002h{CSI}?1006h"
 DISABLE_MOUSE_SGR = f"{CSI}?1000l{CSI}?1002l{CSI}?1006l"
 ENABLE_BRACKETED_PASTE = f"{CSI}?2004h"
 DISABLE_BRACKETED_PASTE = f"{CSI}?2004l"
+BEGIN_SYNC_UPDATE = f"{CSI}?2026h"
+END_SYNC_UPDATE = f"{CSI}?2026l"
 
 
 
@@ -140,7 +142,7 @@ class TerminalDriver:
         if not self._is_tty:
             return
 
-        out = [SHOW_CURSOR, DISABLE_MOUSE_SGR, DISABLE_BRACKETED_PASTE]
+        out = [SHOW_CURSOR, DISABLE_MOUSE_SGR, DISABLE_BRACKETED_PASTE, END_SYNC_UPDATE]
         if self.alt_screen:
             out.append(EXIT_ALT_SCREEN)
 

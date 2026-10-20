@@ -27,9 +27,12 @@ from espresso.core.tea import (
     quit_app,
 )
 from espresso.core.terminal import (
+    BEGIN_SYNC_UPDATE,
     CLEAR_LINE,
+    CLEAR_TO_EOL,
     CURSOR_TO_COL,
     CURSOR_UP,
+    END_SYNC_UPDATE,
     TerminalDriver,
 )
 from espresso.crema.width import string_width, truncate_ansi
@@ -330,7 +333,7 @@ class Program:
     def _render(self, view_content: str) -> None:
         """Render view content to the terminal output stream."""
         new_lines = view_content.splitlines()
-        buf = []
+        buf = [BEGIN_SYNC_UPDATE]
 
         if self.alt_screen:
             # Clamp rendered lines to terminal size to prevent terminal scrolling and auto-wrap spillover
@@ -358,10 +361,16 @@ class Program:
                     if old_line == new_line:
                         continue
 
-                    # Direct cursor jump to row (1-indexed), clear line, and write new_line
-                    buf.append(f"\x1b[{row_idx + 1};1H\x1b[2K")
+                    # Direct cursor jump to row (1-indexed)
                     if new_line is not None:
-                        buf.append(new_line)
+                        # Overwrite characters in-place without blanking the line first, then clear leftover tail to EOL
+                        buf.append(f"\x1b[{row_idx + 1};1H{new_line}{CLEAR_TO_EOL}")
+                    else:
+                        # Row was deleted; clear entire line
+                        buf.append(f"\x1b[{row_idx + 1};1H{CLEAR_LINE}")
+
+            # Park cursor at home position to avoid visible wandering cursor during repaint
+            buf.append("\x1b[H")
         else:
             # Inline mode: rewrite lines over the previously rendered block
             num_prev_lines = len(self._last_rendered_lines)
@@ -370,7 +379,7 @@ class Program:
             buf.append("\r")
 
             for i, line in enumerate(new_lines):
-                buf.append(f"\r\x1b[2K{line}")
+                buf.append(f"\r{line}{CLEAR_TO_EOL}")
                 if i < len(new_lines) - 1:
                     buf.append("\r\n")
 
@@ -378,11 +387,11 @@ class Program:
             if len(new_lines) < num_prev_lines:
                 extra = num_prev_lines - len(new_lines)
                 for _ in range(extra):
-                    buf.append("\r\n\x1b[2K")
+                    buf.append(f"\r\n{CLEAR_LINE}")
                 buf.append(CURSOR_UP(extra))
                 buf.append("\r")
 
-
+        buf.append(END_SYNC_UPDATE)
         self._last_rendered_lines = new_lines
         payload = "".join(buf)
 
