@@ -1027,21 +1027,35 @@ def view(self):
 
 ## 27. ImageViewer
 
-The `ImageViewer` component renders images and graphics in the terminal using 24-bit ANSI upper-half blocks (`▀`) and 10-step grayscale ASCII characters, inspired by `mistakenelf/teacup/image`. It provides pure Python standard library support for Netpbm PPM (`.ppm`), uncompressed 24-bit BMP (`.bmp`), and raw RGB pixel matrices, plus an optional Pillow bridge for PNG/JPEG when installed.
+The `ImageViewer` component renders images and graphics in the terminal using native hardware protocols (DEC Sixel and Kitty Graphics Protocol) alongside versatile cell-based rendering (24-bit ANSI upper-half blocks `▀`, Braille 2x4 dot matrices, and ASCII density ramps). It includes pure Python standard library codecs for DEC Sixel, Kitty APC, Netpbm PPM, and uncompressed BMP, automatic terminal capability detection, intelligent tmux multiplexer protection, and user controls to deselect hardware rendering.
 
 ### Usage
 ```python
-from espresso.beans import ImageViewer, RenderMode
+from espresso.beans import ImageViewer, TerminalGraphicsProtocol, RenderMode
 
-# 1. From raw RGB matrix:
+# 1. From raw RGB matrix with auto-detection:
 pixels = [
     [(255, 0, 0), (0, 255, 0)],
     [(0, 0, 255), (255, 255, 0)],
 ]
-viewer = ImageViewer(pixels=pixels, width=40, height=20, mode=RenderMode.HALF_BLOCK)
+viewer = ImageViewer(
+    pixels=pixels,
+    width=40,
+    height=20,
+    protocol=TerminalGraphicsProtocol.AUTO,
+    enable_native=True,  # Set to False to deselect hardware protocols
+)
 
-# 2. From file (PPM or BMP natively):
-# viewer = ImageViewer.from_file("assets/logo.ppm", width=60, height=30)
+# 2. From Sixel or Kitty data:
+# viewer = ImageViewer.from_sixel(raw_sixel_bytes, width=60, height=30)
+# viewer = ImageViewer.from_kitty(raw_kitty_apc_string, width=60, height=30)
+
+# 3. From file (PPM, BMP, Sixel, or Kitty natively):
+# viewer = ImageViewer.from_file("assets/diagram.sixel", width=60, height=30)
+
+# 4. Dynamic protocol switching or native toggle:
+# viewer.set_protocol(TerminalGraphicsProtocol.BRAILLE)
+# viewer.toggle_native()
 
 def update(self, msg):
     self.viewer, cmd = self.viewer.update(msg)
@@ -1052,11 +1066,14 @@ def view(self):
 ```
 
 ### Features & Formats
+- **Native Hardware Graphics (DEC Sixel & Kitty)**: Direct hardware pixel rasterization in supporting terminal emulators (Ghostty, WezTerm, Kitty, Foot, Contour, Mintty).
+- **Tmux Multiplexer Protection**: Detects tmux and screen sessions to prevent split-pane corruption and dropped escape sequences. Defaults safely to half-blocks inside multiplexers unless `allow_tmux_passthrough=True` is explicitly opted into with double-escape wrapping.
+- **Hardware Deselect Option**: Users can deselect native protocols at any time using `enable_native=False` or `viewer.toggle_native()`, forcing cell-based half-blocks or Braille.
+- **Braille 2x4 Dot Matrix**: Ultra-dense cell rendering using Unicode Braille characters (`U+2800` through `U+28FF`) providing 8 subpixels per character cell with truecolor foreground highlighting.
 - **24-bit ANSI Truecolor Half-Blocks**: Combines two vertical RGB pixels into a single `▀` character using foreground and background ANSI truecolor codes (`\x1b[38;2;R;G;Bm` + `\x1b[48;2;R;G;Bm`).
-- **ASCII Grayscale Mode**: 10-level luminance mapping ramp (` .:-=+*#%@`) for monochrome or non-truecolor terminals.
-- **Native Formats**: Supports Netpbm P3 (ASCII) and P6 (binary) PPM files, plus uncompressed 24-bit Windows BMP files with zero third-party dependencies.
+- **Pure Python Codecs**: Standalone standard library decoders and encoders for DEC Sixel (`decode_sixel`, `encode_sixel`), Kitty APC (`decode_kitty`, `encode_kitty`), Netpbm PPM (`parse_ppm`), and uncompressed 24-bit Windows BMP (`parse_bmp`).
 - **Optional Pillow Bridge**: Automatically loads PNG, JPEG, GIF, and WebP if `PIL` is installed in the environment.
-- **Viewport Navigation**: Arrow keys and mouse wheel scroll large images seamlessly.
+- **Viewport Navigation**: Arrow keys and mouse wheel scroll large images seamlessly within the viewport bounds.
 
 ---
 
@@ -1807,8 +1824,70 @@ def view(self):
   - `AnimationDoneMsg(tag, title)`: Emitted when non-looping animations finish.
   - `AnimationLoopMsg(tag, loop_count)`: Emitted on each cycle completion in looping mode.
 
+---
 
+## 39. MeshViewer
 
+The `MeshViewer` component is a pure Python software 3D rasterizer rendering polygon meshes and geometry directly into terminal character cells with zero external dependencies. It features a complete 4x4 matrix transformation pipeline (Model, LookAt View, Perspective Projection, Viewport), backface culling, z-buffering (depth buffer), and multiple shading and rasterization models.
 
+### Usage
+```python
+from espresso.beans import (
+    MeshViewer,
+    ShadingMode,
+    CanvasMode,
+    create_torus,
+    create_uv_sphere,
+)
 
+# 1. Procedural 3D Mesh:
+mesh = create_torus(major_r=1.2, minor_r=0.45, major_segments=24, minor_segments=16)
 
+# 2. Or load from external 3D file formats:
+# viewer = MeshViewer.from_file("models/teapot.obj", width=60, height=28)
+# viewer = MeshViewer.from_file("models/part.stl", width=60, height=28)
+# viewer = MeshViewer.from_file("models/scan.ply", width=60, height=28)
+# viewer = MeshViewer.from_file("models/character.glb", width=60, height=28)
+
+viewer = MeshViewer(
+    mesh=mesh,
+    width=64,
+    height=28,
+    shading=ShadingMode.GOURAUD,
+    canvas_mode=CanvasMode.HALF_BLOCK,
+    auto_spin=True,
+    spin_speed_y=1.5,
+    title="3D Torus Rasterizer",
+)
+
+def init(self):
+    return self.viewer.init()
+
+def update(self, msg):
+    self.viewer, cmd = self.viewer.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.viewer.view()
+```
+
+### Features & Formats
+- **Supported 3D Formats**: Wavefront OBJ (`.obj`), Stereolithography STL (`.stl` binary and ASCII), Stanford PLY (`.ply` binary and ASCII), and glTF 2.0 Binary (`.glb`) parsed natively in standard library Python.
+- **Procedural 3D Primitives**: Built-in parametric generators for `create_cube`, `create_uv_sphere`, `create_torus`, `create_cylinder`, and `create_pyramid`.
+- **Shading Modes**:
+  - `ShadingMode.FLAT`: Lambertian diffuse reflection with directional key lighting and ambient illumination.
+  - `ShadingMode.GOURAUD`: Smooth barycentric normal interpolation across triangle surfaces for curved specular highlights.
+  - `ShadingMode.WIREFRAME`: High-contrast vector edge drawing using Bresenham line rasterization.
+- **Canvas Rasterization Modes**:
+  - `CanvasMode.HALF_BLOCK`: 24-bit TrueColor upper-half blocks (`▀`) at 1x2 sub-pixels per terminal cell.
+  - `CanvasMode.BRAILLE`: Ultra-high-definition 2x4 dot matrix (`U+2800` through `U+28FF`) providing 8 subpixels per character cell, ideal for fine wireframes and curved profiles.
+- **Interactive Camera Controls**:
+  - `←` / `→` or `h` / `l`: Orbit camera around Y axis.
+  - `↑` / `↓` or `j` / `k`: Pitch camera around X axis.
+  - `+` / `=` or `-` / `_`: Zoom camera distance in and out.
+  - `[` / `]`: Roll camera along view axis.
+  - `s`: Cycle shading mode (Flat ⇄ Gouraud ⇄ Wireframe).
+  - `b`: Toggle canvas mode (Half-block ⇄ Braille).
+  - `Space`: Toggle continuous auto-rotation.
+  - `r`: Reset camera view to default orientation.
+  - Mouse dragging orbits the camera smoothly across azimuth and elevation.

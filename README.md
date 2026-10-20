@@ -180,12 +180,14 @@ Espresso provides built-in mouse tracking (SGR 1006) with advanced gesture synth
 
 ## 🧩 Beans: Standard Component Library
 
-Espresso includes **43 ready-to-use building blocks** that follow the exact same TEA model:
+Espresso includes **45 ready-to-use building blocks** that follow the exact same TEA model:
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/kimusan/espresso/main/assets/demos/demo_bbs_demoscene_ans.gif" alt="ArtPlayer BBS ANSImation" width="700" />
 </p>
 
+* **`MeshViewer`**: Pure Python software 3D rasterizer for OBJ, STL, PLY, and GLB models with Lambert and Gouraud shading, camera orbit, procedural primitives (cube, sphere, torus, cylinder, pyramid), 24-bit half-blocks, and ultra-HD Braille canvas.
+* **`ImageViewer`**: Terminal graphics viewer supporting native hardware protocols (DEC Sixel, Kitty Graphics Protocol) with automatic capability detection, intelligent tmux multiplexer protection, native deselect options, and versatile cell fallbacks (24-bit half-blocks `▀`, Braille 2x4 dot matrix, and ASCII density ramps).
 * **`ArtPlayer`**: Terminal art and animation player supporting modern `.3a` Animated ASCII Art and classic BBS `.ans` formats with frame playback controls, border framing, and lifecycle events (`AnimationDoneMsg`, `AnimationLoopMsg`).
 * **`VirtualList`**: High-performance virtualized list feed with variable-height items, reading anchor preservation, and lazy viewport slicing.
 * **`Accordion`**: Collapsible multi-panel container wrapping child beans with single-expand or multi-expand modes, Tab child focus cycling, and badges.
@@ -216,7 +218,6 @@ Espresso includes **43 ready-to-use building blocks** that follow the exact same
 * **`CodeViewer`**: Syntax-highlighted source code editor viewer (Python, JS, Go, Rust, SQL, JSON) with line numbers and themes.
 * **`QuickFix`**: Interactive diagnostics and code action list with severity badges (`ERROR`, `WARNING`, `INFO`).
 * **`DetailSelector`**: Master-detail dual-pane list selector with real-time preview panels and category filtering.
-* **`ImageViewer`**: Terminal ASCII and Unicode half-block TrueColor image renderer for BMP and PPM formats.
 * **`Splitter`**: Interactive dual-pane container (`Horizontal` / `Vertical`) with draggable divider bar and keyboard resizing.
 * **`Slider` & `RangeSlider`**: Tactile numeric sliders and dual-thumb range bars with mouse dragging.
 * **`Sparkline`**: High-resolution 2D Unicode Braille curves and 1D block charts with trend indicators.
@@ -275,6 +276,8 @@ Explore the interactive demos in `examples/`:
 | **14 Developer Workspace** | `espresso run 14` | Flagship IDE integrating GitTree, BarChart, CodeViewer, and CommandPalette |
 | **15 Accordion & ScrollView** | `espresso run 15` | Multi-panel collapsible accordion wrapping forms, tables, and scrollable logs |
 | **16 Art & Animation Player** | `espresso run 16` | Retro .3a and .ans player with CP437, progressive reveal, and confetti |
+| **17 3D Mesh Rasterizer** | `espresso run 17` | Software 3D rendering for OBJ/STL/PLY/GLB with Lambert/Gouraud shading & Braille |
+| **18 Terminal Image Protocols** | `espresso run 18` | DEC Sixel & Kitty Graphics Protocol, capability auto-detection, and tmux protection |
 
 ---
 

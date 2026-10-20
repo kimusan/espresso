@@ -65,7 +65,7 @@ Built purely with the **Python standard library** (zero external dependencies), 
 | **[[Getting Started\|Getting-Started]]** | Requirements, installation (`pip install espressoTUI`), standalone `.pyz` runner, first TEA application, and CLI commands. |
 | **[[The Elm Architecture\|The-Elm-Architecture]]** | Model-Update-View triad, `Cmd` async isolation, mouse gesture tracking, alt-screen line-diffing engine, and sub-model composition. |
 | **[[Crema Styling Guide\|Crema-Styling-Guide]]** | Declarative styles, TrueColor linear/multi-gradients, border titles, ANSI word wrapping, `FlexBox`, and responsive multi-column `Grid`. |
-| **[[Beans Component Catalog\|Beans-Component-Catalog]]** | Comprehensive reference for all 39 standard UI beans with full code examples, keyboard controls, and configuration options. |
+| **[[Beans Component Catalog\|Beans-Component-Catalog]]** | Comprehensive reference for all standard UI beans with full code examples, keyboard controls, and configuration options. |
 | **[[Release & Packaging\|Release-and-Packaging]]** | Package distribution formats (Wheel, sdist, universal zipapp, standalone native binaries), PyPI Trusted Publishing, and `./scripts/release.py`. |
 
 ---
@@ -76,15 +76,21 @@ Built purely with the **Python standard library** (zero external dependencies), 
 | :--- | :--- | :--- |
 | **`espresso`** | `bubbletea` | **The Strong Base**: Core TEA framework, runtime event loop, raw terminal driver, command primitives, flicker-free line-diffing alt-screen renderer, SGR mouse tracking, and desktop gesture engine (`MouseGestureTracker`). |
 | **`espresso.crema`** | `lipgloss` | **The Smooth Crema**: Declarative styling, box model, TrueColor (24-bit RGB), ANSI 256, borders, border titles, TrueColor linear gradients, ANSI word-wrapping, 2D layout alignment, `FlexBox`, and responsive `Grid`. |
-| **`espresso.beans`** | `bubbles` | **The Flavorful Beans**: 40 reusable UI components including TextArea, GitTree, CommandPalette, BarChart, Splitter, Sliders, Form, DiffViewer, SortableList, Confetti, CodeViewer, MarkdownViewer, MeshViewer, Tables, Viewports, and more. |
-| **`espresso` CLI** | — | **The Toolkit**: Standalone developer executable for listing built-in examples, launching the interactive gallery, running scripts, and scaffolding new applications. |
+| **`espresso.beans`** | `bubbles` | **The Flavorful Beans**: 45+ reusable UI components including MeshViewer (3D rasterizer), ImageViewer (Sixel & Kitty), TextArea, GitTree, CommandPalette, BarChart, Splitter, Sliders, Form, DiffViewer, SortableList, Confetti, CodeViewer, MarkdownViewer, Tables, Viewports, and more. |
+| **`espresso` CLI** | - | **The Toolkit**: Standalone developer executable for listing built-in examples, launching the interactive gallery, running scripts, and scaffolding new applications. |
 
 ---
 
-## 🧩 40 Standard UI Beans
+## 🧩 Standard UI Beans
 
 | Component | Description |
 | :--- | :--- |
+| **`MeshViewer`** | Pure Python software 3D rasterizer for OBJ, STL, PLY, and GLB with Lambert/Gouraud shading, TrueColor half-blocks (`▀`), and ultra-HD Braille (`⠟`) canvas. |
+| **`ImageViewer`** | Terminal graphics viewer supporting native hardware protocols (DEC Sixel, Kitty Graphics Protocol) with capability auto-detection, tmux protection, and cell fallbacks (half-blocks `▀`, Braille 2x4 dot matrix, ASCII ramps). |
+| **`ArtPlayer`** | Terminal art and animation player supporting modern `.3a` and classic BBS `.ans` formats with frame controls and lifecycle events. |
+| **`VirtualList`** | High-performance virtualized list feed with variable-height items, reading anchor preservation, and lazy viewport slicing. |
+| **`Accordion`** | Collapsible multi-panel container wrapping child beans with single-expand or multi-expand modes, Tab focus cycling, and badges. |
+| **`ScrollView`** | Scrollable container bean wrapping any child Model or text with interactive scrolling, vertical scrollbar rendering, and coordinate translation. |
 | **`Spinner`** | Animated activity indicators (`DOTS`, `LINE`, `PULSE`, `POINTS`, `COFFEE`, `GLOBE`, `MOON`). |
 | **`TextInput`** | Interactive text field with cursor blinking, navigation, and password masking. |
 | **`Progress`** | Smooth percentage progress bars with custom styles and dynamic width scaling. |
@@ -111,7 +117,6 @@ Built purely with the **Python standard library** (zero external dependencies), 
 | **`CodeViewer`** | Syntax-highlighted code viewer (Python, JS, Go, Rust, SQL, JSON) with cursor highlighting. |
 | **`QuickFix`** | Diagnostic bottom drawer for linter issues with severity badges and view compositing. |
 | **`DetailSelector`** | Dual-pane master-detail list selector with real-time preview panel. |
-| **`ImageViewer`** | Terminal graphics viewer rendering TrueColor half-blocks (`▀`) and ASCII grayscale. |
 | **`Splitter`** | Dual-pane container (`Left \| Right` or `Top / Bottom`) with draggable divider bar. |
 | **`Slider` / `RangeSlider`** | Direct-manipulation numeric slider and dual-thumb range bar with mouse dragging. |
 | **`Sparkline`** | High-resolution Unicode Braille curves (4× vertical resolution) and 1D block bars. |
@@ -124,7 +129,6 @@ Built purely with the **Python standard library** (zero external dependencies), 
 | **`CommandPalette`** | Spotlight search runner (`Ctrl+P` / `Cmd+P`) with recents tracking and modal overlay. |
 | **`GitTree`** | Collapsible Git file tree with status badges (`[M]`, `[A]`, `[D]`, `[?]`) and branch header. |
 | **`BarChart`** | Horizontal and vertical bar charts with sub-character precision and TrueColor gradients. |
-| **`MeshViewer`** | 3D software rasterizer for OBJ, STL, PLY, and GLB with Lambert/Gouraud shading, TrueColor half-blocks (`▀`), and ultra-HD Braille (`⠟`) canvas. |
 """
 
 
@@ -214,14 +218,15 @@ python3 app.py
 Espresso includes the `espresso` command-line utility for exploring examples and scaffolding new applications:
 
 ```bash
-# List all 14 interactive built-in example applications
+# List all 18 interactive built-in example applications
 espresso list
 
-# Run any example by ID (e.g. 14 for Developer Workspace)
+# Run any example by ID (e.g. 17 for 3D Mesh Rasterizer, 18 for Terminal Image Protocols)
+espresso run 18
+espresso run 17
 espresso run 14
-espresso run 08
 
-# Launch the interactive 39-component gallery
+# Launch the interactive component gallery
 espresso gallery
 
 # Scaffold a new TEA application with boilerplate ready to go

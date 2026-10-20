@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### 🚀 Features
+
+- **beans**: Implement native DEC Sixel and Kitty Graphics Protocol hardware rasterization in `ImageViewer` with automatic capability detection, pure Python standard library codecs (`decode_sixel`, `encode_sixel`, `decode_kitty`, `encode_kitty`), Braille 2x4 dot matrix canvas, and interactive native protocol deselection.
+- **core**: Add tmux multiplexer safety detection and transparent DCS passthrough wrapping (`wrap_tmux_passthrough`) to prevent split-pane graphics corruption and dropped escape sequences.
+- **beans**: Implement `MeshViewer` 3D software rasterizer supporting OBJ, STL, PLY, and GLB models with Lambert, Gouraud, and Wireframe shading, camera orbit/pan/zoom, procedural 3D primitives, 24-bit half-blocks, and ultra-HD Braille canvas.
+- **examples**: Add Example 17 (`17_3d_mesh_rasterizer.py`) demonstrating 3D teapot, torus, sphere, and cube models with real-time camera manipulation.
+- **examples**: Add Example 18 (`18_terminal_image_protocols.py`) demonstrating DEC Sixel, Kitty, half-block, and Braille graphics with live tmux detection and protocol cycling.
+- **docs**: Synchronize documentation, component catalog, and GitHub Wiki pages with `MeshViewer`, `ImageViewer` hardware protocols, and new interactive examples.
+
 ## [1.1.0](https://github.com/kimusan/espresso/compare/v1.0.0...v1.1.0) - 2026-10-09
 
 ### 🚀 Features
