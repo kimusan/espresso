@@ -73,6 +73,7 @@ from espresso.beans import (
     SelectPrompt,
     SelectSubmitMsg,
     StageStatus,
+    TerminalGraphicsProtocol,
     StatusBar,
     StatusSection,
     TabStyle,
@@ -990,10 +991,23 @@ class ComponentGallery(Model):
             cmds: list[Cmd] = []
             if isinstance(msg, KeyMsg):
                 if msg.key == "a":
-                    new_mode = RenderMode.ASCII if self.image_viewer.mode == RenderMode.HALF_BLOCK else RenderMode.HALF_BLOCK
-                    self.image_viewer.mode = new_mode
-                    self.image_viewer._rebuild_rendered()
-                    self.status_msg = f"ImageViewer render mode: {new_mode.value.upper()}"
+                    modes = [
+                        TerminalGraphicsProtocol.HALF_BLOCK,
+                        TerminalGraphicsProtocol.BRAILLE,
+                        TerminalGraphicsProtocol.ASCII,
+                        TerminalGraphicsProtocol.AUTO,
+                    ]
+                    curr_idx = modes.index(self.image_viewer.protocol) if self.image_viewer.protocol in modes else 0
+                    new_proto = modes[(curr_idx + 1) % len(modes)]
+                    self.image_viewer.set_protocol(new_proto)
+                    eff = self.image_viewer._resolve_protocol()
+                    self.status_msg = f"ImageViewer protocol: {new_proto.value.upper()} (effective: {eff.value.upper()})"
+                    return self, None
+                elif msg.key == "t":
+                    self.image_viewer.toggle_native()
+                    eff = self.image_viewer._resolve_protocol()
+                    state = "ENABLED" if self.image_viewer.enable_native else "DESELECTED"
+                    self.status_msg = f"Native graphics {state} (effective: {eff.value.upper()})"
                     return self, None
                 elif msg.key == "n":
                     advanced = False
@@ -1230,22 +1244,26 @@ class ComponentGallery(Model):
 
             # Right panel: ImageViewer + Info
             img_view = self.image_viewer.view()
-            mode_badge = "24-BIT HALF-BLOCK" if self.image_viewer.mode == RenderMode.HALF_BLOCK else "ASCII DENSITY"
+            eff = self.image_viewer._resolve_protocol()
+            nat_status = "ENABLED" if self.image_viewer.enable_native else "DESELECTED"
+            mode_badge = f"{self.image_viewer.protocol.value.upper()} (effective: {eff.value.upper()})"
             info_lines = [
                 img_view,
                 "",
                 f"{Style().bold(True).foreground('#FFA726').render('Terminal Graphics (ImageViewer):')}",
-                f"{Style().foreground('#8888AA').render('Renderer:')} {Style().bold(True).foreground('#00E5FF').render(mode_badge)}",
-                f"{Style().foreground('#8888AA').render('Formats:')} {Style().foreground('#00E676').render('Netpbm PPM, 24-bit BMP, RGB matrix, Pillow bridge')}",
+                f"{Style().foreground('#8888AA').render('Protocol:')} {Style().bold(True).foreground('#00E5FF').render(mode_badge)}",
+                f"{Style().foreground('#8888AA').render('Native Mode:')} {Style().foreground('#00E676').render(nat_status)}",
+                f"{Style().foreground('#8888AA').render('Formats:')} {Style().foreground('#00E676').render('DEC Sixel, Kitty APC, Netpbm PPM, 24-bit BMP, RGB matrix')}",
                 "",
                 f"{Style().bold(True).foreground('#FAFAFA').render('Hotkeys & Navigation:')}",
-                f"• {Style().foreground('#00E676').render('a')}: Toggle 24-bit Half-block (▀) ⇄ ASCII ramp",
+                f"• {Style().foreground('#00E676').render('a')}: Cycle Renderer (Half-block ⇄ Braille ⇄ ASCII ⇄ Auto)",
+                f"• {Style().foreground('#00E676').render('t')}: Toggle Native Protocol (Hardware vs Cell Deselect)",
                 f"• {Style().foreground('#00E676').render('n')}: Advance Pipeline stage",
                 f"• {Style().foreground('#00E676').render('r')}: Reset Pipeline execution",
                 f"• {Style().foreground('#00E676').render('↑ / ↓ or j / k')}: Navigate DetailSelector items",
                 f"• {Style().foreground('#00E676').render('Enter')}: Select DetailItem",
             ]
-            p_right = make_panel("🖼️ ANSI Half-Block ImageViewer", "\n".join(info_lines), w_right, content_h, border_fg="#FF4081")
+            p_right = make_panel("🖼️ Terminal ImageViewer", "\n".join(info_lines), w_right, content_h, border_fg="#FF4081")
             return p_left, p_right
 
         return "", ""

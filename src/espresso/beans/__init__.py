@@ -40,7 +40,21 @@ from espresso.beans.detail_selector import DetailItem, DetailSelectMsg, DetailSe
 from espresso.beans.dialog import Dialog, DialogResultMsg
 from espresso.beans.filepicker import FileEntry, FilePicker, FileSelectMsg, format_file_size
 from espresso.beans.help import Help, KeyBinding, KeyMap
-from espresso.beans.image import ImageViewer, RenderMode, parse_bmp, parse_ppm
+from espresso.beans.image import (
+    ImageViewer,
+    RenderMode,
+    TerminalGraphicsProtocol,
+    decode_kitty,
+    decode_sixel,
+    detect_terminal_graphics,
+    encode_kitty,
+    encode_sixel,
+    is_inside_tmux,
+    parse_bmp,
+    parse_ppm,
+    render_image_to_braille,
+    wrap_tmux_passthrough,
+)
 from espresso.beans.list import List, ListItem, ListSelectMsg, PaginationMode
 from espresso.beans.markdown import MarkdownViewer, render_markdown
 from espresso.beans.metric import (
@@ -287,8 +301,17 @@ __all__ = [
     # ImageViewer
     "ImageViewer",
     "RenderMode",
-    "parse_ppm",
+    "TerminalGraphicsProtocol",
+    "decode_kitty",
+    "decode_sixel",
+    "detect_terminal_graphics",
+    "encode_kitty",
+    "encode_sixel",
+    "is_inside_tmux",
     "parse_bmp",
+    "parse_ppm",
+    "render_image_to_braille",
+    "wrap_tmux_passthrough",
     # Splitter
     "Splitter",
     "SplitterOrientation",
