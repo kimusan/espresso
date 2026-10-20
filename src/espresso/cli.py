@@ -42,6 +42,7 @@ EXAMPLES = [
     ("14", "14_developer_workspace.py", "Flagship IDE with GitTree, BarChart, and CommandPalette"),
     ("15", "15_accordion_and_scrollview.py", "Accordion panel containers and scrollable ScrollView panes"),
     ("16", "16_ansi_and_3a_player.py", "Terminal art & animation player for .3a and classic .ans formats"),
+    ("17", "17_3d_mesh_rasterizer.py", "3D software rasterizer for OBJ/STL/PLY/GLB with Lambert/Gouraud shading and Braille canvas"),
 ]
 
 NEW_APP_TEMPLATE = '''"""Espresso TUI Application."""

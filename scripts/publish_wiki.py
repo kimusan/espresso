@@ -76,12 +76,12 @@ Built purely with the **Python standard library** (zero external dependencies), 
 | :--- | :--- | :--- |
 | **`espresso`** | `bubbletea` | **The Strong Base**: Core TEA framework, runtime event loop, raw terminal driver, command primitives, flicker-free line-diffing alt-screen renderer, SGR mouse tracking, and desktop gesture engine (`MouseGestureTracker`). |
 | **`espresso.crema`** | `lipgloss` | **The Smooth Crema**: Declarative styling, box model, TrueColor (24-bit RGB), ANSI 256, borders, border titles, TrueColor linear gradients, ANSI word-wrapping, 2D layout alignment, `FlexBox`, and responsive `Grid`. |
-| **`espresso.beans`** | `bubbles` | **The Flavorful Beans**: 39 reusable UI components including TextArea, GitTree, CommandPalette, BarChart, Splitter, Sliders, Form, DiffViewer, SortableList, Confetti, CodeViewer, MarkdownViewer, Tables, Viewports, and more. |
+| **`espresso.beans`** | `bubbles` | **The Flavorful Beans**: 40 reusable UI components including TextArea, GitTree, CommandPalette, BarChart, Splitter, Sliders, Form, DiffViewer, SortableList, Confetti, CodeViewer, MarkdownViewer, MeshViewer, Tables, Viewports, and more. |
 | **`espresso` CLI** | — | **The Toolkit**: Standalone developer executable for listing built-in examples, launching the interactive gallery, running scripts, and scaffolding new applications. |
 
 ---
 
-## 🧩 39 Standard UI Beans
+## 🧩 40 Standard UI Beans
 
 | Component | Description |
 | :--- | :--- |
@@ -124,6 +124,7 @@ Built purely with the **Python standard library** (zero external dependencies), 
 | **`CommandPalette`** | Spotlight search runner (`Ctrl+P` / `Cmd+P`) with recents tracking and modal overlay. |
 | **`GitTree`** | Collapsible Git file tree with status badges (`[M]`, `[A]`, `[D]`, `[?]`) and branch header. |
 | **`BarChart`** | Horizontal and vertical bar charts with sub-character precision and TrueColor gradients. |
+| **`MeshViewer`** | 3D software rasterizer for OBJ, STL, PLY, and GLB with Lambert/Gouraud shading, TrueColor half-blocks (`▀`), and ultra-HD Braille (`⠟`) canvas. |
 """
 
 

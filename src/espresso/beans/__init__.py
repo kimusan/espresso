@@ -151,6 +151,24 @@ from espresso.beans.art_player import (
     parse_3a,
     parse_ans,
 )
+from espresso.beans.mesh_viewer import (
+    CanvasMode,
+    MeshData,
+    MeshViewer,
+    MeshViewerTickMsg,
+    ShadingMode,
+    Triangle,
+    Vec3,
+    create_cube,
+    create_cylinder,
+    create_pyramid,
+    create_torus,
+    create_uv_sphere,
+    parse_glb,
+    parse_obj,
+    parse_ply,
+    parse_stl,
+)
 
 __all__ = [
     # Spinner
@@ -362,5 +380,22 @@ __all__ = [
     "AnimationLoopMsg",
     "parse_3a",
     "parse_ans",
+    # MeshViewer (3D Software Rasterizer)
+    "MeshViewer",
+    "MeshViewerTickMsg",
+    "MeshData",
+    "Triangle",
+    "Vec3",
+    "ShadingMode",
+    "CanvasMode",
+    "parse_obj",
+    "parse_stl",
+    "parse_ply",
+    "parse_glb",
+    "create_cube",
+    "create_uv_sphere",
+    "create_torus",
+    "create_pyramid",
+    "create_cylinder",
 ]
 
