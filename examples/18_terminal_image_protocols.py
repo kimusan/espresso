@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Example 18: Terminal Image Protocols and Sixel/Kitty Graphics.
 
 Demonstrates Espresso's ImageViewer with native terminal graphics protocols (DEC Sixel,
@@ -9,6 +10,11 @@ from __future__ import annotations
 
 import math
 import os
+import sys
+from pathlib import Path
+
+# Add src/ to sys.path so example runs directly
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from espresso import (
     Cmd,
