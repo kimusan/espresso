@@ -8,6 +8,7 @@ import struct
 import unittest
 
 from espresso.beans.mesh_viewer import (
+    DEFAULT_MESH_PALETTES,
     CanvasMode,
     Mat4,
     MeshData,
@@ -440,6 +441,13 @@ class TestMeshViewerComponent(unittest.TestCase):
         viewer, _ = viewer.update(KeyMsg("d"))
         self.assertFalse(viewer.dither)
 
+        # Toggle color palette ('p')
+        self.assertEqual(viewer.color_name, "Purple")
+        viewer, _ = viewer.update(KeyMsg("p"))
+        self.assertEqual(viewer.color_name, "Cyan")
+        viewer, _ = viewer.update(KeyMsg("p"))
+        self.assertEqual(viewer.color_name, "Emerald")
+
         # Orbit and Zoom keys
         old_yaw = viewer.yaw
         viewer, _ = viewer.update(KeyMsg("right"))
@@ -478,6 +486,45 @@ class TestMeshViewerComponent(unittest.TestCase):
         viewer, cmd = viewer.update(MeshViewerTickMsg(tag=viewer.tag))
         self.assertGreater(viewer.yaw, old_yaw)
         self.assertIsNotNone(cmd)
+
+    def test_color_palettes_and_custom_color(self) -> None:
+        # Default palette initialization
+        viewer = MeshViewer(width=40, height=14)
+        self.assertEqual(viewer.color_name, "Purple")
+        self.assertEqual(viewer.base_color, (145, 105, 255))
+
+        # Cycle through all default palettes and verify wrap-around
+        total_presets = len(DEFAULT_MESH_PALETTES)
+        for i in range(1, total_presets):
+            expected_name, expected_rgb = DEFAULT_MESH_PALETTES[i]
+            col = viewer.cycle_color()
+            self.assertEqual(col, expected_rgb)
+            self.assertEqual(viewer.color_name, expected_name)
+            self.assertEqual(viewer.base_color, expected_rgb)
+
+        # One more cycle should wrap back to Purple (index 0)
+        viewer.cycle_color()
+        self.assertEqual(viewer.color_name, "Purple")
+        self.assertEqual(viewer.base_color, (145, 105, 255))
+
+        # Test set_color with an existing preset color
+        viewer.set_color((0, 235, 255))  # Cyan
+        self.assertEqual(viewer.color_name, "Cyan")
+        self.assertEqual(viewer.base_color, (0, 235, 255))
+
+        # Test set_color with a custom RGB color
+        viewer.set_color((250, 120, 20), name="Tangerine")
+        self.assertEqual(viewer.color_name, "Tangerine")
+        self.assertEqual(viewer.base_color, (250, 120, 20))
+
+        # Test custom base_color in __init__
+        custom_viewer = MeshViewer(width=40, height=14, base_color=(10, 20, 30))
+        self.assertEqual(custom_viewer.color_name, "Custom")
+        self.assertEqual(custom_viewer.base_color, (10, 20, 30))
+        self.assertEqual(custom_viewer.palette_idx, 0)
+        # Cycling should move to the first built-in palette (Purple)
+        custom_viewer.cycle_color()
+        self.assertEqual(custom_viewer.color_name, "Purple")
 
 
 if __name__ == "__main__":

@@ -167,6 +167,7 @@ from espresso.beans.art_player import (
 )
 from espresso.beans.mesh_viewer import (
     CanvasMode,
+    DEFAULT_MESH_PALETTES,
     MeshData,
     MeshViewer,
     MeshViewerTickMsg,
@@ -406,6 +407,7 @@ __all__ = [
     # MeshViewer (3D Software Rasterizer)
     "MeshViewer",
     "MeshViewerTickMsg",
+    "DEFAULT_MESH_PALETTES",
     "MeshData",
     "Triangle",
     "Vec3",

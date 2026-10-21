@@ -268,30 +268,29 @@ class App3DModel(Model):
         else:
             res_info = "2x4 solid ⣿"
 
+        cr, cg, cb = self.viewer.base_color
+        color_bullet = Style().bold(True).foreground(f"#{cr:02x}{cg:02x}{cb:02x}").render(f"● {self.viewer.color_name}")
+
         info_lines = [
             f"\x1b[1m\x1b[35m◆ SHADING & CAMERA\x1b[0m",
             f"Mode:    {val_col.render(shading_name)}",
             f"Canvas:  {val_col.render(canvas_name)}",
+            f"Color:   {color_bullet}",
             f"Grid:    {dim_col.render(res_info)}",
-            f"Yaw:     {dim_col.render(f'{int(math.degrees(self.viewer.yaw)) % 360}°')}",
-            f"Pitch:   {dim_col.render(f'{int(math.degrees(self.viewer.pitch))}°')}",
-            f"Zoom:    {dim_col.render(f'{self.viewer.distance:.1f}x')}",
-            f"Triangles: {val_col.render(str(len(self.viewer.mesh.triangles)))}",
+            f"Angle:   {dim_col.render(f'{int(math.degrees(self.viewer.yaw)) % 360}° / {int(math.degrees(self.viewer.pitch))}°')}",
+            f"Zoom:    {dim_col.render(f'{self.viewer.distance:.1f}x')} {dim_col.render(f'(▲{len(self.viewer.mesh.triangles)})')}",
             f"Spin:    {'ON ⚡' if self.viewer.auto_spin else 'OFF ⏸'}",
-            "",
             f"\x1b[1m\x1b[35m◆ CONTROLS\x1b[0m",
-            f"{key_col.render('Space')}  Toggle auto-spin",
-            f"{key_col.render('M')}      Cycle shading",
-            f"{key_col.render('C')}      Toggle canvas",
+            f"{key_col.render('Space')}  Auto-spin",
+            f"{key_col.render('M / C')}  Shading / Canvas",
+            f"{key_col.render('P')}      Cycle color",
             f"{key_col.render('D')}      Toggle dither",
             f"{key_col.render('Arrows')} Orbit camera",
             f"{key_col.render('+ / -')}  Zoom in / out",
             f"{key_col.render('[ / ]')}  Roll view",
-            f"{key_col.render('R')}      Reset camera",
             f"{key_col.render('1 - 6')}  Switch model",
-            f"{key_col.render('B')}      Cycle border",
+            f"{key_col.render('R / B')}  Reset / Border",
             f"{key_col.render('Q')}      Quit",
-            "",
             dim_col.render("Drag mouse to orbit"),
             dim_col.render("Scroll wheel to zoom"),
         ]

@@ -858,6 +858,18 @@ BAYER_4X4 = [
     [15/16,  7/16, 13/16,  5/16],
 ]
 
+# High-contrast 24-bit TrueColor palettes designed for dark and light backgrounds
+DEFAULT_MESH_PALETTES: list[tuple[str, tuple[int, int, int]]] = [
+    ("Purple", (145, 105, 255)),   # Vibrant Signature Purple
+    ("Cyan", (0, 235, 255)),       # Electric Cyberpunk Cyan
+    ("Emerald", (0, 230, 118)),    # Vivid Neon Green
+    ("Amber", (255, 205, 60)),     # Warm Gold / Amber
+    ("Coral", (255, 85, 85)),      # Bright Coral Red
+    ("Hot Pink", (255, 75, 160)),  # Vivid Magenta / Pink
+    ("Sky Blue", (70, 160, 255)),  # Electric Sky Blue
+    ("White", (245, 245, 250)),    # Crisp Silver / White
+]
+
 
 # =============================================================================
 # Software 3D Rasterizer Engine
@@ -1265,7 +1277,8 @@ class MeshViewer(Model):
         height: int = 24,
         shading: ShadingMode = ShadingMode.GOURAUD,
         canvas_mode: CanvasMode = CanvasMode.HALF_BLOCK,
-        base_color: tuple[int, int, int] = (125, 86, 244),  # Signature Purple
+        base_color: tuple[int, int, int] = (145, 105, 255),  # Signature Purple
+        ambient: float = 0.28,
         auto_spin: bool = True,
         spin_speed: float = 2.5,
         title: str = "3D Mesh Viewer",
@@ -1278,12 +1291,22 @@ class MeshViewer(Model):
         self.shading = shading
         self.canvas_mode = canvas_mode
         self.base_color = base_color
+        self.ambient = ambient
         self.auto_spin = auto_spin
         self.spin_speed = spin_speed
         self.title = title
         self.border = border
         self.dither = dither
         self.tag = tag
+
+        # Color palette presets
+        self.palettes: list[tuple[str, tuple[int, int, int]]] = list(DEFAULT_MESH_PALETTES)
+        matched_idx = next((i for i, (_, c) in enumerate(self.palettes) if c == base_color), None)
+        if matched_idx is not None:
+            self.palette_idx = matched_idx
+        else:
+            self.palettes.insert(0, ("Custom", base_color))
+            self.palette_idx = 0
 
         # Camera & Transform state
         self.yaw = 0.65       # Orbit angle around Y axis
@@ -1311,6 +1334,29 @@ class MeshViewer(Model):
             create_cylinder,
         ]
         self.primitive_idx = 0
+
+    @property
+    def color_name(self) -> str:
+        """Return human-readable name of the active color preset."""
+        if 0 <= self.palette_idx < len(self.palettes):
+            return self.palettes[self.palette_idx][0]
+        return "Custom"
+
+    def cycle_color(self) -> tuple[int, int, int]:
+        """Cycle to the next built-in color preset and return the new RGB tuple."""
+        self.palette_idx = (self.palette_idx + 1) % len(self.palettes)
+        self.base_color = self.palettes[self.palette_idx][1]
+        return self.base_color
+
+    def set_color(self, color: tuple[int, int, int], name: str = "Custom") -> None:
+        """Set an explicit RGB base color for the mesh."""
+        self.base_color = color
+        for idx, (p_name, p_col) in enumerate(self.palettes):
+            if p_col == color:
+                self.palette_idx = idx
+                return
+        self.palettes.append((name, color))
+        self.palette_idx = len(self.palettes) - 1
 
     def load_mesh(self, mesh: MeshData) -> None:
         """Assign a new mesh to the viewer and normalize its scale."""
@@ -1378,6 +1424,11 @@ class MeshViewer(Model):
                 # Toggle Bayer dithering in Braille mode
                 case "d":
                     self.dither = not self.dither
+                    return self, None
+
+                # Cycle color palette preset
+                case "p" | "x":
+                    self.cycle_color()
                     return self, None
 
                 # Auto-spin toggle
@@ -1505,7 +1556,7 @@ class MeshViewer(Model):
         rasterizer = Rasterizer3D(
             pixel_width=pixel_w,
             pixel_height=pixel_h,
-            ambient=0.22,
+            ambient=self.ambient,
             base_color=self.base_color,
         )
         rasterizer.render_mesh(self.mesh, mvp, self.shading)
@@ -1541,8 +1592,8 @@ class MeshViewer(Model):
             if self.canvas_mode == CanvasMode.BRAILLE and self.dither:
                 mode_badge += " (DITHER)"
             poly_badge = f"▲ {len(self.mesh.triangles)} tris"
-            info_left = f" {mode_badge} ({poly_badge})"
-            info_right = f"yaw:{int(math.degrees(self.yaw)) % 360}° zoom:{self.distance:.1f}x [m:shading c:canvas d:dither space:spin] "
+            info_left = f" {mode_badge} ({poly_badge}) [{self.color_name}]"
+            info_right = f"yaw:{int(math.degrees(self.yaw)) % 360}° zoom:{self.distance:.1f}x [p:color m:shading c:canvas space:spin] "
 
             w_left = string_width(info_left)
             w_right = string_width(info_right)
