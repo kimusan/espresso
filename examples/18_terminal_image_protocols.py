@@ -37,9 +37,11 @@ from espresso.beans.image import (
     TerminalGraphicsProtocol,
     decode_sixel,
     detect_terminal_graphics,
+    detect_terminal_name,
     encode_kitty,
     encode_sixel,
     is_inside_tmux,
+    supports_graphics_protocol,
 )
 
 
@@ -106,7 +108,16 @@ class TerminalImageApp(Model):
                 next_proto = protocols[(idx + 1) % len(protocols)]
                 self.viewer.set_protocol(next_proto)
                 eff = self.viewer._resolve_protocol()
-                self.status = f"Protocol changed to {next_proto.value.upper()} (effective: {eff.value.upper()})"
+                supported = self.viewer.is_protocol_supported(eff)
+                host_term = detect_terminal_name()
+                if not supported and eff in (TerminalGraphicsProtocol.SIXEL, TerminalGraphicsProtocol.KITTY):
+                    if is_inside_tmux() and not self.viewer.allow_tmux_passthrough:
+                        reason = "requires tmux passthrough ('m')"
+                    else:
+                        reason = f"unsupported by host terminal {host_term}"
+                    self.status = f"Selected {next_proto.value.upper()} (Warning: {reason}; terminal will not render image)"
+                else:
+                    self.status = f"Protocol changed to {next_proto.value.upper()} (effective: {eff.value.upper()})"
                 return self, None
 
             case KeyMsg(key="t" | "T"):
@@ -135,7 +146,9 @@ class TerminalImageApp(Model):
     def view(self) -> str:
         eff = self.viewer._resolve_protocol()
         detected = detect_terminal_graphics(allow_tmux_passthrough=True)
+        host_term = detect_terminal_name()
         tmux_active = is_inside_tmux()
+        is_supported = self.viewer.is_protocol_supported(eff)
 
         header = (
             Style()
@@ -148,23 +161,61 @@ class TerminalImageApp(Model):
 
         left_view = self.viewer.view()
 
+        # Format effective protocol line with support status
+        if eff in (TerminalGraphicsProtocol.KITTY, TerminalGraphicsProtocol.SIXEL):
+            if is_supported:
+                eff_color = "#00FF66"
+                eff_label = eff.value.upper()
+            else:
+                eff_color = "#FF5252"
+                eff_label = f"{eff.value.upper()} ⚠️ (UNSUPPORTED BY {host_term.upper()})"
+        else:
+            eff_color = "#FFD700"
+            eff_label = eff.value.upper()
+
         info_box = [
             Style().bold(True).foreground("#00E5FF").render("Current Configuration:"),
             f"• Selected Protocol: {Style().bold(True).foreground('#FFFF00').render(self.viewer.protocol.value.upper())}",
-            f"• Effective Protocol: {Style().bold(True).foreground('#00FF66' if eff in (TerminalGraphicsProtocol.KITTY, TerminalGraphicsProtocol.SIXEL) else '#FFD700').render(eff.value.upper())}",
+            f"• Effective Protocol: {Style().bold(True).foreground(eff_color).render(eff_label)}",
             f"• Native Hardware: {Style().bold(True).render('Enabled' if self.viewer.enable_native else 'Deselected (Forced Cell)')}",
             "",
             Style().bold(True).foreground("#FF9100").render("Environment Detection:"),
-            f"• Detected Terminal: {Style().foreground('#00E5FF').render(f'{detected.value.upper()} (Host)' if tmux_active else detected.value.upper())}",
+            f"• Host Terminal: {Style().foreground('#00E5FF').render(host_term)}",
+            f"• Detected Protocol: {Style().foreground('#00E5FF').render(f'{detected.value.upper()} (Host)' if tmux_active else detected.value.upper())}",
             f"• Inside Tmux: {Style().foreground('#FF5252' if tmux_active else '#69F0AE').render('YES' if tmux_active else 'NO')}",
             f"• Tmux Passthrough: {Style().foreground('#69F0AE' if self.viewer.allow_tmux_passthrough else '#FFD700').render('ENABLED' if self.viewer.allow_tmux_passthrough else 'DISABLED (SAFE)')}",
+        ]
+
+        if not is_supported and eff in (TerminalGraphicsProtocol.SIXEL, TerminalGraphicsProtocol.KITTY):
+            info_box.extend([
+                "",
+                Style().bold(True).foreground("#FF5252").render("⚠️ Compatibility Note:"),
+            ])
+            if eff == TerminalGraphicsProtocol.SIXEL and host_term == "Ghostty":
+                info_box.extend([
+                    Style().foreground("#FF8A80").render("Ghostty intentionally does not implement DEC Sixel."),
+                    Style().foreground("#FF8A80").render("It implements Kitty graphics protocol exclusively."),
+                    Style().foreground("#FF8A80").render("Use Kitty ('p') or half-blocks for graphics."),
+                ])
+            elif is_inside_tmux() and not self.viewer.allow_tmux_passthrough:
+                info_box.extend([
+                    Style().foreground("#FF8A80").render("Hardware graphics require tmux passthrough."),
+                    Style().foreground("#FF8A80").render("Press 'm' to enable passthrough mode."),
+                ])
+            else:
+                info_box.extend([
+                    Style().foreground("#FF8A80").render(f"{eff.value.upper()} is not supported by {host_term}."),
+                    Style().foreground("#FF8A80").render("Use Kitty ('p') or half-blocks for graphics."),
+                ])
+
+        info_box.extend([
             "",
             Style().bold(True).foreground("#FFFFFF").render("Interactive Commands:"),
             f"• {Style().foreground('#69F0AE').render('p')}: Cycle Protocol (Auto ⇄ Kitty ⇄ Sixel ⇄ Half-block ⇄ Braille ⇄ ASCII)",
             f"• {Style().foreground('#69F0AE').render('t')}: Toggle Native Graphics (Deselect / Reselect)",
             f"• {Style().foreground('#69F0AE').render('m')}: Toggle Tmux Passthrough mode",
             f"• {Style().foreground('#FF5252').render('q')}: Quit Demo",
-        ]
+        ])
 
         right_panel = (
             Style()

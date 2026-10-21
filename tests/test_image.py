@@ -12,6 +12,7 @@ from espresso.beans.image import (
     decode_kitty,
     decode_sixel,
     detect_terminal_graphics,
+    detect_terminal_name,
     encode_kitty,
     encode_sixel,
     is_inside_tmux,
@@ -21,6 +22,7 @@ from espresso.beans.image import (
     rgb_to_ansi_half_block,
     rgb_to_ascii,
     scale_rgb_matrix,
+    supports_graphics_protocol,
     wrap_tmux_passthrough,
 )
 
@@ -364,6 +366,64 @@ class TestImageViewer(unittest.TestCase):
         # Next rebuild in Braille should not re-emit clear sequence
         viewer._rebuild_rendered()
         self.assertNotIn("a=d", viewer.viewport.lines[0])
+
+    def test_detect_terminal_name(self) -> None:
+        with unittest.mock.patch.dict("os.environ", {"GHOSTTY_RESOURCES_DIR": "/path/to/ghostty"}, clear=True):
+            self.assertEqual(detect_terminal_name(), "Ghostty")
+
+        with unittest.mock.patch.dict("os.environ", {"KITTY_WINDOW_ID": "1"}, clear=True):
+            self.assertEqual(detect_terminal_name(), "Kitty")
+
+        with unittest.mock.patch.dict("os.environ", {"WEZTERM_PANE": "1"}, clear=True):
+            self.assertEqual(detect_terminal_name(), "WezTerm")
+
+        with unittest.mock.patch.dict("os.environ", {"TERM_PROGRAM": "foot"}, clear=True):
+            self.assertEqual(detect_terminal_name(), "Foot")
+
+    def test_supports_graphics_protocol(self) -> None:
+        # Cell modes are always supported
+        self.assertTrue(supports_graphics_protocol(TerminalGraphicsProtocol.HALF_BLOCK))
+        self.assertTrue(supports_graphics_protocol(TerminalGraphicsProtocol.BRAILLE))
+        self.assertTrue(supports_graphics_protocol(TerminalGraphicsProtocol.ASCII))
+        self.assertTrue(supports_graphics_protocol(TerminalGraphicsProtocol.AUTO))
+
+        # In Ghostty terminal: Kitty is supported, Sixel is NOT supported
+        ghostty_env = {"GHOSTTY_RESOURCES_DIR": "/path/to/ghostty", "TERM_PROGRAM": "ghostty"}
+        with unittest.mock.patch.dict("os.environ", ghostty_env, clear=True):
+            self.assertTrue(supports_graphics_protocol(TerminalGraphicsProtocol.KITTY))
+            self.assertFalse(supports_graphics_protocol(TerminalGraphicsProtocol.SIXEL))
+
+        # In Foot terminal: Sixel is supported, Kitty is NOT supported
+        foot_env = {"TERM_PROGRAM": "foot"}
+        with unittest.mock.patch.dict("os.environ", foot_env, clear=True):
+            self.assertTrue(supports_graphics_protocol(TerminalGraphicsProtocol.SIXEL))
+            self.assertFalse(supports_graphics_protocol(TerminalGraphicsProtocol.KITTY))
+
+        # In WezTerm: Both Kitty and Sixel are supported
+        wezterm_env = {"WEZTERM_PANE": "1", "TERM_PROGRAM": "wezterm"}
+        with unittest.mock.patch.dict("os.environ", wezterm_env, clear=True):
+            self.assertTrue(supports_graphics_protocol(TerminalGraphicsProtocol.KITTY))
+            self.assertTrue(supports_graphics_protocol(TerminalGraphicsProtocol.SIXEL))
+
+        # Inside tmux without passthrough: native protocols return False
+        tmux_env = {"TMUX": "/tmp/tmux-1000/default,1,0", "GHOSTTY_RESOURCES_DIR": "1"}
+        with unittest.mock.patch.dict("os.environ", tmux_env, clear=True):
+            self.assertFalse(supports_graphics_protocol(TerminalGraphicsProtocol.KITTY, allow_tmux_passthrough=False))
+            self.assertFalse(supports_graphics_protocol(TerminalGraphicsProtocol.SIXEL, allow_tmux_passthrough=False))
+            # With passthrough enabled on Ghostty: Kitty is True, Sixel is False
+            self.assertTrue(supports_graphics_protocol(TerminalGraphicsProtocol.KITTY, allow_tmux_passthrough=True))
+            self.assertFalse(supports_graphics_protocol(TerminalGraphicsProtocol.SIXEL, allow_tmux_passthrough=True))
+
+    def test_image_viewer_is_protocol_supported(self) -> None:
+        pixels = [[(255, 0, 0)]]
+        ghostty_tmux_env = {"TMUX": "1", "GHOSTTY_RESOURCES_DIR": "1"}
+        with unittest.mock.patch.dict("os.environ", ghostty_tmux_env, clear=True):
+            viewer = ImageViewer(pixels=pixels, protocol=TerminalGraphicsProtocol.KITTY, allow_tmux_passthrough=False)
+            self.assertFalse(viewer.is_protocol_supported())
+
+            viewer.allow_tmux_passthrough = True
+            self.assertTrue(viewer.is_protocol_supported())
+            self.assertFalse(viewer.is_protocol_supported(TerminalGraphicsProtocol.SIXEL))
 
 
 if __name__ == "__main__":

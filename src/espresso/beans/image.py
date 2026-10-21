@@ -101,18 +101,19 @@ def detect_terminal_graphics(
 
     # Check for Kitty graphics support
     # Supported by Kitty, Ghostty, WezTerm
+    term_program = os.environ.get("TERM_PROGRAM", "").lower()
     if (
         os.environ.get("KITTY_WINDOW_ID")
         or os.environ.get("KITTY_PID")
         or os.environ.get("GHOSTTY_RESOURCES_DIR")
-        or os.environ.get("TERM_PROGRAM") in ("ghostty", "kitty", "WezTerm")
+        or term_program in ("ghostty", "kitty", "wezterm")
         or os.environ.get("TERM") == "xterm-kitty"
+        or "WEZTERM_PANE" in os.environ
     ):
         return TerminalGraphicsProtocol.KITTY
 
     # Check for Sixel graphics support
     # Supported by Foot, WezTerm, Contour, Mintty, mlterm, XTerm with sixel
-    term_program = os.environ.get("TERM_PROGRAM", "").lower()
     term = os.environ.get("TERM", "").lower()
 
     if term_program in ("foot", "contour", "mlterm", "mintty") or term.startswith(
@@ -122,6 +123,80 @@ def detect_terminal_graphics(
 
     # Fallback to universally supported half-block truecolor
     return TerminalGraphicsProtocol.HALF_BLOCK
+
+
+def detect_terminal_name() -> str:
+    """Return the human-readable name of the detected host terminal emulator."""
+    term_program = os.environ.get("TERM_PROGRAM", "")
+    term_program_lower = term_program.lower()
+    if os.environ.get("GHOSTTY_RESOURCES_DIR") or term_program_lower == "ghostty":
+        return "Ghostty"
+    if (
+        os.environ.get("KITTY_WINDOW_ID")
+        or os.environ.get("KITTY_PID")
+        or os.environ.get("TERM") == "xterm-kitty"
+        or term_program_lower == "kitty"
+    ):
+        return "Kitty"
+    if "WEZTERM_PANE" in os.environ or term_program_lower == "wezterm":
+        return "WezTerm"
+    if term_program_lower == "foot" or os.environ.get("TERM", "").lower().startswith("foot"):
+        return "Foot"
+    if term_program_lower == "contour":
+        return "Contour"
+    if term_program_lower == "mlterm" or os.environ.get("TERM", "").lower().startswith("mlterm"):
+        return "mlterm"
+    if term_program_lower == "mintty":
+        return "Mintty"
+    if term_program_lower == "alacritty" or os.environ.get("ALACRITTY_LOG") or os.environ.get("ALACRITTY_WINDOW_ID"):
+        return "Alacritty"
+    if term_program_lower == "iterm.app":
+        return "iTerm2"
+    if term_program_lower == "apple_terminal":
+        return "Apple Terminal"
+    if term_program:
+        return term_program
+    term = os.environ.get("TERM", "")
+    if term:
+        return term
+    return "Unknown"
+
+
+def supports_graphics_protocol(
+    protocol: TerminalGraphicsProtocol | RenderMode | str,
+    allow_tmux_passthrough: bool = False,
+) -> bool:
+    """Check if the current terminal environment supports the requested graphics protocol."""
+    if isinstance(protocol, str):
+        try:
+            protocol = TerminalGraphicsProtocol(protocol)
+        except ValueError:
+            return True
+    elif isinstance(protocol, RenderMode):
+        protocol = TerminalGraphicsProtocol(protocol.value)
+
+    if protocol in (
+        TerminalGraphicsProtocol.AUTO,
+        TerminalGraphicsProtocol.HALF_BLOCK,
+        TerminalGraphicsProtocol.BRAILLE,
+        TerminalGraphicsProtocol.ASCII,
+    ):
+        return True
+
+    if is_inside_tmux() and not allow_tmux_passthrough:
+        return False
+
+    detected = detect_terminal_graphics(allow_tmux_passthrough=True)
+    if protocol == TerminalGraphicsProtocol.KITTY:
+        return detected == TerminalGraphicsProtocol.KITTY
+
+    if protocol == TerminalGraphicsProtocol.SIXEL:
+        term_program = os.environ.get("TERM_PROGRAM", "").lower()
+        if term_program == "wezterm" or "WEZTERM_PANE" in os.environ:
+            return True
+        return detected == TerminalGraphicsProtocol.SIXEL
+
+    return False
 
 
 def rgb_to_ansi_half_block(
@@ -810,6 +885,11 @@ class ImageViewer(Model):
         if is_inside_tmux():
             return wrap_tmux_passthrough(seq)
         return seq
+
+    def is_protocol_supported(self, protocol: TerminalGraphicsProtocol | None = None) -> bool:
+        """Return True if the active (or specified) protocol is supported by current terminal hardware."""
+        p = protocol if protocol is not None else self.protocol
+        return supports_graphics_protocol(p, allow_tmux_passthrough=self.allow_tmux_passthrough)
 
     def set_size(self, width: int, height: int) -> None:
         """Update display dimensions and re-render."""
