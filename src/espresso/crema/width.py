@@ -10,8 +10,14 @@ from typing import Iterator
 
 from espresso.crema._cell_widths import CELL_WIDTHS
 
-# Matches all standard ANSI CSI, OSC, and 2-byte escape sequences
-ANSI_REGEX = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+# Matches all standard ANSI CSI, OSC, DCS (including tmux passthrough & Sixel), APC (Kitty), and 2-byte escape sequences
+ANSI_REGEX = re.compile(
+    r"\x1bP(?:[^\x1b]|\x1b\x1b|\x1b[^\x1b\x07\\])*?(?:\x1b\\|\x07)"  # DCS (including tmux passthrough and Sixel)
+    r"|\x1b[\]_X\^][\s\S]*?(?:\x1b\\|\x07)"                           # OSC, APC (Kitty graphics), SOS, PM
+    r"|\x1b\[[0-?]*[ -/]*[@-~]"                                        # CSI (Control Sequence Introducer)
+    r"|\x1b(?:[ -/]*[0-~])",                                           # 2-byte and intermediate Fe/Fs escape sequences
+    re.DOTALL,
+)
 
 # Set of BMP emojis that promote to 2 cells with VS16 or when rendered as emoji
 EMOJI_BMP_WIDE: set[int] = {

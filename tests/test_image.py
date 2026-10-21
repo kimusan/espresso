@@ -305,6 +305,48 @@ class TestImageViewer(unittest.TestCase):
         viewer.set_protocol(TerminalGraphicsProtocol.ASCII)
         self.assertIn("@", viewer.view())
 
+    def test_image_viewer_tmux_passthrough_toggle(self) -> None:
+        pixels = [[(255, 0, 0), (0, 255, 0)]]
+        viewer = ImageViewer(pixels=pixels, width=10, height=5, allow_tmux_passthrough=False)
+        self.assertFalse(viewer.allow_tmux_passthrough)
+
+        state = viewer.toggle_tmux_passthrough()
+        self.assertTrue(state)
+        self.assertTrue(viewer.allow_tmux_passthrough)
+
+        viewer.set_tmux_passthrough(False)
+        self.assertFalse(viewer.allow_tmux_passthrough)
+
+    def test_graphics_ansi_width_and_stripping(self) -> None:
+        from espresso.crema.width import string_width, strip_ansi, truncate_ansi
+
+        # Kitty graphics escape sequence
+        kitty_seq = "\x1b_Ga=T,f=24,s=2,v=1;QUJDREVGR0g=\x1b\\"
+        self.assertEqual(strip_ansi(kitty_seq), "")
+        self.assertEqual(string_width(kitty_seq), 0)
+
+        # Tmux wrapped Kitty sequence
+        tmux_kitty = wrap_tmux_passthrough(kitty_seq)
+        self.assertEqual(strip_ansi(tmux_kitty), "")
+        self.assertEqual(string_width(tmux_kitty), 0)
+
+        # Sixel graphics escape sequence
+        sixel_seq = '\x1bPq"1;1;10;10#0;2;0;0;0#0~-~-\x1b\\'
+        self.assertEqual(strip_ansi(sixel_seq), "")
+        self.assertEqual(string_width(sixel_seq), 0)
+
+        # Tmux wrapped Sixel sequence
+        tmux_sixel = wrap_tmux_passthrough(sixel_seq)
+        self.assertEqual(strip_ansi(tmux_sixel), "")
+        self.assertEqual(string_width(tmux_sixel), 0)
+
+        # Truncation must not damage preceding text or append spurious text
+        line = f"Start: {tmux_kitty} End"
+        self.assertEqual(string_width(line), 11)  # "Start: " (7) + "" (0) + " End" (4)
+        truncated = truncate_ansi(line, 15)
+        self.assertIn("\x1bPtmux;", truncated)
+        self.assertTrue(truncated.endswith("End"))
+
 
 if __name__ == "__main__":
     unittest.main()

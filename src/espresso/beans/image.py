@@ -790,6 +790,17 @@ class ImageViewer(Model):
         self.enable_native = not self.enable_native
         self._rebuild_rendered()
 
+    def toggle_tmux_passthrough(self) -> bool:
+        """Toggle tmux DCS passthrough mode and rebuild rendering."""
+        self.allow_tmux_passthrough = not self.allow_tmux_passthrough
+        self._rebuild_rendered()
+        return self.allow_tmux_passthrough
+
+    def set_tmux_passthrough(self, allowed: bool) -> None:
+        """Set tmux DCS passthrough mode and rebuild rendering."""
+        self.allow_tmux_passthrough = allowed
+        self._rebuild_rendered()
+
     def set_size(self, width: int, height: int) -> None:
         """Update display dimensions and re-render."""
         self.width = max(10, width)

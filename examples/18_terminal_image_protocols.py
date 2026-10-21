@@ -89,10 +89,10 @@ class TerminalImageApp(Model):
 
     def update(self, msg: Msg) -> tuple[Model, Cmd | None]:
         match msg:
-            case KeyMsg(key="q" | "ctrl+c"):
+            case KeyMsg(key="q" | "Q" | "ctrl+c"):
                 return self, quit_app()
 
-            case KeyMsg(key="p"):
+            case KeyMsg(key="p" | "P"):
                 protocols = [
                     TerminalGraphicsProtocol.AUTO,
                     TerminalGraphicsProtocol.KITTY,
@@ -108,19 +108,23 @@ class TerminalImageApp(Model):
                 self.status = f"Protocol changed to {next_proto.value.upper()} (effective: {eff.value.upper()})"
                 return self, None
 
-            case KeyMsg(key="t"):
+            case KeyMsg(key="t" | "T"):
                 self.viewer.toggle_native()
                 eff = self.viewer._resolve_protocol()
                 state = "ENABLED" if self.viewer.enable_native else "DESELECTED"
                 self.status = f"Native hardware graphics {state} (effective: {eff.value.upper()})"
                 return self, None
 
-            case KeyMsg(key="m"):
-                # Toggle tmux passthrough flag
-                self.viewer.allow_tmux_passthrough = not self.viewer.allow_tmux_passthrough
-                self.viewer._rebuild_rendered()
-                state = "ALLOWED" if self.viewer.allow_tmux_passthrough else "BLOCKED (safe fallback)"
-                self.status = f"Tmux passthrough is now {state}"
+            case KeyMsg(key="m" | "M"):
+                self.viewer.toggle_tmux_passthrough()
+                eff = self.viewer._resolve_protocol()
+                tmux_active = is_inside_tmux()
+                if not tmux_active:
+                    state = "ENABLED" if self.viewer.allow_tmux_passthrough else "DISABLED"
+                    self.status = f"Tmux passthrough is {state} (effective only inside tmux sessions; currently direct terminal)"
+                else:
+                    state = f"ENABLED (Effective: {eff.value.upper()})" if self.viewer.allow_tmux_passthrough else "DISABLED (Safe cell fallback)"
+                    self.status = f"Tmux passthrough is now {state}"
                 return self, None
 
             case _:
@@ -129,7 +133,7 @@ class TerminalImageApp(Model):
 
     def view(self) -> str:
         eff = self.viewer._resolve_protocol()
-        detected = detect_terminal_graphics()
+        detected = detect_terminal_graphics(allow_tmux_passthrough=True)
         tmux_active = is_inside_tmux()
 
         header = (
@@ -146,13 +150,13 @@ class TerminalImageApp(Model):
         info_box = [
             Style().bold(True).foreground("#00E5FF").render("Current Configuration:"),
             f"• Selected Protocol: {Style().bold(True).foreground('#FFFF00').render(self.viewer.protocol.value.upper())}",
-            f"• Effective Protocol: {Style().bold(True).foreground('#00FF66').render(eff.value.upper())}",
+            f"• Effective Protocol: {Style().bold(True).foreground('#00FF66' if eff in (TerminalGraphicsProtocol.KITTY, TerminalGraphicsProtocol.SIXEL) else '#FFD700').render(eff.value.upper())}",
             f"• Native Hardware: {Style().bold(True).render('Enabled' if self.viewer.enable_native else 'Deselected (Forced Cell)')}",
             "",
             Style().bold(True).foreground("#FF9100").render("Environment Detection:"),
-            f"• Detected Terminal: {Style().foreground('#00E5FF').render(detected.value.upper())}",
+            f"• Detected Terminal: {Style().foreground('#00E5FF').render(f'{detected.value.upper()} (Host)' if tmux_active else detected.value.upper())}",
             f"• Inside Tmux: {Style().foreground('#FF5252' if tmux_active else '#69F0AE').render('YES' if tmux_active else 'NO')}",
-            f"• Tmux Passthrough: {Style().foreground('#FFD700').render('ENABLED' if self.viewer.allow_tmux_passthrough else 'DISABLED (SAFE)')}",
+            f"• Tmux Passthrough: {Style().foreground('#69F0AE' if self.viewer.allow_tmux_passthrough else '#FFD700').render('ENABLED' if self.viewer.allow_tmux_passthrough else 'DISABLED (SAFE)')}",
             "",
             Style().bold(True).foreground("#FFFFFF").render("Interactive Commands:"),
             f"• {Style().foreground('#69F0AE').render('p')}: Cycle Protocol (Auto ⇄ Kitty ⇄ Sixel ⇄ Half-block ⇄ Braille ⇄ ASCII)",
