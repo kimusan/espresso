@@ -5,17 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.0](https://github.com/kimusan/espresso/compare/v1.1.0...v1.2.0) - 2026-10-21
 
 ### 🚀 Features
 
-- **beans**: Implement native DEC Sixel and Kitty Graphics Protocol hardware rasterization in `ImageViewer` with automatic capability detection, pure Python standard library codecs (`decode_sixel`, `encode_sixel`, `decode_kitty`, `encode_kitty`), Braille 2x4 dot matrix canvas, and interactive native protocol deselection.
-- **core**: Add tmux multiplexer safety detection and transparent DCS passthrough wrapping (`wrap_tmux_passthrough`) to prevent split-pane graphics corruption and dropped escape sequences.
-- **beans**: Implement `MeshViewer` 3D software rasterizer supporting OBJ, STL, PLY, and GLB models with Lambert, Gouraud, and Wireframe shading, camera orbit/pan/zoom, procedural 3D primitives, 24-bit half-blocks, and ultra-HD Braille canvas.
-- **examples**: Add Example 17 (`17_3d_mesh_rasterizer.py`) demonstrating 3D teapot, torus, sphere, and cube models with real-time camera manipulation.
-- **examples**: Add Example 18 (`18_terminal_image_protocols.py`) demonstrating DEC Sixel, Kitty, half-block, and Braille graphics with live tmux detection and protocol cycling.
-- **docs**: Synchronize documentation, component catalog, and GitHub Wiki pages with `MeshViewer`, `ImageViewer` hardware protocols, and new interactive examples.
+- **image**: Add terminal graphics compatibility detection and Ghostty compatibility indicators ([e621d82](https://github.com/kimusan/espresso/commit/e621d82))
+- **release**: Support replacing existing Unreleased changelog section ([855a665](https://github.com/kimusan/espresso/commit/855a665))
+- **examples**: Enable alternate screen mode for flicker-free double buffering in examples 16 and 18 ([e033f43](https://github.com/kimusan/espresso/commit/e033f43))
+- **mesh_viewer**: Add color palette presets and cycling support ([8861a2d](https://github.com/kimusan/espresso/commit/8861a2d))
+- **mesh_viewer**: Render solid surfaces with fully dotted braille characters ([6860bb1](https://github.com/kimusan/espresso/commit/6860bb1))
+- **renderer**: Implement terminal double buffering via DEC 2026 and in-place line diffing ([695024d](https://github.com/kimusan/espresso/commit/695024d))
+- **image**: Add Sixel and Kitty codecs, terminal graphics detection, and tmux protection ([0de3e0a](https://github.com/kimusan/espresso/commit/0de3e0a))
+- **beans**: Add MeshViewer software 3D rasterizer with Lambert/Gouraud shading and Braille canvas ([a52c8a7](https://github.com/kimusan/espresso/commit/a52c8a7))
 
+### 🐛 Bug Fixes
+
+- **image**: Clear Kitty graphics placements when switching protocols or disabling passthrough ([4be4cce](https://github.com/kimusan/espresso/commit/4be4cce))
+- **image**: Prevent tmux passthrough truncation and fix m key toggle in example 18 ([6c259c3](https://github.com/kimusan/espresso/commit/6c259c3))
+- **examples**: Add sys.path bootstrap to example 18 for direct execution ([669e939](https://github.com/kimusan/espresso/commit/669e939))
+- **mesh_viewer**: Eliminate white block artifacts along silhouette in half-block mode ([e0993e9](https://github.com/kimusan/espresso/commit/e0993e9))
+- **confetti**: Preserve visual alignment and multi-cell emoji widths during particle overlay ([54fd1c9](https://github.com/kimusan/espresso/commit/54fd1c9))
+- **demos**: Use iter_graphemes to ensure pixel-perfect border alignment for multi-byte emoji clusters ([97769c4](https://github.com/kimusan/espresso/commit/97769c4))
+- Resolve floating-point truncation in Stopwatch and Timer formatting ([7daff14](https://github.com/kimusan/espresso/commit/7daff14))
+
+### 📖 Documentation
+
+- Update documentation, component catalog, and wiki for MeshViewer and terminal image protocols ([bc55012](https://github.com/kimusan/espresso/commit/bc55012))
+- Embed interactive demo animations in README, docs, and wiki ([b0b5c28](https://github.com/kimusan/espresso/commit/b0b5c28))
+
+### 🛠️ Maintenance & Packaging
+
+- Regenerate mastui demo animation with full 4-column feed and clean modal flow ([1eac3ca](https://github.com/kimusan/espresso/commit/1eac3ca))
 ## [1.1.0](https://github.com/kimusan/espresso/compare/v1.0.0...v1.1.0) - 2026-10-09
 
 ### 🚀 Features
