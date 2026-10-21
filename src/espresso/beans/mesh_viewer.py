@@ -1155,8 +1155,15 @@ def emit_braille_canvas(
     pixel_width: int,
     pixel_height: int,
     is_wireframe: bool = False,
+    dither: bool = False,
 ) -> list[str]:
-    """Convert sub-pixel color buffer into Unicode Braille patterns (U+2800..U+28FF)."""
+    """Convert sub-pixel color buffer into Unicode Braille patterns (U+2800..U+28FF).
+
+    In solid mode (default dither=False), each occupied sub-pixel activates its
+    corresponding Braille dot, creating solid surfaces with fully dotted characters (⣿)
+    and sub-pixel edge contours, colored using 24-bit Truecolor.
+    When dither=True, Bayer ordered dithering is applied based on luminance.
+    """
     lines: list[str] = []
     term_cols = pixel_width // 2
     term_rows = pixel_height // 4
@@ -1193,15 +1200,15 @@ def emit_braille_canvas(
                 if px < pixel_width and py < pixel_height:
                     c = color_buffer[py * pixel_width + px]
                     if c is not None:
-                        if is_wireframe:
-                            # Direct wireframe dot
+                        if not dither or is_wireframe:
+                            # Solid surface or wireframe: activate dot for each occupied subpixel
                             mask |= bit
                             accum_r += c[0]
                             accum_g += c[1]
                             accum_b += c[2]
                             active_dots += 1
                         else:
-                            # Bayer dithered shading
+                            # Bayer dithered shading (optional monochrome/dither mode)
                             lum = (0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]) / 255.0
                             thresh = BAYER_4X4[py % 4][px % 4]
                             if lum > thresh:
@@ -1263,6 +1270,7 @@ class MeshViewer(Model):
         spin_speed: float = 2.5,
         title: str = "3D Mesh Viewer",
         border: Border | None = ROUNDED_BORDER,
+        dither: bool = False,
         tag: str = "mesh_viewer",
     ) -> None:
         self.width = max(20, width)
@@ -1274,6 +1282,7 @@ class MeshViewer(Model):
         self.spin_speed = spin_speed
         self.title = title
         self.border = border
+        self.dither = dither
         self.tag = tag
 
         # Camera & Transform state
@@ -1364,6 +1373,11 @@ class MeshViewer(Model):
                         self.canvas_mode = CanvasMode.BRAILLE
                     else:
                         self.canvas_mode = CanvasMode.HALF_BLOCK
+                    return self, None
+
+                # Toggle Bayer dithering in Braille mode
+                case "d":
+                    self.dither = not self.dither
                     return self, None
 
                 # Auto-spin toggle
@@ -1505,6 +1519,7 @@ class MeshViewer(Model):
                 pixel_w,
                 pixel_h,
                 is_wireframe=(self.shading == ShadingMode.WIREFRAME),
+                dither=self.dither,
             )
 
         # Pad or clip lines to inner_h
@@ -1523,9 +1538,11 @@ class MeshViewer(Model):
         # Stats and help overlay at the bottom
         if self.show_stats and len(lines) >= 2:
             mode_badge = f"{self.shading.value.upper()} | {self.canvas_mode.value.upper()}"
+            if self.canvas_mode == CanvasMode.BRAILLE and self.dither:
+                mode_badge += " (DITHER)"
             poly_badge = f"▲ {len(self.mesh.triangles)} tris"
             info_left = f" {mode_badge} ({poly_badge})"
-            info_right = f"yaw:{int(math.degrees(self.yaw)) % 360}° zoom:{self.distance:.1f}x [m:shading c:canvas space:spin] "
+            info_right = f"yaw:{int(math.degrees(self.yaw)) % 360}° zoom:{self.distance:.1f}x [m:shading c:canvas d:dither space:spin] "
 
             w_left = string_width(info_left)
             w_right = string_width(info_right)

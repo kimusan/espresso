@@ -352,6 +352,24 @@ class TestRasterizerAndCanvas(unittest.TestCase):
         has_braille = any(any(ord(ch) >= 0x2800 for ch in l) for l in braille_lines)
         self.assertTrue(has_braille)
 
+    def test_braille_solid_surface_rendering(self) -> None:
+        """Verify that solid surfaces emit fully-dotted Braille ⣿ characters in default mode."""
+        # 2x4 subpixels = 1 terminal character cell, all filled with red
+        red = (255, 0, 0)
+        solid_cell = [red] * 8
+        lines = emit_braille_canvas(solid_cell, pixel_width=2, pixel_height=4, is_wireframe=False, dither=False)
+        self.assertEqual(len(lines), 1)
+        # Should contain fully dotted character ⣿ (U+28FF)
+        self.assertIn("⣿", lines[0])
+
+        # Dither mode test: dark color with Bayer dither drops dots
+        dark_purple = (27, 18, 53)
+        dark_cell = [dark_purple] * 8
+        dithered_lines = emit_braille_canvas(dark_cell, pixel_width=2, pixel_height=4, is_wireframe=False, dither=True)
+        self.assertEqual(len(dithered_lines), 1)
+        # In dither mode with dark color, ⣿ should NOT be emitted
+        self.assertNotIn("⣿", dithered_lines[0])
+
     def test_half_block_silhouette_rendering(self) -> None:
         """Verify that bottom-pixel-only cells emit ▄ without default foreground white blocks."""
         # 4 pixels width, 2 pixels height (1 terminal row)
@@ -414,6 +432,13 @@ class TestMeshViewerComponent(unittest.TestCase):
         self.assertTrue(viewer.auto_spin)
         viewer, _ = viewer.update(KeyMsg("space"))
         self.assertFalse(viewer.auto_spin)
+
+        # Toggle dither mode ('d')
+        self.assertFalse(viewer.dither)
+        viewer, _ = viewer.update(KeyMsg("d"))
+        self.assertTrue(viewer.dither)
+        viewer, _ = viewer.update(KeyMsg("d"))
+        self.assertFalse(viewer.dither)
 
         # Orbit and Zoom keys
         old_yaw = viewer.yaw

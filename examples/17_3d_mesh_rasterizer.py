@@ -261,7 +261,12 @@ class App3DModel(Model):
 
         shading_name = self.viewer.shading.value.upper()
         canvas_name = self.viewer.canvas_mode.value.upper()
-        res_info = "1x2 sub-pixels" if self.viewer.canvas_mode == CanvasMode.HALF_BLOCK else "2x4 sub-pixels"
+        if self.viewer.canvas_mode == CanvasMode.HALF_BLOCK:
+            res_info = "1x2 sub-pixels"
+        elif self.viewer.dither:
+            res_info = "2x4 Bayer dither"
+        else:
+            res_info = "2x4 solid ⣿"
 
         info_lines = [
             f"\x1b[1m\x1b[35m◆ SHADING & CAMERA\x1b[0m",
@@ -278,6 +283,7 @@ class App3DModel(Model):
             f"{key_col.render('Space')}  Toggle auto-spin",
             f"{key_col.render('M')}      Cycle shading",
             f"{key_col.render('C')}      Toggle canvas",
+            f"{key_col.render('D')}      Toggle dither",
             f"{key_col.render('Arrows')} Orbit camera",
             f"{key_col.render('+ / -')}  Zoom in / out",
             f"{key_col.render('[ / ]')}  Roll view",
