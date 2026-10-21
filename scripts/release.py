@@ -344,6 +344,17 @@ def update_changelog_file(
             changelog_path.write_text(updated, encoding="utf-8")
         return
 
+    # If an [Unreleased] section exists, replace it cleanly with the new release entry
+    unreleased_re = re.compile(
+        r"^## \[Unreleased\].*?(?=(?:\n## \[|\Z))",
+        re.MULTILINE | re.DOTALL,
+    )
+    if unreleased_re.search(existing):
+        updated = unreleased_re.sub(new_entry.strip(), existing, count=1)
+        if not dry_run:
+            changelog_path.write_text(updated, encoding="utf-8")
+        return
+
     # Otherwise insert before the first ## [
     first_section = re.search(r"^## \[", existing, re.MULTILINE)
     if first_section:
