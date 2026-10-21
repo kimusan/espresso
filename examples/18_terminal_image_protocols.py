@@ -185,7 +185,7 @@ class TerminalImageApp(Model):
 
 def main() -> None:
     app = TerminalImageApp()
-    Program(app).run()
+    Program(app, alt_screen=True).run()
 
 
 if __name__ == "__main__":

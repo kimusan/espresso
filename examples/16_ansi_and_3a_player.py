@@ -411,7 +411,7 @@ class ArtPlayerDemo(Model):
 
 def main() -> None:
     app = ArtPlayerDemo()
-    Program(app).run()
+    Program(app, alt_screen=True).run()
 
 
 if __name__ == "__main__":
