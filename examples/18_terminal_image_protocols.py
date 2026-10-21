@@ -90,6 +90,7 @@ class TerminalImageApp(Model):
     def update(self, msg: Msg) -> tuple[Model, Cmd | None]:
         match msg:
             case KeyMsg(key="q" | "Q" | "ctrl+c"):
+                self.viewer.clear()
                 return self, quit_app()
 
             case KeyMsg(key="p" | "P"):

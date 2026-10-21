@@ -674,12 +674,15 @@ class ImageViewer(Model):
         protocol: TerminalGraphicsProtocol | RenderMode | str | None = None,
         enable_native: bool = True,
         allow_tmux_passthrough: bool = False,
+        image_id: int = 1,
         title: str = "Image Preview",
         show_border: bool = True,
     ) -> None:
         self.raw_matrix = pixels or []
         self.width = max(10, width)
         self.height = max(4, height)
+        self.image_id = image_id
+        self._has_kitty_placement = True
 
         # Allow mode or protocol argument interchangeably
         chosen_proto = protocol if protocol is not None else mode
@@ -801,6 +804,13 @@ class ImageViewer(Model):
         self.allow_tmux_passthrough = allowed
         self._rebuild_rendered()
 
+    def get_clear_sequence(self) -> str:
+        """Return escape sequence to delete Kitty graphics images from screen and cache."""
+        seq = f"\x1b_Ga=d,d=i,i={self.image_id}\x1b\\\x1b_Ga=d,d=a\x1b\\"
+        if is_inside_tmux():
+            return wrap_tmux_passthrough(seq)
+        return seq
+
     def set_size(self, width: int, height: int) -> None:
         """Update display dimensions and re-render."""
         self.width = max(10, width)
@@ -828,15 +838,19 @@ class ImageViewer(Model):
     def _rebuild_rendered(self) -> None:
         """Re-render pixel matrix into terminal viewport."""
         if not self.raw_matrix:
-            self.viewport.set_content("No image loaded")
+            clear_seq = self.get_clear_sequence() if self._has_kitty_placement else ""
+            self.viewport.set_content(clear_seq + "No image loaded")
+            self._has_kitty_placement = False
             return
 
         effective = self._resolve_protocol()
 
         if effective == TerminalGraphicsProtocol.KITTY:
-            seq = encode_kitty(self.raw_matrix, cols=self.width, rows=self.height)
+            clear_cmd = f"\x1b_Ga=d,d=i,i={self.image_id}\x1b\\\x1b_Ga=d,d=a\x1b\\"
+            seq = clear_cmd + encode_kitty(self.raw_matrix, cols=self.width, rows=self.height, image_id=self.image_id)
             if is_inside_tmux() and self.allow_tmux_passthrough:
                 seq = wrap_tmux_passthrough(seq)
+            self._has_kitty_placement = True
             # Pad rectangular lines so surrounding layout geometry and borders remain stable
             lines = [seq + (" " * self.width)] + [(" " * self.width) for _ in range(self.height - 1)]
             self.viewport.set_content("\n".join(lines))
@@ -846,20 +860,28 @@ class ImageViewer(Model):
             target_w = self.width * 8
             target_h = self.height * 16
             scaled = scale_rgb_matrix(self.raw_matrix, target_w, target_h)
-            seq = encode_sixel(scaled)
+            clear_seq = self.get_clear_sequence() if self._has_kitty_placement else ""
+            seq = clear_seq + encode_sixel(scaled)
             if is_inside_tmux() and self.allow_tmux_passthrough:
                 seq = wrap_tmux_passthrough(seq)
             lines = [seq + (" " * self.width)] + [(" " * self.width) for _ in range(self.height - 1)]
             self.viewport.set_content("\n".join(lines))
+            self._has_kitty_placement = False
 
         elif effective == TerminalGraphicsProtocol.BRAILLE:
             lines = render_image_to_braille(self.raw_matrix, width=self.width, height=self.height)
+            if lines and self._has_kitty_placement:
+                lines[0] = self.get_clear_sequence() + lines[0]
             self.viewport.set_content("\n".join(lines))
+            self._has_kitty_placement = False
 
         elif effective == TerminalGraphicsProtocol.ASCII:
             scaled = scale_rgb_matrix(self.raw_matrix, self.width, self.height)
             lines = render_image_to_lines(scaled, RenderMode.ASCII)
+            if lines and self._has_kitty_placement:
+                lines[0] = self.get_clear_sequence() + lines[0]
             self.viewport.set_content("\n".join(lines))
+            self._has_kitty_placement = False
 
         else:
             # Default HALF_BLOCK
@@ -867,12 +889,23 @@ class ImageViewer(Model):
             target_h = self.height * 2
             scaled = scale_rgb_matrix(self.raw_matrix, target_w, target_h)
             lines = render_image_to_lines(scaled, RenderMode.HALF_BLOCK)
+            if lines and self._has_kitty_placement:
+                lines[0] = self.get_clear_sequence() + lines[0]
             self.viewport.set_content("\n".join(lines))
+            self._has_kitty_placement = False
 
     def set_pixels(self, matrix: list[list[tuple[int, int, int]]]) -> None:
         """Set a new pixel matrix and re-render."""
         self.raw_matrix = matrix
         self._rebuild_rendered()
+
+    def clear(self) -> str:
+        """Clear the image from the viewport and return the escape sequence to delete Kitty graphics."""
+        self.raw_matrix = []
+        clear_seq = self.get_clear_sequence() if self._has_kitty_placement else ""
+        self.viewport.set_content(clear_seq)
+        self._has_kitty_placement = False
+        return clear_seq
 
     def init(self) -> Cmd | None:
         return None

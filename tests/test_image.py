@@ -347,6 +347,24 @@ class TestImageViewer(unittest.TestCase):
         self.assertIn("\x1bPtmux;", truncated)
         self.assertTrue(truncated.endswith("End"))
 
+    def test_image_viewer_kitty_placement_clearing(self) -> None:
+        pixels = [[(255, 0, 0), (0, 255, 0)]]
+        viewer = ImageViewer(pixels=pixels, width=10, height=5, protocol=TerminalGraphicsProtocol.KITTY, enable_native=True)
+
+        # In Kitty mode, initial lines have Kitty transmission and clear sequence
+        self.assertIn("a=T", viewer.viewport.lines[0])
+        self.assertIn("a=d", viewer.viewport.lines[0])
+        self.assertTrue(viewer._has_kitty_placement)
+
+        # Switch to Braille: should emit clear sequence on the transition frame
+        viewer.set_protocol(TerminalGraphicsProtocol.BRAILLE)
+        self.assertIn("a=d", viewer.viewport.lines[0])
+        self.assertFalse(viewer._has_kitty_placement)
+
+        # Next rebuild in Braille should not re-emit clear sequence
+        viewer._rebuild_rendered()
+        self.assertNotIn("a=d", viewer.viewport.lines[0])
+
 
 if __name__ == "__main__":
     unittest.main()
