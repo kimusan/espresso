@@ -267,6 +267,19 @@ class TestImageViewer(unittest.TestCase):
         viewer_kitty = ImageViewer.from_kitty(kitty_data, width=10, height=5, mode=RenderMode.HALF_BLOCK)
         self.assertEqual(viewer_kitty.raw_matrix, original)
 
+    def test_image_viewer_from_file(self) -> None:
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ppm_file = Path(tmpdir) / "test.ppm"
+            ppm_file.write_bytes(b"P3\n1 1\n255\n255 0 0\n")
+
+            viewer = ImageViewer.from_file(ppm_file, title="Custom Title")
+            self.assertEqual(viewer.title, "Custom Title")
+            self.assertEqual(len(viewer.raw_matrix), 1)
+            self.assertEqual(viewer.raw_matrix[0][0], (255, 0, 0))
+
     def test_image_viewer_native_deselection(self) -> None:
         pixels = [
             [(255, 0, 0), (0, 255, 0)],

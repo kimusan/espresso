@@ -68,23 +68,46 @@ def generate_plasma_matrix(w: int, h: int, t: float = 0.0) -> list[list[tuple[in
 class TerminalImageApp(Model):
     """Interactive demo of terminal image protocols."""
 
-    def __init__(self) -> None:
+    def __init__(self, image_path: str | Path | None = None) -> None:
         self.width = 80
         self.height = 24
         self.plasma_w = 48
         self.plasma_h = 32
         self.plasma = generate_plasma_matrix(self.plasma_w, self.plasma_h)
 
+        # Locate sample photo if available
+        repo_root = Path(__file__).resolve().parent.parent
+        default_asset = repo_root / "assets" / "sample_coffee.jpg"
+        if not default_asset.exists():
+            default_asset = repo_root / "assets" / "sample_coffee.ppm"
+
+        self.custom_path = Path(image_path) if image_path else None
+        self.showing_plasma = False
+
+        if self.custom_path and self.custom_path.exists():
+            self.loaded_image = ImageViewer.from_file(self.custom_path)
+            self.image_name = self.custom_path.name
+            pixels = self.loaded_image.raw_matrix
+        elif default_asset.exists():
+            self.loaded_image = ImageViewer.from_file(default_asset)
+            self.image_name = default_asset.name
+            pixels = self.loaded_image.raw_matrix
+        else:
+            self.loaded_image = None
+            self.image_name = "Synthetic Plasma Matrix"
+            self.showing_plasma = True
+            pixels = self.plasma
+
         # Initialize ImageViewer
         self.viewer = ImageViewer(
-            pixels=self.plasma,
+            pixels=pixels,
             width=36,
             height=14,
             protocol=TerminalGraphicsProtocol.AUTO,
             enable_native=True,
-            title="Terminal Graphics Demo",
+            title=f"Image: {self.image_name}",
         )
-        self.status = "Press 'p' to cycle protocol, 't' to toggle native graphics, 'q' to quit."
+        self.status = "Press 'p' to cycle protocol, 'i' to toggle photo/plasma, 't' to toggle native, 'q' to quit."
 
     def init(self) -> Cmd | None:
         return None
@@ -118,6 +141,21 @@ class TerminalImageApp(Model):
                     self.status = f"Selected {next_proto.value.upper()} (Warning: {reason}; terminal will not render image)"
                 else:
                     self.status = f"Protocol changed to {next_proto.value.upper()} (effective: {eff.value.upper()})"
+                return self, None
+
+            case KeyMsg(key="i" | "I"):
+                if self.loaded_image:
+                    self.showing_plasma = not self.showing_plasma
+                    if self.showing_plasma:
+                        self.viewer.set_pixels(self.plasma)
+                        self.viewer.title = "Synthetic Plasma Matrix"
+                        self.status = "Switched to Synthetic Plasma Generator ('i' to toggle photo)"
+                    else:
+                        self.viewer.set_pixels(self.loaded_image.raw_matrix)
+                        self.viewer.title = f"Image: {self.image_name}"
+                        self.status = f"Switched to photo: {self.image_name} ('i' to toggle plasma)"
+                else:
+                    self.status = "No photo asset found; displaying plasma generator."
                 return self, None
 
             case KeyMsg(key="t" | "T"):
@@ -173,8 +211,10 @@ class TerminalImageApp(Model):
             eff_color = "#FFD700"
             eff_label = eff.value.upper()
 
+        current_src = "Synthetic Plasma" if self.showing_plasma else self.image_name
         info_box = [
             Style().bold(True).foreground("#00E5FF").render("Current Configuration:"),
+            f"• Image Source: {Style().bold(True).foreground('#FFFFFF').render(current_src)}",
             f"• Selected Protocol: {Style().bold(True).foreground('#FFFF00').render(self.viewer.protocol.value.upper())}",
             f"• Effective Protocol: {Style().bold(True).foreground(eff_color).render(eff_label)}",
             f"• Native Hardware: {Style().bold(True).render('Enabled' if self.viewer.enable_native else 'Deselected (Forced Cell)')}",
@@ -212,6 +252,7 @@ class TerminalImageApp(Model):
             "",
             Style().bold(True).foreground("#FFFFFF").render("Interactive Commands:"),
             f"• {Style().foreground('#69F0AE').render('p')}: Cycle Protocol (Auto ⇄ Kitty ⇄ Sixel ⇄ Half-block ⇄ Braille ⇄ ASCII)",
+            f"• {Style().foreground('#69F0AE').render('i')}: Toggle Photo ⇄ Plasma Generator",
             f"• {Style().foreground('#69F0AE').render('t')}: Toggle Native Graphics (Deselect / Reselect)",
             f"• {Style().foreground('#69F0AE').render('m')}: Toggle Tmux Passthrough mode",
             f"• {Style().foreground('#FF5252').render('q')}: Quit Demo",
@@ -240,7 +281,8 @@ class TerminalImageApp(Model):
 
 
 def main() -> None:
-    app = TerminalImageApp()
+    img_arg = sys.argv[1] if len(sys.argv) > 1 else None
+    app = TerminalImageApp(image_path=img_arg)
     Program(app, alt_screen=True).run()
 
 

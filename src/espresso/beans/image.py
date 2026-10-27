@@ -811,14 +811,15 @@ class ImageViewer(Model):
         data = p.read_bytes()
         suffix = p.suffix.lower()
 
+        kwargs.setdefault("title", p.name)
         if suffix in (".ppm", ".pgm"):
-            return cls.from_ppm(data, title=p.name, **kwargs)
+            return cls.from_ppm(data, **kwargs)
         elif suffix == ".bmp":
-            return cls.from_bmp(data, title=p.name, **kwargs)
+            return cls.from_bmp(data, **kwargs)
         elif suffix in (".sixel", ".six"):
-            return cls.from_sixel(data, title=p.name, **kwargs)
+            return cls.from_sixel(data, **kwargs)
         elif suffix == ".kitty":
-            return cls.from_kitty(data, title=p.name, **kwargs)
+            return cls.from_kitty(data, **kwargs)
         else:
             # Try Pillow if available
             try:
@@ -835,7 +836,7 @@ class ImageViewer(Model):
                         row.append((rgb_bytes[idx], rgb_bytes[idx + 1], rgb_bytes[idx + 2]))
                         idx += 3
                     matrix.append(row)
-                return cls(pixels=matrix, title=p.name, **kwargs)
+                return cls(pixels=matrix, **kwargs)
             except ImportError:
                 raise ValueError(
                     f"Unsupported image format '{suffix}' without Pillow. "
