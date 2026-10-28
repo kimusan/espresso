@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0](https://github.com/kimusan/espresso/compare/v1.2.0...v1.3.0) - 2026-10-28
+
+### 🚀 Features
+
+- **beans**: Add MenuBar, MultiSplitter, Wizard, and CardList components ([5416b4c](https://github.com/kimusan/espresso/commit/5416b4c))
+- **examples**: Support loading actual image files and bundle coffee sample in example 18 ([37ac327](https://github.com/kimusan/espresso/commit/37ac327))
+
+### 🛠️ Maintenance & Packaging
+
+- Ignore generated release notes markdown files ([3617550](https://github.com/kimusan/espresso/commit/3617550))
+
 ## [1.2.0](https://github.com/kimusan/espresso/compare/v1.1.0...v1.2.0) - 2026-10-21
 
 ### 🚀 Features
