@@ -167,6 +167,32 @@ from espresso.beans.art_player import (
     parse_3a,
     parse_ans,
 )
+from espresso.beans.card_list import (
+    CardActivateMsg,
+    CardItem,
+    CardList,
+    CardSelectMsg,
+)
+from espresso.beans.menubar import (
+    MenuBar,
+    MenuCategory,
+    MenuCloseMsg,
+    MenuItem,
+    MenuOpenMsg,
+    MenuSelectMsg,
+)
+from espresso.beans.multi_splitter import (
+    MultiSplitter,
+    MultiSplitterResizeMsg,
+)
+from espresso.beans.wizard import (
+    Wizard,
+    WizardBackMsg,
+    WizardCancelMsg,
+    WizardCompleteMsg,
+    WizardNextMsg,
+    WizardStep,
+)
 from espresso.beans.mesh_viewer import (
     CanvasMode,
     DEFAULT_MESH_PALETTES,
@@ -399,6 +425,28 @@ __all__ = [
     "AccordionItem",
     "AccordionToggleMsg",
     "AccordionSelectMsg",
+    # MenuBar
+    "MenuBar",
+    "MenuItem",
+    "MenuCategory",
+    "MenuSelectMsg",
+    "MenuOpenMsg",
+    "MenuCloseMsg",
+    # MultiSplitter
+    "MultiSplitter",
+    "MultiSplitterResizeMsg",
+    # Wizard
+    "Wizard",
+    "WizardStep",
+    "WizardNextMsg",
+    "WizardBackMsg",
+    "WizardCompleteMsg",
+    "WizardCancelMsg",
+    # CardList
+    "CardList",
+    "CardItem",
+    "CardSelectMsg",
+    "CardActivateMsg",
     # ArtPlayer
     "ArtPlayer",
     "ArtAnimation",

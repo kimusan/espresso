@@ -28,6 +28,32 @@ from espresso.core.tea import (
     tick,
 )
 from espresso import beans, crema
+from espresso.beans.card_list import (
+    CardActivateMsg,
+    CardItem,
+    CardList,
+    CardSelectMsg,
+)
+from espresso.beans.menubar import (
+    MenuBar,
+    MenuCategory,
+    MenuCloseMsg,
+    MenuItem,
+    MenuOpenMsg,
+    MenuSelectMsg,
+)
+from espresso.beans.multi_splitter import (
+    MultiSplitter,
+    MultiSplitterResizeMsg,
+)
+from espresso.beans.wizard import (
+    Wizard,
+    WizardBackMsg,
+    WizardCancelMsg,
+    WizardCompleteMsg,
+    WizardNextMsg,
+    WizardStep,
+)
 
 __version__ = "1.2.0"
 
@@ -56,6 +82,25 @@ __all__ = [
     "quit_app",
     "crema",
     "beans",
+    # Beans additions
+    "MenuBar",
+    "MenuItem",
+    "MenuCategory",
+    "MenuSelectMsg",
+    "MenuOpenMsg",
+    "MenuCloseMsg",
+    "MultiSplitter",
+    "MultiSplitterResizeMsg",
+    "Wizard",
+    "WizardStep",
+    "WizardNextMsg",
+    "WizardBackMsg",
+    "WizardCompleteMsg",
+    "WizardCancelMsg",
+    "CardList",
+    "CardItem",
+    "CardSelectMsg",
+    "CardActivateMsg",
 ]
 
 
