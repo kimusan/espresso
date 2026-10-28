@@ -46,7 +46,7 @@ Terminal applications in Python have historically required heavy object-oriented
 | :--- | :--- | :--- |
 | **`espresso`** | `bubbletea` | **The Strong Base**: Core TEA framework, runtime event loop, raw terminal driver, command primitives, line-diffing alt-screen renderer, SGR mouse tracking, and gesture engine. |
 | **`espresso.crema`** | `lipgloss` | **The Smooth Crema**: Declarative styling, box model, TrueColor (24-bit RGB), ANSI 256, borders, border titles, TrueColor linear gradients, ANSI word-wrapping, 2D layout alignment, FlexBox, and responsive Grid. |
-| **`espresso.beans`** | `bubbles` | **The Flavorful Beans**: 43 reusable UI components including ArtPlayer, VirtualList, Accordion, ScrollView, TextArea, GitTree, CommandPalette, BarChart, Splitter, Sliders, Form, DiffViewer, SortableList, Confetti, CodeViewer, MarkdownViewer, Tables, Viewports, and more. |
+| **`espresso.beans`** | `bubbles` | **The Flavorful Beans**: 49 reusable UI components including MenuBar, MultiSplitter, Wizard, CardList, MeshViewer, ImageViewer, ArtPlayer, VirtualList, Accordion, ScrollView, TextArea, GitTree, CommandPalette, BarChart, Splitter, Sliders, Form, DiffViewer, SortableList, Confetti, CodeViewer, MarkdownViewer, Tables, Viewports, and more. |
 
 ---
 
@@ -180,12 +180,16 @@ Espresso provides built-in mouse tracking (SGR 1006) with advanced gesture synth
 
 ## 🧩 Beans: Standard Component Library
 
-Espresso includes **45 ready-to-use building blocks** that follow the exact same TEA model:
+Espresso includes **49 ready-to-use building blocks** that follow the exact same TEA model:
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/kimusan/espresso/main/assets/demos/demo_bbs_demoscene_ans.gif" alt="ArtPlayer BBS ANSImation" width="700" />
 </p>
 
+* **`MenuBar` & `DropdownMenu`**: Desktop top application menu bar with cascading dropdown menus, hotkey accelerators, mnemonic `Alt+<key>` access, mouse hover/click selection, and non-destructive overlay compositing.
+* **`MultiSplitter`**: 3+ pane resizable layout with independent draggable dividers, min size clamping, proportional terminal scaling, and ratio equalization.
+* **`Wizard`**: Multi-step guided sequential workflow with progress breadcrumbs, validation callbacks, back-navigation state preservation, and bottom button bar.
+* **`CardList`**: High-density 2-line information cards with glyphs, tree nesting depth branches (`╰─ `), right-aligned badges, click/drag selection, and smooth scrolling.
 * **`MeshViewer`**: Pure Python software 3D rasterizer for OBJ, STL, PLY, and GLB models with Lambert and Gouraud shading, camera orbit, procedural primitives (cube, sphere, torus, cylinder, pyramid), 24-bit half-blocks, and ultra-HD Braille canvas.
 * **`ImageViewer`**: Terminal graphics viewer supporting native hardware protocols (DEC Sixel, Kitty Graphics Protocol) with automatic capability detection, intelligent tmux multiplexer protection, native deselect options, and versatile cell fallbacks (24-bit half-blocks `▀`, Braille 2x4 dot matrix, and ASCII density ramps).
 * **`ArtPlayer`**: Terminal art and animation player supporting modern `.3a` Animated ASCII Art and classic BBS `.ans` formats with frame playback controls, border framing, and lifecycle events (`AnimationDoneMsg`, `AnimationLoopMsg`).
@@ -278,6 +282,7 @@ Explore the interactive demos in `examples/`:
 | **16 Art & Animation Player** | `espresso run 16` | Retro .3a and .ans player with CP437, progressive reveal, and confetti |
 | **17 3D Mesh Rasterizer** | `espresso run 17` | Software 3D rendering for OBJ/STL/PLY/GLB with Lambert/Gouraud shading & Braille |
 | **18 Terminal Image Protocols** | `espresso run 18` | DEC Sixel & Kitty Graphics Protocol, capability auto-detection, and tmux protection |
+| **19 Desktop Beans Showcase** | `espresso run 19` | Desktop application integrating MenuBar, MultiSplitter, Wizard, and CardList |
 
 ---
 

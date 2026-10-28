@@ -1826,7 +1826,7 @@ def view(self):
 
 ---
 
-## 39. MeshViewer
+## 44. MeshViewer
 
 The `MeshViewer` component is a pure Python software 3D rasterizer rendering polygon meshes and geometry directly into terminal character cells with zero external dependencies. It features a complete 4x4 matrix transformation pipeline (Model, LookAt View, Perspective Projection, Viewport), backface culling, z-buffering (depth buffer), and multiple shading and rasterization models.
 
@@ -1891,3 +1891,231 @@ def view(self):
   - `Space`: Toggle continuous auto-rotation.
   - `r`: Reset camera view to default orientation.
   - Mouse dragging orbits the camera smoothly across azimuth and elevation.
+
+---
+
+## 45. MenuBar & DropdownMenu
+
+The `MenuBar` component provides a classic desktop-style application top menu bar with cascading drop-down menus, hotkey accelerators, mnemonic Alt+key access, and mouse interactions. It is paired with `MenuItem` and `MenuCategory` data models to define rich application command menus with separators, disabled entries, and right-aligned shortcut indicators.
+
+### Usage
+```python
+from espresso.beans import MenuBar, MenuCategory, MenuItem, MenuSelectMsg
+
+menu = MenuBar(
+    categories=[
+        MenuCategory(
+            id="file",
+            label="File",
+            mnemonic="f",
+            items=[
+                MenuItem(id="new", label="New File", shortcut="Ctrl+N"),
+                MenuItem(id="open", label="Open...", shortcut="Ctrl+O"),
+                MenuItem(id="sep1", label="", is_separator=True),
+                MenuItem(id="save", label="Save", shortcut="Ctrl+S"),
+                MenuItem(id="exit", label="Exit", shortcut="Ctrl+Q"),
+            ],
+        ),
+        MenuCategory(
+            id="edit",
+            label="Edit",
+            mnemonic="e",
+            items=[
+                MenuItem(id="undo", label="Undo", shortcut="Ctrl+Z"),
+                MenuItem(id="redo", label="Redo", shortcut="Ctrl+Y", enabled=False),
+            ],
+        ),
+    ],
+    width=80,
+    brand="Espresso",
+    right_status="v1.3.0",
+)
+
+def update(self, msg):
+    match msg:
+        case MenuSelectMsg(category_id=cat_id, item_id=item_id):
+            print(f"Triggered action: {cat_id} -> {item_id}")
+            return self, None
+
+    self.menu, cmd = self.menu.update(msg)
+    return self, cmd
+
+def view(self):
+    base_ui = "Main window content goes here..."
+    # Render dropdown overlay seamlessly on top of background UI
+    return self.menu.render_overlay(base_ui)
+```
+
+### Keyboard Navigation & Hotkeys
+Keyboard users can focus and open the menu bar by pressing `F10` or invoking mnemonics via `Alt+<mnemonic>` (such as `Alt+f` or `Alt+e`). Once the menu is active, `Left` and `Right` arrow keys cycle across top-level categories, while `Up` and `Down` arrow keys navigate items within the current dropdown, automatically skipping separator lines and disabled items. Pressing `Enter` or `Space` activates the currently selected item, emitting `MenuSelectMsg(category_id, item_id)` and closing the menu. Pressing `Esc` closes the dropdown and returns focus to the main interface.
+
+### Mouse Interactions
+The menu bar features comprehensive mouse integration. Clicking on any category header toggles its dropdown open or closed. When a menu is open, hovering the mouse across adjacent category headers instantly switches to that category's dropdown. Clicking an enabled menu item triggers its action, emits `MenuSelectMsg`, and closes the menu. Mouse dragging is also supported in classic desktop fashion: users can press the mouse button on a category header, drag over dropdown items to preview selections, and release over a menu item to activate it. Mouse wheel scrolling over category headers cycles through categories, while wheel scrolling over an open dropdown navigates its items. Clicking outside the menu bar or dropdown area dismisses the menu automatically.
+
+### Overlay Compositing
+The component provides `render_overlay(base_view: str) -> str`, which leverages Crema's `place_overlay` to composite the active dropdown box on top of any underlying view without disturbing underlying coordinates. Alternatively, applications with custom compositors can query `get_overlay_bounds()` and call `render_bar()` and `render_dropdown()` independently.
+
+---
+
+## 46. MultiSplitter
+
+The `MultiSplitter` component provides a flexible multi-pane container supporting three or more resizable panes separated by interactive draggable divider bars. It expands upon the two-pane `Splitter` bean to power complex desktop applications like email clients, IDE workspaces, and multi-log viewers.
+
+### Usage
+```python
+from espresso.beans import MultiSplitter, MultiSplitterResizeMsg, SplitterOrientation
+
+multi = MultiSplitter(
+    panes=[tree_view, card_list, detail_view],
+    ratios=[0.20, 0.35, 0.45],
+    min_sizes=[16, 24, 30],
+    orientation=SplitterOrientation.HORIZONTAL,
+    width=100,
+    height=24,
+)
+
+def update(self, msg):
+    match msg:
+        case MultiSplitterResizeMsg(divider_index=idx, sizes=sizes, ratios=ratios):
+            print(f"Divider {idx} resized. Sizes: {sizes}, Ratios: {ratios}")
+            return self, None
+
+    self.multi, cmd = self.multi.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.multi.view()
+```
+
+### Proportional Resizing & Constraints
+Panes are proportioned according to normalized floating-point ratios that dynamically adjust when the terminal window resizes. Each pane can enforce a strict minimum size (`min_sizes`), preventing any pane from collapsing into zero width or height. When resizing a divider, only the two adjacent panes exchange space while remaining panes preserve their sizes.
+
+### Mouse Dragging & Gestures
+Users can resize any divider by clicking and dragging directly on the divider bar (`│` or `─`). Pressing the mouse locks the active divider, mouse motion updates the split proportions in real time while respecting minimum constraints, and releasing the mouse commits the resize and emits `MultiSplitterResizeMsg`. Hovering over a divider and rolling the mouse wheel nudges the split by one cell. Double-clicking a divider equalizes the space between its two adjacent panes, while right-clicking any divider equalizes all pane ratios evenly across the entire component.
+
+### Keyboard Controls & Event Forwarding
+Dividers can be selected with `[` and `]` and nudged using arrow keys or vim navigation (`Left`/`Right` or `h`/`l` for horizontal splits, `Up`/`Down` or `k`/`j` for vertical splits). Holding `Ctrl` with arrow keys steps dividers by coarse increments of five cells. Pressing `=` or `r` resets all pane ratios to an even distribution, and pressing `e` equalizes adjacent panes around the active divider. The component automatically translates mouse coordinates and forwards update messages to child `Model` instances contained within each pane.
+
+---
+
+## 47. Wizard
+
+The `Wizard` component manages multi-step sequential workflows such as account onboarding, system installation, and setup assistants. It coordinates step transitions, breadcrumb progress headers, validation callbacks, back-navigation state retention, and interactive button bars.
+
+### Usage
+```python
+from espresso.beans import Wizard, WizardStep, WizardCompleteMsg, WizardCancelMsg
+
+steps = [
+    WizardStep(
+        id="provider",
+        title="Account Provider",
+        content=provider_selector,
+        description="Select your service provider",
+    ),
+    WizardStep(
+        id="credentials",
+        title="Credentials",
+        content=credentials_form,
+        description="Enter login credentials",
+        validate=lambda: (False, "Password cannot be empty") if not creds.is_valid() else (True, ""),
+    ),
+    WizardStep(
+        id="confirm",
+        title="Confirmation",
+        content="Ready to connect account. Click Finish to save.",
+        can_go_back=True,
+    ),
+]
+
+wizard = Wizard(
+    steps=steps,
+    width=72,
+    height=20,
+    allow_cancel=True,
+)
+
+def update(self, msg):
+    match msg:
+        case WizardCompleteMsg(data=wizard_data):
+            print("Wizard completed with data:", wizard_data)
+            return self, None
+        case WizardCancelMsg():
+            print("Wizard was cancelled by the user")
+            return self, None
+
+    self.wizard, cmd = self.wizard.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.wizard.view()
+```
+
+### Step Validation & State Retention
+Each `WizardStep` supports an optional `validate` callback returning a `(is_valid, error_message)` tuple. When advancing to the next step, the validator executes. If validation fails, an inline error banner is displayed and navigation halts without altering child states. When moving backward via the Back button, `Esc`, or mouse clicks, previously entered form values and child model states are preserved intact.
+
+### Progress Breadcrumbs & Navigation
+The header renders a progress indicator with step badges (`● Step 1: Provider  ──  ○ Step 2: Credentials  ──  ○ Step 3: Confirmation`). Users can click directly on any previously completed step badge in the header to jump back immediately. The bottom button bar provides `[ < Back ]`, `[ Next > ]` (or `[ Finish ]` on the final step), and `[ Cancel ]` actions.
+
+### Keyboard & Mouse Controls
+Pressing `Tab` or `Shift+Tab` cycles focus between step content and the button bar. When the button bar is focused, `Left` and `Right` arrow keys select buttons, and `Enter` or `Space` activates them. From anywhere within step content, `Ctrl+N` triggers next or finish, `Ctrl+P` steps back, and `Esc` navigates back or cancels. Clicking with the mouse directly triggers button bar actions, clicks step header badges, or translates coordinates to interact with child models and inputs within the content area.
+
+---
+
+## 48. CardList
+
+The `CardList` component is a high-density two-line information list tailored for data-rich interfaces such as email inboxes, commit histories, task backlogs, and notification centers. Each card renders two distinct lines of metadata with status badges, glyph indicators, tree hierarchy branches, and selection highlights.
+
+### Usage
+```python
+from espresso.beans import CardList, CardItem, CardSelectMsg, CardActivateMsg
+
+items = [
+    CardItem(
+        id="msg-101",
+        title="Linus Torvalds",
+        subtitle="Linux 6.14-rc1 merge window summary and release announcement",
+        badge_text="10:42 AM",
+        glyphs="● ★",
+        is_unread=True,
+    ),
+    CardItem(
+        id="msg-102",
+        title="Greg Kroah-Hartman",
+        subtitle="Re: stable review patches for 6.13.2",
+        badge_text="Yesterday",
+        glyphs="📎",
+        depth=1,
+    ),
+]
+
+card_list = CardList(
+    items=items,
+    width=50,
+    height=16,
+)
+
+def update(self, msg):
+    match msg:
+        case CardSelectMsg(item=card, index=idx):
+            print(f"Highlighted card {idx}: {card.title}")
+            return self, None
+        case CardActivateMsg(item=card, index=idx):
+            print(f"Opened card {idx}: {card.id}")
+            return self, None
+
+    self.card_list, cmd = self.card_list.update(msg)
+    return self, cmd
+
+def view(self):
+    return self.card_list.view()
+```
+
+### Two-Line Visual Structure & Tree Hierarchy
+Each card occupies exactly two lines in the terminal viewport. The first line displays leading glyphs (such as unread dots `●`, stars `★`, or attachments `📎`), optional hierarchical tree branch connectors (`╰─ ` or `├─ ` based on `depth`), the item title, and right-aligned badge text. The second line renders the subtitle or description in secondary styling with matching indentation. Strings are measured with `string_width` and truncated with `truncate_ansi` to prevent layout overflow.
+
+### Viewport Scrolling & Selection Retention
+The list calculates visible cards as `height // 2` and maintains an internal `scroll_offset`. When navigating through items, the cursor automatically keeps the active two-line card fully visible within the viewport window without jitter or partial-line cutoffs.
+
+### Keyboard & Mouse Controls
+Users can navigate cards with `Up` and `Down` arrow keys, vim keys (`k` and `j`), `PageUp`, `PageDown`, `Home` (`g`), and `End` (`G`). Pressing `Enter` or `Space` emits `CardActivateMsg(item, index)`. With the mouse, rolling the wheel scrolls the list viewport. Clicking either the title or subtitle line of an item selects it and emits `CardSelectMsg`. Double-clicking an item activates it and emits `CardActivateMsg`. Right-clicking also selects the item, and dragging the mouse across items while holding the button updates the active selection in real time.

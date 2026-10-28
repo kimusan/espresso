@@ -76,7 +76,7 @@ Built purely with the **Python standard library** (zero external dependencies), 
 | :--- | :--- | :--- |
 | **`espresso`** | `bubbletea` | **The Strong Base**: Core TEA framework, runtime event loop, raw terminal driver, command primitives, flicker-free line-diffing alt-screen renderer, SGR mouse tracking, and desktop gesture engine (`MouseGestureTracker`). |
 | **`espresso.crema`** | `lipgloss` | **The Smooth Crema**: Declarative styling, box model, TrueColor (24-bit RGB), ANSI 256, borders, border titles, TrueColor linear gradients, ANSI word-wrapping, 2D layout alignment, `FlexBox`, and responsive `Grid`. |
-| **`espresso.beans`** | `bubbles` | **The Flavorful Beans**: 45+ reusable UI components including MeshViewer (3D rasterizer), ImageViewer (Sixel & Kitty), TextArea, GitTree, CommandPalette, BarChart, Splitter, Sliders, Form, DiffViewer, SortableList, Confetti, CodeViewer, MarkdownViewer, Tables, Viewports, and more. |
+| **`espresso.beans`** | `bubbles` | **The Flavorful Beans**: 49+ reusable UI components including MenuBar, MultiSplitter, Wizard, CardList, MeshViewer (3D rasterizer), ImageViewer (Sixel & Kitty), TextArea, GitTree, CommandPalette, BarChart, Splitter, Sliders, Form, DiffViewer, SortableList, Confetti, CodeViewer, MarkdownViewer, Tables, Viewports, and more. |
 | **`espresso` CLI** | - | **The Toolkit**: Standalone developer executable for listing built-in examples, launching the interactive gallery, running scripts, and scaffolding new applications. |
 
 ---
@@ -85,6 +85,10 @@ Built purely with the **Python standard library** (zero external dependencies), 
 
 | Component | Description |
 | :--- | :--- |
+| **`MenuBar`** | Desktop application top menu bar with cascading dropdowns, hotkey accelerators, mnemonic `Alt+<key>` access, and mouse hover/click. |
+| **`MultiSplitter`** | 3+ pane resizable layout with independent draggable dividers, min size clamping, proportional terminal scaling, and ratio equalization. |
+| **`Wizard`** | Multi-step guided sequential workflow with progress breadcrumbs, validation callbacks, back-navigation state retention, and button bar. |
+| **`CardList`** | High-density 2-line information cards with glyphs, tree nesting depth branches (`╰─ `), status badges, click/drag selection, and scrolling. |
 | **`MeshViewer`** | Pure Python software 3D rasterizer for OBJ, STL, PLY, and GLB with Lambert/Gouraud shading, TrueColor half-blocks (`▀`), and ultra-HD Braille (`⠟`) canvas. |
 | **`ImageViewer`** | Terminal graphics viewer supporting native hardware protocols (DEC Sixel, Kitty Graphics Protocol) with capability auto-detection, tmux protection, and cell fallbacks (half-blocks `▀`, Braille 2x4 dot matrix, ASCII ramps). |
 | **`ArtPlayer`** | Terminal art and animation player supporting modern `.3a` and classic BBS `.ans` formats with frame controls and lifecycle events. |
@@ -218,10 +222,11 @@ python3 app.py
 Espresso includes the `espresso` command-line utility for exploring examples and scaffolding new applications:
 
 ```bash
-# List all 18 interactive built-in example applications
+# List all 19 interactive built-in example applications
 espresso list
 
-# Run any example by ID (e.g. 17 for 3D Mesh Rasterizer, 18 for Terminal Image Protocols)
+# Run any example by ID (e.g. 19 for Desktop Beans Showcase, 18 for Terminal Image Protocols)
+espresso run 19
 espresso run 18
 espresso run 17
 espresso run 14
